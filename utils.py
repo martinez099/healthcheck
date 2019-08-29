@@ -1,5 +1,6 @@
-import json
 import base64
+import json
+import logging
 import ssl
 
 from urllib import request
@@ -32,6 +33,7 @@ def do_http(_url, _user, _pass, _data=None, _method='GET'):
         req.add_header('Content-Type', 'application/json; charset=utf-8')
         req.data(json.dumps(_data).encode('utf-8'))
 
+    logging.info('calling urlopen to {} ...'.format(_url))
     rsp = request.urlopen(req, context=SSL_CONTEXT)
     if rsp.code == 200:
         return json.loads(rsp.read())
