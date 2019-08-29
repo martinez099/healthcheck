@@ -1,26 +1,18 @@
-import os
-import pprint
-
-from utils import urlopen, get_result
+from checks import get_cluster, get_nodes, get_bdbs, get_shards, check_number_of_nodes, check_license, \
+    check_number_of_cores, check_shards_count
 
 
-CLUSTER_FQDN = os.getenv('CLUSTER_FQDN')
-USERNAME = os.getenv('USERNAME')
-PASSWORD = os.getenv('PASSWORD')
+def main():
+    get_cluster()
+    get_nodes()
+    get_bdbs()
+    get_shards()
+
+    check_license()
+    check_shards_count(17)
+    check_number_of_nodes()
+    check_number_of_cores()
 
 
-rsp = urlopen('https://{}:9443/v1/cluster'.format(CLUSTER_FQDN), USERNAME, PASSWORD)
-pprint.pprint('Cluster {}'.format(CLUSTER_FQDN))
-pprint.pprint(get_result(rsp))
-
-rsp = urlopen('https://{}:9443/v1/nodes'.format(CLUSTER_FQDN), USERNAME, PASSWORD)
-pprint.pprint('Nodes:')
-pprint.pprint(get_result(rsp))
-
-rsp = urlopen('https://{}:9443/v1/bdbs'.format(CLUSTER_FQDN), USERNAME, PASSWORD)
-pprint.pprint('Databases:')
-pprint.pprint(get_result(rsp))
-
-rsp = urlopen('https://{}:9443/v1/shards'.format(CLUSTER_FQDN), USERNAME, PASSWORD)
-pprint.pprint('Shards:')
-pprint.pprint(get_result(rsp))
+if __name__ == '__main__':
+    main()
