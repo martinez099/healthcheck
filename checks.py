@@ -11,8 +11,8 @@ def check_license():
     pprint.pprint('shards_limit: {}'.format(shards_limit))
 
 
-def check_shards_count(bdb_id):
-    rsp = fetch('bdbs/{}'.format(bdb_id))
+def check_shards_count(_bdb_id):
+    rsp = fetch('bdbs/{}'.format(_bdb_id))
     shards_count = rsp['shards_count']
     pprint.pprint('shards_count: {}'.format(shards_count))
 
