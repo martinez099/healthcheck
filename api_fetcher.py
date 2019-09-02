@@ -5,7 +5,6 @@ import os
 import re
 import ssl
 
-from sshrex import exec_on_all_nodes, exec_on_node
 from urllib import request
 
 FQDN = os.getenv('CLUSTER_FQDN')
@@ -19,7 +18,7 @@ SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 CACHE = {}
 
 
-def do_http(_url, _user, _pass, _data=None, _method='GET'):
+def _do_http(_url, _user, _pass, _data=None, _method='GET'):
     """
     Perfrom an HTTP request and get the JSON response.
 
@@ -41,7 +40,7 @@ def do_http(_url, _user, _pass, _data=None, _method='GET'):
         req.add_header('Content-Type', 'application/json; charset=utf-8')
         req.data(json.dumps(_data).encode('utf-8'))
 
-    logging.info('calling urlopen to {} ...'.format(_url))
+    logging.debug('calling urlopen to {} ...'.format(_url))
     rsp = request.urlopen(req, context=SSL_CONTEXT)
     if rsp.code == 200:
         return json.loads(rsp.read())
@@ -49,65 +48,48 @@ def do_http(_url, _user, _pass, _data=None, _method='GET'):
         raise Exception(str(rsp))
 
 
-def fetch(_topic):
+def _fetch(_topic):
     if _topic in CACHE:
         return CACHE[_topic]
     else:
-        rsp = do_http('https://{}:9443/v1/{}'.format(FQDN, _topic), USERNAME, PASSWORD)
+        rsp = _do_http('https://{}:9443/v1/{}'.format(FQDN, _topic), USERNAME, PASSWORD)
         CACHE[_topic] = rsp
         return rsp
 
 
-def fetch_shards_limit():
-    rsp = fetch('license')
+def get_cluster_value(_key):
+    return _fetch('cluster')[_key]
+
+
+def get_shards_limit():
+    rsp = _fetch('license')
     match = re.search(r'Shards limit : (\d+)\n', rsp['license'], re.MULTILINE | re.DOTALL)
     return match.group(1)
 
 
-def fetch_shards_count():
-    rsp = fetch('shards')
+def get_shards_count():
+    rsp = _fetch('shards')
     return len(rsp)
 
 
-def fetch_number_of_nodes():
-    rsp = fetch('nodes')
+def get_number_of_nodes():
+    rsp = _fetch('nodes')
     return len(rsp)
 
 
-def fetch_number_of_cores():
-    rsp = fetch('nodes')
-    return sum([node['cores'] for node in rsp])
+def get_nodes_values(_key):
+    return [node[_key] for node in _fetch('nodes')]
 
 
-def fetch_ram_size():
-    rsp = fetch('nodes')
-    return sum([node['total_memory'] for node in rsp])
+def get_summed_nodes_values(_key):
+    return sum([node[_key] for node in _fetch('nodes')])
 
 
-def fetch_ephemeral_storage():
-    rsp = fetch('nodes')
-    return sum([node['ephemeral_storage_size'] for node in rsp])
+def get_bdb_value(_bdb_id, _key):
+    return _fetch(f'bdbs/{_bdb_id}')[_key]
 
 
-def fetch_persistent_storage():
-    rsp = fetch('nodes')
-    return sum([node['persistent_storage_size'] for node in rsp])
+def get_bdb_alerts(_bdb_id=None):
+    return _fetch(f'bdbs/alerts/{_bdb_id}') if _bdb_id else _fetch('bdbs/alerts')
 
 
-def fetch_log_file_paths():
-    return exec_on_all_nodes('df -h /var/opt/redislabs/log')
-
-
-def fetch_tmp_file_path():
-    return exec_on_all_nodes('df -h /tmp')
-
-
-def fetch_software_versions():
-    rsp = fetch('nodes')
-    return [r['software_version'] for r in rsp]
-
-
-def fetch_quorums():
-    rsp = fetch('nodes')
-    cmd = 'sudo /opt/redislabs/bin/rladmin info node {} | grep quorum'
-    return [exec_on_node(cmd.format(i), 0) for i in range(1, len(rsp) + 1)]
