@@ -1,10 +1,12 @@
+#!/usr/bin/env python3
+
 import argparse
 import logging
 
 from health_checker import HealthChecker
 
 
-def main(_args):
+def healtcheck(_args):
 
     checker = HealthChecker(_args)
 
@@ -43,15 +45,15 @@ def main(_args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('cluster_fqdn', help="The FQDN of the cluser to inspect.", type=str)
     parser.add_argument('cluster_username', help="The username of the cluser to inspect.", type=str)
     parser.add_argument('cluster_password', help="The password of the cluser to inspect.", type=str)
     parser.add_argument('ssh_username', help="The ssh username to log into nodes of the cluster.", type=str)
-    parser.add_argument('ssh_hostnames', help="The hostnames of the nodes to log into.", type=str)
-    parser.add_argument('ssh_keyfile', help="The path to ssh identity file.", type=str)
+    parser.add_argument('ssh_hostnames', help="A list with hostnames of the nodes of the cluster.", type=str)
+    parser.add_argument('ssh_keyfile', help="The path to the ssh identity file.", type=str)
     args = parser.parse_args()
 
-    main(args)
+    healtcheck(args)
