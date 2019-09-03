@@ -1,4 +1,5 @@
 import base64
+import datetime
 import json
 import logging
 import re
@@ -30,12 +31,20 @@ class ApiFetcher(object):
     def get_cluster_value(self, _key):
         return self._fetch('cluster')[_key]
 
-    def get_shards_limit(self):
+    def get_license_shards_limit(self):
         rsp = self._fetch('license')
         match = re.search(r'Shards limit : (\d+)\n', rsp['license'], re.MULTILINE | re.DOTALL)
-        return match.group(1)
+        return int(match.group(1))
 
-    def get_shards_count(self):
+    def get_license_expire_date(self):
+        rsp = self._fetch('license')
+        return datetime.datetime.strptime(rsp['expiration_date'], '%Y-%m-%dT%H:%M:%SZ')
+
+    def get_license_expired(self):
+        rsp = self._fetch('license')
+        return rsp['expired']
+
+    def get_number_of_shards(self):
         rsp = self._fetch('shards')
         return len(rsp)
 
@@ -46,7 +55,7 @@ class ApiFetcher(object):
     def get_node_values(self, _key):
         return [node[_key] for node in self._fetch('nodes')]
 
-    def get_summed_node_values(self, _key):
+    def get_sum_of_node_values(self, _key):
         return sum([node[_key] for node in self._fetch('nodes')])
 
     def get_bdb_value(self, _bdb_id, _key):

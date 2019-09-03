@@ -1,4 +1,5 @@
 import logging
+import re
 
 from subprocess import Popen, PIPE
 
@@ -18,19 +19,21 @@ class SshRemoteExecutor(object):
         self.hostnames = _hostnames
         self.keyfile = _keyfile
 
-    def get_log_file_paths(self):
-        return self._exec_on_all_nodes('df -h /var/opt/redislabs/log')
-
-    def get_tmp_file_path(self):
-        return self._exec_on_all_nodes('df -h /tmp')
-
-    def get_quorums(self, _nr_of_nodes):
-        cmd = 'sudo /opt/redislabs/bin/rladmin info node {} | grep quorum'
-        return [self._exec_on_node(cmd.format(i), 0) for i in range(1, _nr_of_nodes + 1)]
-
     def get_master_node(self):
         cmd = 'sudo /opt/redislabs/bin/rladmin status | grep master'
-        return self._exec_on_node(cmd, 0)
+        rsp = self._exec_on_node(cmd, 0)
+        match = re.search(r'(node:\d+ master.*)', rsp)
+        return re.split(r'\s+', match.group(1))[4]
+
+    def get_log_file_path(self, _node_nr=0):
+        return self._exec_on_node('df -h /var/opt/redislabs/log', _node_nr)
+
+    def get_tmp_file_path(self, _node_nr=0):
+        return self._exec_on_node('df -h /tmp', _node_nr)
+
+    def get_quorum(self, _node_nr=0):
+        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr} | grep quorum'
+        return self._exec_on_node(cmd, _node_nr)
 
     def get_swappiness(self, _node_nr=0):
         cmd = 'grep swap /etc/sysctl.conf || echo inactive'
