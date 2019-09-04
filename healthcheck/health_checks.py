@@ -1,19 +1,19 @@
 import datetime
+import math
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.ssh_rex import SshRemoteExecutor
+
+GB = pow(1024, 3)
+
+
+def to_gb(_value):
+    return math.floor(_value / GB)
 
 
 def format_result(_result, **_kwargs):
     result = '[+] ' if _result else '[-] '
     return result + ', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
-
-
-def format_results(_results, **_kwargs):
-    results = ['']
-    for i in range(0, len(_results)):
-        results.append(k + ': ' + format_result(_results[i], **_kwargs))
-    return ''.join(results)
 
 
 class CheckSuite(object):
@@ -52,14 +52,10 @@ class RecommendedRequirementsChecks(CheckSuite):
         software_versions = self.api.get_node_values('software_version')
 
         kwargs = {}
-
         for i in range(0, number_of_nodes):
-            kwargs[f'node{i + 1}'] = {
-                'software version': software_versions[i]
-            }
+            kwargs[f'software version (node{i + 1})'] = software_versions[i]
 
-        #return format_results(software_versions,**kwargs)
-        return software_versions
+        return format_result(True, **kwargs)
 
     def check_license_shards_limit(self, *_args, **_kwargs):
         shards_limit = self.api.get_license_shards_limit()
@@ -80,7 +76,8 @@ class RecommendedRequirementsChecks(CheckSuite):
     def check_license_expired(self, *_args, **_kwargs):
         expired = self.api.get_license_expired()
 
-        return format_result(not expired, **{'license expired': expired})
+        result = not expired
+        return format_result(result, **{'license expired': expired})
 
     def check_number_of_shards(self, *_args, **_kwargs):
         number_of_shards = self.api.get_number_of_shards()
@@ -108,34 +105,34 @@ class RecommendedRequirementsChecks(CheckSuite):
 
     def check_total_memory(self, *_args, **_kwargs):
         total_memory = self.api.get_sum_of_node_values('total_memory')
-        min_memory = 90 * 10e7  # GB
+        min_memory = 90 * GB
 
         result = total_memory >= min_memory
-        return format_result(result, **{'total memory': total_memory,
-                                        'min memory': min_memory})
+        return format_result(result, **{'total memory in GB': to_gb(total_memory),
+                                        'min memory in GB': to_gb(min_memory)})
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
         epehemeral_storage_size = self.api.get_sum_of_node_values('ephemeral_storage_size')
-        min_ephemeral_size = 360 * 10e7  # GB
+        min_ephemeral_size = 360 * GB
 
         result = epehemeral_storage_size >= min_ephemeral_size
-        return format_result(result, **{'ephemeral storage size': epehemeral_storage_size,
-                                        'min ephemeral size': min_ephemeral_size})
+        return format_result(result, **{'ephemeral storage size in GB': to_gb(epehemeral_storage_size),
+                                        'min ephemeral size in GB': to_gb(min_ephemeral_size)})
 
     def check_persistent_storage(self, *_args, **_kwargs):
         persistent_storage_size = self.api.get_sum_of_node_values('persistent_storage_size')
-        min_persistent_size = 540 * 10e7  # GB
+        min_persistent_size = 540 * GB
 
         result = persistent_storage_size >= min_persistent_size
-        return format_result(result, **{'persistent storage size': persistent_storage_size,
-                                        'min persistent size': min_persistent_size})
+        return format_result(result, **{'persistent storage size in GB': to_gb(persistent_storage_size),
+                                        'min persistent size in GB': to_gb(min_persistent_size)})
 
     def _check_quorum(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
         quorums = [self.ssh.get_quorum(node_nr) for node_nr in range(0, number_of_nodes + 1)]
         return quorums
 
-    def check_log_file_paths(self, *_args, **_kwargs):
+    def _check_log_file_paths(self, *_args, **_kwargs):
         log_file_path_node0 = self.ssh.get_log_file_path()
 
         result = '/dev/root' in log_file_path_node0

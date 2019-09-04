@@ -10,6 +10,7 @@ from healthcheck.health_checks import RecommendedRequirementsChecks
 
 def main(_args):
 
+    # execute recommended HW requirements check suite
     executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
     executor.execute_suite(RecommendedRequirementsChecks(_args))
     executor.wait()
@@ -18,6 +19,7 @@ def main(_args):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
+    # parse command line arguments
     parser = argparse.ArgumentParser()
     cluster = parser.add_argument_group('cluster', 'data accessing the Redis E cluster')
     cluster.add_argument('cluster_fqdn', help="The FQDN of the cluser to inspect.", type=str)
