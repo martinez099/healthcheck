@@ -1,37 +1,11 @@
 import datetime
-import math
 
-from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.ssh_rex import SshRemoteExecutor
-
-GB = pow(1024, 3)
+from healthcheck.check_suites.base_suite import CheckSuite, format_result, to_gb, GB
 
 
-def to_gb(_value):
-    return math.floor(_value / GB)
-
-
-def format_result(_result, **_kwargs):
-    result = '[+] ' if _result else '[-] '
-    return result + ', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
-
-
-class CheckSuite(object):
+class RecommendedChecks(CheckSuite):
     """
-    Check Suite class.
-    """
-
-    def __init__(self, _args):
-        """
-        :param _args: The parsed command line arguments.
-        """
-        self.api = ApiFetcher(_args.cluster_fqdn, _args.cluster_username, _args.cluster_password)
-        self.ssh = SshRemoteExecutor(_args.ssh_username, _args.ssh_hostnames.split(','), _args.ssh_keyfile)
-
-
-class RecommendedRequirementsChecks(CheckSuite):
-    """
-    Recommended HW requirements checks.
+    Recommended HW requirements.
 
     see https://docs.redislabs.com/latest/rs/administering/designing-production/hardware-requirements
     """
@@ -40,7 +14,7 @@ class RecommendedRequirementsChecks(CheckSuite):
         """
         :param _args: The parsed command line arguments.
         """
-        super(RecommendedRequirementsChecks, self).__init__(_args)
+        super(RecommendedChecks, self).__init__(_args)
 
     def check_master_node(self, *_args, **_kwargs):
         master_node = self.ssh.get_master_node()
@@ -108,24 +82,24 @@ class RecommendedRequirementsChecks(CheckSuite):
         min_memory = 90 * GB
 
         result = total_memory >= min_memory
-        return format_result(result, **{'total memory in GB': to_gb(total_memory),
-                                        'min memory in GB': to_gb(min_memory)})
+        return format_result(result, **{'total memory': to_gb(total_memory),
+                                        'min memory': to_gb(min_memory)})
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
         epehemeral_storage_size = self.api.get_sum_of_node_values('ephemeral_storage_size')
         min_ephemeral_size = 360 * GB
 
         result = epehemeral_storage_size >= min_ephemeral_size
-        return format_result(result, **{'ephemeral storage size in GB': to_gb(epehemeral_storage_size),
-                                        'min ephemeral size in GB': to_gb(min_ephemeral_size)})
+        return format_result(result, **{'ephemeral storage size': to_gb(epehemeral_storage_size),
+                                        'min ephemeral size': to_gb(min_ephemeral_size)})
 
     def check_persistent_storage(self, *_args, **_kwargs):
         persistent_storage_size = self.api.get_sum_of_node_values('persistent_storage_size')
         min_persistent_size = 540 * GB
 
         result = persistent_storage_size >= min_persistent_size
-        return format_result(result, **{'persistent storage size in GB': to_gb(persistent_storage_size),
-                                        'min persistent size in GB': to_gb(min_persistent_size)})
+        return format_result(result, **{'persistent storage size': to_gb(persistent_storage_size),
+                                        'min persistent size': to_gb(min_persistent_size)})
 
     def _check_quorum(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
