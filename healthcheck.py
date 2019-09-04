@@ -14,6 +14,7 @@ def main(_args):
     executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
     executor.execute_suite(RecommendedRequirementsChecks(_args))
     executor.wait()
+    executor.shutdown()
 
 
 if __name__ == '__main__':

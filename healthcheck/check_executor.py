@@ -50,3 +50,9 @@ class CheckExecutor(object):
                 self.result_cb(result)
             except Exception as e:
                 logging.error(e)
+
+    def shutdown(self):
+        """
+        Shutdown the thread pool executor.
+        """
+        return self.executor.shutdown()
