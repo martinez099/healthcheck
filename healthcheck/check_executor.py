@@ -30,6 +30,16 @@ class CheckExecutor(object):
             future.add_done_callback(_done_cb)
         self.futures.append(future)
 
+    def execute_suite(self, checks):
+        """
+        Execute a check suite.
+
+        :param checks: The check suite.
+        """
+        for check in filter(lambda x: x.startswith('check_'), dir(checks)):
+            method = getattr(checks, check)
+            self.execute(method)
+
     def wait(self):
         """
         Wait for completition of all futures.

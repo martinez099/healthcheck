@@ -4,50 +4,14 @@ import argparse
 import logging
 import pprint
 
-from healtcheck.check_executor import CheckExecutor
-from healtcheck.health_checks import HealthChecks
+from healthcheck.check_executor import CheckExecutor
+from healthcheck.health_checks import RecommendedRequirementsChecks
 
 
 def main(_args):
 
-    checks = HealthChecks(_args)
     executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
-
-    executor.execute(checks.check_master_node)
-    executor.execute(checks.check_software_version)
-    executor.execute(checks.check_license_shards_limit)
-    executor.execute(checks.check_license_expire_date)
-    executor.execute(checks.check_license_expired)
-    executor.execute(checks.check_number_of_shards)
-    executor.execute(checks.check_number_of_nodes)
-    executor.execute(checks.check_number_of_cores)
-    executor.execute(checks.check_total_memory)
-    executor.execute(checks.check_ephemeral_storage)
-    executor.execute(checks.check_persistent_storage)
-    executor.execute(checks.check_quorum)
-    executor.execute(checks.check_log_file_paths)
-    executor.execute(checks.check_tmp_file_path)
-    executor.execute(checks.check_memory_size)
-    executor.execute(checks.check_data_persistence)
-    executor.execute(checks.check_rack_awareness)
-    executor.execute(checks.check_reqplica_sync)
-    executor.execute(checks.check_sync_sources)
-    executor.execute(checks.check_shards_placement)
-    executor.execute(checks.check_proxy_policy)
-    executor.execute(checks.check_replication)
-    executor.execute(checks.check_cluster_and_node_alerts)
-    executor.execute(checks.check_bdb_alerts)
-    executor.execute(checks.check_os_version)
-    executor.execute(checks.check_swappiness)
-    executor.execute(checks.check_transparent_hugepages)
-    executor.execute(checks.check_rladmin_status)
-    executor.execute(checks.check_rlcheck_result)
-    executor.execute(checks.check_cnm_ctl_status)
-    executor.execute(checks.check_supervisorctl_status)
-    executor.execute(checks.check_errors_in_syslog)
-    executor.execute(checks.check_errors_in_install_log)
-    #executore.execute(check.check_errors_in_logs)
-
+    executor.execute_suite(RecommendedRequirementsChecks(_args))
     executor.wait()
 
 
