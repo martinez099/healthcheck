@@ -61,6 +61,10 @@ class ApiFetcher(object):
     def get_bdb_value(self, _bdb_id, _key):
         return self._fetch(f'bdbs/{_bdb_id}')[_key]
 
+    def get_bdb_values(self, _key):
+        bdbs = self._fetch('bdbs')
+        return [bdb[_key] for bdb in bdbs]
+
     def get_bdb_alerts(self, _bdb_id=None):
         return self._fetch(f'bdbs/alerts/{_bdb_id}') if _bdb_id else self._fetch('bdbs/alerts')
 

@@ -47,7 +47,7 @@ class RecommendedChecks(CheckSuite):
         return format_result(result, **{'license expired': expired})
 
     def check_number_of_shards(self, *_args, **_kwargs):
-        """check if enough number of shards"""
+        """check if enough shards"""
         number_of_shards = self.api.get_number_of_shards()
         min_shards = 2
 
@@ -56,7 +56,7 @@ class RecommendedChecks(CheckSuite):
                                         'min shards': min_shards})
 
     def check_number_of_nodes(self, *_args, **_kwargs):
-        """check if enough number of nodes"""
+        """check if enough nodes"""
         number_of_nodes = self.api.get_number_of_nodes()
         min_nodes = 3
 
@@ -65,7 +65,7 @@ class RecommendedChecks(CheckSuite):
                                         'min nodes': min_nodes})
 
     def check_number_of_cores(self, *_args, **_kwargs):
-        """check if enough numbers of cores"""
+        """check if enough cores"""
         number_of_cores = self.api.get_sum_of_node_values('cores')
         min_cores = 24
 
@@ -134,45 +134,69 @@ class RecommendedChecks(CheckSuite):
         kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
         return format_result(result, **kwargs)
 
-    def _check_memory_size(self, *_args, **_kwargs):
-        memory_sizes = self.api.get_bdb_value(16, 'memory_size')
+    def check_memory_size(self, *_args, **_kwargs):
+        """get memory size of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        memory_sizes = self.api.get_bdb_values('memory_size')
 
-        return memory_sizes
+        kwargs = {f'{bdb_names[i]}': to_gb(memory_sizes[i]) for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_data_persistence(self, *_args, **_kwargs):
-        data_persistences = self.api.get_bdb_value(16, 'data_persistence')
+    def check_data_persistence(self, *_args, **_kwargs):
+        """get persistence setting of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        data_persistences = self.api.get_bdb_values('data_persistence')
 
-        return data_persistences
+        kwargs = {f'{bdb_names[i]}': data_persistences[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_rack_awareness(self, *_args, **_kwargs):
-        rack_awareness = self.api.get_bdb_value(16, 'rack_aware')
+    def check_rack_awareness(self, *_args, **_kwargs):
+        """get rack awareness setting of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        rack_awareness = self.api.get_bdb_values('rack_aware')
 
-        return rack_awareness
+        kwargs = {f'{bdb_names[i]}': rack_awareness[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_reqplica_sync(self, *_args, **_kwargs):
-        replica_sync = self.api.get_bdb_value(16, 'replica_sync')
+    def check_reqplica_sync(self, *_args, **_kwargs):
+        """get replica sync setting of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        replica_syncs = self.api.get_bdb_values('replica_sync')
 
-        return replica_sync
+        kwargs = {f'{bdb_names[i]}': replica_syncs[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_sync_sources(self, *_args, **_kwargs):
-        sync_sources = self.api.get_bdb_value(16, 'sync_sources')
+    def check_sync_sources(self, *_args, **_kwargs):
+        """get sync sources setting of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        sync_sources = self.api.get_bdb_values('sync_sources')
 
-        return sync_sources
+        kwargs = {f'{bdb_names[i]}': sync_sources[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_shards_placement(self, *_args, **_kwargs):
-        shards_placement = self.api.get_bdb_value(16, 'shards_placement')
+    def check_shards_placement(self, *_args, **_kwargs):
+        """get shards placement policy of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        shards_placements = self.api.get_bdb_values('shards_placement')
 
-        return shards_placement
+        kwargs = {f'{bdb_names[i]}': shards_placements[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_proxy_policy(self, *_args, **_kwargs):
-        proxy_policy = self.api.get_bdb_value(16, 'proxy_policy')
+    def check_proxy_policy(self, *_args, **_kwargs):
+        """get proxy policy of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        proxy_policies = self.api.get_bdb_values('proxy_policy')
 
-        return proxy_policy
+        kwargs = {f'{bdb_names[i]}': proxy_policies[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
-    def _check_replication(self, *_args, **_kwargs):
-        replication = self.api.get_bdb_value(16, 'replication')
+    def check_replication(self, *_args, **_kwargs):
+        """get replication setting of all databases"""
+        bdb_names = self.api.get_bdb_values('name')
+        replications = self.api.get_bdb_values('replication')
 
-        return replication
+        kwargs = {f'{bdb_names[i]}': replications[i] for i in range(0, len(bdb_names))}
+        return format_result(None, **kwargs)
 
     def _check_cluster_and_node_alerts(self, *_args, **_kwargs):
         alerts = self.api.get_cluster_value('alert_settings')
