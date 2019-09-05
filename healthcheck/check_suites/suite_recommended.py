@@ -1,6 +1,6 @@
 import datetime
 
-from healthcheck.check_suites.base_suite import CheckSuite, format_result, format_error, to_gb, GB
+from healthcheck.check_suites.base_suite import CheckSuite, format_result, to_gb, GB
 
 
 class RecommendedChecks(CheckSuite):
@@ -17,10 +17,7 @@ class RecommendedChecks(CheckSuite):
         number_of_nodes = self.api.get_number_of_nodes()
         software_versions = self.api.get_node_values('software_version')
 
-        kwargs = {}
-        for i in range(0, number_of_nodes):
-            kwargs[f'software version (node{i + 1})'] = software_versions[i]
-
+        kwargs = {f'node{i + 1}': software_versions[i] for i in range(0, number_of_nodes)}
         return format_result(None, **kwargs)
 
     def check_license_shards_limit(self, *_args, **_kwargs):
@@ -102,23 +99,31 @@ class RecommendedChecks(CheckSuite):
         return format_result(result, **{'persistent storage size': to_gb(persistent_storage_size),
                                         'min persistent size': to_gb(min_persistent_size)})
 
-    def check_quorum(self, *_args, **_kwargs):
-        """check if quorum node is existent and configured"""
+    def check_quorum_only(self, *_args, **_kwargs):
+        """get quorumg only nodes"""
         number_of_nodes = self.api.get_number_of_nodes()
-        quorums = [self.ssh.get_quorum(node_nr) for node_nr in range(0, number_of_nodes)]
+        quorums = [self.ssh.get_quorum_only(node_nr) for node_nr in range(0, number_of_nodes)]
 
-        return quorums
+        kwargs = {f'node{i + 1}': quorums[i] for i in range(0, number_of_nodes)}
+        return format_result(None, **kwargs)
 
-    def _check_log_file_paths(self, *_args, **_kwargs):
-        log_file_path_node0 = self.ssh.get_log_file_path()
+    def check_log_file_path(self, *_args, **_kwargs):
+        """check if log file path is on root filesystem"""
+        number_of_nodes = self.api.get_number_of_nodes()
+        log_file_paths = [self.ssh.get_log_file_path(node_nr) for node_nr in range(0, number_of_nodes)]
 
-        result = '/dev/root' in log_file_path_node0
-        return format_result(result, **{'log file path': log_file_path_node0})
+        result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
+        kwargs = {f'node{i + 1}': log_file_paths[i] for i in range(0, number_of_nodes)}
+        return format_result(result, **kwargs)
 
-    def _check_tmp_file_path(self, *_args, **_kwargs):
-        tmp_file_paths = self.ssh.get_tmp_file_path()
+    def check_tmp_file_path(self, *_args, **_kwargs):
+        """check if tmp file path is on root filesystem"""
+        number_of_nodes = self.api.get_number_of_nodes()
+        tmp_file_paths = [self.ssh.get_tmp_file_path(node_nr) for node_nr in range(0, number_of_nodes)]
 
-        return tmp_file_paths
+        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
+        kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
+        return format_result(result, **kwargs)
 
     def _check_memory_size(self, *_args, **_kwargs):
         memory_sizes = self.api.get_bdb_value(16, 'memory_size')

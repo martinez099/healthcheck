@@ -1,7 +1,15 @@
 import concurrent.futures
 import functools
 
-from healthcheck.check_suites.base_suite import format_error
+
+def format_error(_check_name, _exception):
+    """
+    Format an error.
+
+    :param _exception: The exception occurred.
+    :return: A string with the rendered result.
+    """
+    return f'[*] [{_check_name}] FAILED: {_exception}'
 
 
 class CheckExecutor(object):
@@ -31,7 +39,7 @@ class CheckExecutor(object):
             try:
                 return _check(_args, _kwargs)
             except Exception as e:
-                return format_error(e)
+                return format_error(_func.__name__, e)
 
         future = self.executor.submit(functools.partial(wrapper, _func), _args, _kwargs)
         if _done_cb:

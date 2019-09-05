@@ -38,12 +38,12 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
 
-    cluster = parser.add_argument_group('cluster', 'data accessing the Redis E cluster')
+    cluster = parser.add_argument_group('cluster', 'credentials accessing the REST-API')
     cluster.add_argument('cluster_fqdn', help="The FQDN of the cluser to inspect.", type=str)
     cluster.add_argument('cluster_username', help="The username of the cluser to inspect.", type=str)
     cluster.add_argument('cluster_password', help="The password of the cluser to inspect.", type=str)
 
-    ssh = parser.add_argument_group('ssh', 'data accessing the nodes vie SSH')
+    ssh = parser.add_argument_group('ssh', 'credentials accessing the nodes via SSH')
     ssh.add_argument('ssh_username', help="The ssh username to log into nodes of the cluster.", type=str)
     ssh.add_argument('ssh_hostnames', help="A list with hostnames of the nodes.", type=str)
     ssh.add_argument('ssh_keyfile', help="The path to the ssh identity file.", type=str)

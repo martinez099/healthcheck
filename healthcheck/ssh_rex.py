@@ -26,14 +26,22 @@ class SshRemoteExecutor(object):
         return re.split(r'\s+', match.group(1))[4]
 
     def get_log_file_path(self, _node_nr=0):
-        return self._exec_on_node('df -h /var/opt/redislabs/log', _node_nr)
+        cmd = 'df -h /var/opt/redislabs/log'
+        rsp = self._exec_on_node(cmd, _node_nr)
+        match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
+        return match.group(1)
 
     def get_tmp_file_path(self, _node_nr=0):
-        return self._exec_on_node('df -h /tmp', _node_nr)
+        cmd = 'df -h /tmp'
+        rsp = self._exec_on_node(cmd, _node_nr)
+        match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
+        return match.group(1)
 
-    def get_quorum(self, _node_nr=0):
-        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr} | grep quorum || echo not found'
-        return self._exec_on_node(cmd, _node_nr)
+    def get_quorum_only(self, _node_nr=0):
+        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr + 1} | grep quorum || echo not found'
+        rsp = self._exec_on_node(cmd, _node_nr)
+        match = re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL)
+        return match.group(1)
 
     def get_swappiness(self, _node_nr=0):
         cmd = 'grep swap /etc/sysctl.conf || echo inactive'

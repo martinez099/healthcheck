@@ -36,17 +36,6 @@ def format_result(_result, **_kwargs):
     return result + f', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
 
 
-def format_error(_exception):
-    """
-    Format an error.
-
-    :param _exception: The exception occurred.
-    :return: A string with the rendered result.
-    """
-    check_name = inspect.stack()[1][3]
-    return f'[*] [{check_name}] FAILED: {_exception}'
-
-
 class CheckSuite(object):
     """
     Check Suite class.
