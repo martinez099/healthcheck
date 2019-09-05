@@ -1,10 +1,11 @@
 import datetime
 import concurrent.futures
 
-from healthcheck.check_suites.base_suite import CheckSuite, format_result, to_gb, GB
+from healthcheck.common import format_result, to_gb, GB
+from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
-class RecommendedChecks(CheckSuite):
+class RecommendedChecks(BaseCheckSuite):
     """Recommended Requirements"""
 
     def check_master_node(self, *_args, **_kwargs):
@@ -111,7 +112,7 @@ class RecommendedChecks(CheckSuite):
     def check_log_file_path(self, *_args, **_kwargs):
         """check if log file path is on root filesystem"""
         number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as e:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
             futures = [e.submit(self.ssh.get_log_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
             done, undone = concurrent.futures.wait(futures)
             assert not undone
@@ -124,7 +125,7 @@ class RecommendedChecks(CheckSuite):
     def check_tmp_file_path(self, *_args, **_kwargs):
         """check if tmp file path is on root filesystem"""
         number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as e:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
             futures = [e.submit(self.ssh.get_tmp_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
             done, undone = concurrent.futures.wait(futures)
             assert not undone
@@ -198,62 +199,82 @@ class RecommendedChecks(CheckSuite):
         kwargs = {f'{bdb_names[i]}': replications[i] for i in range(0, len(bdb_names))}
         return format_result(None, **kwargs)
 
-    def _check_cluster_and_node_alerts(self, *_args, **_kwargs):
+    def check_cluster_and_node_alerts(self, *_args, **_kwargs):
+        """get cluster and node alert settings"""
         alerts = self.api.get_cluster_value('alert_settings')
 
-        return alerts
+        return format_result(None, **{'alerts': alerts})
 
-    def _check_bdb_alerts(self, *_args, **_kwargs):
+    def check_bdb_alerts(self, *_args, **_kwargs):
+        """get database alert settings"""
         alerts = self.api.get_bdb_alerts()
 
-        return alerts
+        return format_result(None, **{'alerts': alerts})
 
-    def _check_os_version(self, *_args, **_kwargs):
-        os_version = self.api.get_node_values('os_version')
+    def check_os_version(self, *_args, **_kwargs):
+        """get os version of all nodes"""
+        number_of_nodes = self.api.get_number_of_nodes()
+        os_versions = self.api.get_node_values('os_version')
 
-        return os_version
+        kwargs = {f'node{i + 1}': os_versions[i] for i in range(0, number_of_nodes)}
+        return format_result(None, **kwargs)
 
-    def _check_swappiness(self, *_args, **_kwargs):
-        swappiness = self.ssh.get_swappiness()
+    def check_swappiness(self, *_args, **_kwargs):
+        """get swap setting of all nodes"""
+        number_of_nodes = self.api.get_number_of_nodes()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
+            futures = [e.submit(self.ssh.get_swappiness, node_nr) for node_nr in range(0, number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            swappiness = [d.result() for d in done]
 
-        return swappiness
+        kwargs = {f'node{i + 1}': swappiness[i] for i in range(0, number_of_nodes)}
+        return format_result(None, **kwargs)
 
-    def _check_transparent_hugepages(self, *_args, **_kwargs):
-        transparent_hugepages = self.ssh.get_transparent_hugepages()
+    def check_transparent_hugepages(self, *_args, **_kwargs):
+        """get THP setting of all nodes"""
+        number_of_nodes = self.api.get_number_of_nodes()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
+            futures = [e.submit(self.ssh.get_transparent_hugepages, node_nr) for node_nr in range(0, number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            transparent_hugepages = [d.result() for d in done]
 
-        return transparent_hugepages
+        kwargs = {f'node{i + 1}': transparent_hugepages[i] for i in range(0, number_of_nodes)}
+        return format_result(None, **kwargs)
 
-    def _check_rladmin_status(self, *_args, **_kwargs):
+    def check_rladmin_status(self, *_args, **_kwargs):
+        """get output of rladmin status extra all"""
         status = self.ssh.run_rladmin_status()
 
-        return status
+        return format_result(None, **{'rladmin status extra all': status})
 
-    def _check_rlcheck_result(self, *_args, **_kwargs):
+    def check_rlcheck_result(self, *_args, **_kwargs):
+        """get output of rlcheck status"""
         check = self.ssh.run_rlcheck()
 
-        return check
+        return format_result(None, **{'rlcheck': check})
 
-    def _check_cnm_ctl_status(self, *_args, **_kwargs):
+    def check_cnm_ctl_status(self, *_args, **_kwargs):
+        """get output of cnm_ctl status"""
         status = self.ssh.run_cnm_ctl_status()
 
-        return status
+        return format_result(None, **{'cnm_ctl status': status})
 
-    def _check_supervisorctl_status(self, *_args, **_kwargs):
+    def check_supervisorctl_status(self, *_args, **_kwargs):
+        """get output of supervisorctl status"""
         status = self.ssh.run_supervisorctl_status()
 
-        return status
+        return format_result(None, **{'supervisorctl status': status})
 
-    def _check_errors_in_syslog(self, *_args, **_kwargs):
+    def check_errors_in_syslog(self, *_args, **_kwargs):
+        """get errors in syslog"""
         errors = self.ssh.find_errors_in_syslog()
 
-        return errors
+        return format_result(None, **{'syslog errors': errors})
 
-    def _check_errors_in_install_log(self, *_args, **_kwargs):
+    def check_errors_in_install_log(self, *_args, **_kwargs):
+        """get errors in install.log"""
         errors = self.ssh.find_errors_in_install_log()
 
-        return errors
-
-    def _check_errors_in_logs(self, *_args, **_kwargs):
-        errors = self.ssh.find_errors_in_logs()
-
-        return errors
+        return format_result(None, **{'install.log errors': errors})

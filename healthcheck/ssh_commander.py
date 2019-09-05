@@ -44,7 +44,7 @@ class SshCommander(object):
         return match.group(1)
 
     def get_swappiness(self, _node_nr=0):
-        cmd = 'grep swap /etc/sysctl.conf || echo inactive'
+        cmd = 'grep swap /etc/sysctl.conf || echo -n inactive'
         return self._exec_on_node(cmd, _node_nr)
 
     def get_transparent_hugepages(self, _node_nr=0):
@@ -73,10 +73,6 @@ class SshCommander(object):
 
     def find_errors_in_install_log(self, _node_nr=0):
         cmd = 'zgrep error /var/opt/redislabs/log/install.log || echo no error'
-        return self._exec_on_node(cmd, _node_nr)
-
-    def find_errors_in_logs(self, _node_nr=0):
-        cmd = 'grep error /var/opt/redislabs/log/*.log || echo no error'
         return self._exec_on_node(cmd, _node_nr)
 
     def _exec_on_all_nodes(self, _cmd):

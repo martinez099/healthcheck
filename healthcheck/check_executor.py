@@ -1,15 +1,7 @@
 import concurrent.futures
 import functools
 
-
-def format_error(_check_name, _exception):
-    """
-    Format an error.
-
-    :param _exception: The exception occurred.
-    :return: A string with the rendered result.
-    """
-    return f'[*] [{_check_name}] FAILED: {_exception}'
+from healthcheck.common import format_error
 
 
 class CheckExecutor(object):

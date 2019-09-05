@@ -6,11 +6,11 @@ import importlib
 import logging
 import pprint
 
-from healthcheck.check_suites.base_suite import CheckSuite
+from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 
 
-def load_suites(_args, _base_class=CheckSuite):
+def load_suites(_args, _base_class=BaseCheckSuite):
     """
     Load check suites.
 
