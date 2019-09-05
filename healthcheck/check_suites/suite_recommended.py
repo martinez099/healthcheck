@@ -1,27 +1,19 @@
 import datetime
 
-from healthcheck.check_suites.base_suite import CheckSuite, format_result, to_gb, GB
+from healthcheck.check_suites.base_suite import CheckSuite, format_result, format_error, to_gb, GB
 
 
 class RecommendedChecks(CheckSuite):
-    """
-    Recommended HW requirements.
-
-    see https://docs.redislabs.com/latest/rs/administering/designing-production/hardware-requirements
-    """
-
-    def __init__(self, _args):
-        """
-        :param _args: The parsed command line arguments.
-        """
-        super(RecommendedChecks, self).__init__(_args)
+    """Recommended Requirements"""
 
     def check_master_node(self, *_args, **_kwargs):
+        """get hostname of master node"""
         master_node = self.ssh.get_master_node()
 
         return format_result(True, **{'master node': master_node})
 
     def check_software_version(self, *_args, **_kwargs):
+        """get software version of all nodes"""
         number_of_nodes = self.api.get_number_of_nodes()
         software_versions = self.api.get_node_values('software_version')
 
@@ -29,9 +21,10 @@ class RecommendedChecks(CheckSuite):
         for i in range(0, number_of_nodes):
             kwargs[f'software version (node{i + 1})'] = software_versions[i]
 
-        return format_result(True, **kwargs)
+        return format_result(None, **kwargs)
 
     def check_license_shards_limit(self, *_args, **_kwargs):
+        """check if shards limit in license is respected"""
         shards_limit = self.api.get_license_shards_limit()
         number_of_shards = self.api.get_number_of_shards()
 
@@ -40,6 +33,7 @@ class RecommendedChecks(CheckSuite):
                                         'number of shards': number_of_shards})
 
     def check_license_expire_date(self, *_args, **_kwargs):
+        """check if expire date is in future"""
         expire_date = self.api.get_license_expire_date()
         today = datetime.datetime.now()
 
@@ -48,12 +42,14 @@ class RecommendedChecks(CheckSuite):
                                         'today': today})
 
     def check_license_expired(self, *_args, **_kwargs):
+        """check if license is expired"""
         expired = self.api.get_license_expired()
 
         result = not expired
         return format_result(result, **{'license expired': expired})
 
     def check_number_of_shards(self, *_args, **_kwargs):
+        """check if enough number of shards"""
         number_of_shards = self.api.get_number_of_shards()
         min_shards = 2
 
@@ -62,6 +58,7 @@ class RecommendedChecks(CheckSuite):
                                         'min shards': min_shards})
 
     def check_number_of_nodes(self, *_args, **_kwargs):
+        """check if enough number of nodes"""
         number_of_nodes = self.api.get_number_of_nodes()
         min_nodes = 3
 
@@ -70,6 +67,7 @@ class RecommendedChecks(CheckSuite):
                                         'min nodes': min_nodes})
 
     def check_number_of_cores(self, *_args, **_kwargs):
+        """check if enough numbers of cores"""
         number_of_cores = self.api.get_sum_of_node_values('cores')
         min_cores = 24
 
@@ -78,6 +76,7 @@ class RecommendedChecks(CheckSuite):
                                         'min cores': min_cores})
 
     def check_total_memory(self, *_args, **_kwargs):
+        """check if enough RAM"""
         total_memory = self.api.get_sum_of_node_values('total_memory')
         min_memory = 90 * GB
 
@@ -86,6 +85,7 @@ class RecommendedChecks(CheckSuite):
                                         'min memory': to_gb(min_memory)})
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
+        """check if enough ephemeral storage"""
         epehemeral_storage_size = self.api.get_sum_of_node_values('ephemeral_storage_size')
         min_ephemeral_size = 360 * GB
 
@@ -94,6 +94,7 @@ class RecommendedChecks(CheckSuite):
                                         'min ephemeral size': to_gb(min_ephemeral_size)})
 
     def check_persistent_storage(self, *_args, **_kwargs):
+        """check if enough persistent storage"""
         persistent_storage_size = self.api.get_sum_of_node_values('persistent_storage_size')
         min_persistent_size = 540 * GB
 
@@ -101,9 +102,11 @@ class RecommendedChecks(CheckSuite):
         return format_result(result, **{'persistent storage size': to_gb(persistent_storage_size),
                                         'min persistent size': to_gb(min_persistent_size)})
 
-    def _check_quorum(self, *_args, **_kwargs):
+    def check_quorum(self, *_args, **_kwargs):
+        """check if quorum node is existent and configured"""
         number_of_nodes = self.api.get_number_of_nodes()
-        quorums = [self.ssh.get_quorum(node_nr) for node_nr in range(0, number_of_nodes + 1)]
+        quorums = [self.ssh.get_quorum(node_nr) for node_nr in range(0, number_of_nodes)]
+
         return quorums
 
     def _check_log_file_paths(self, *_args, **_kwargs):

@@ -1,5 +1,7 @@
 import concurrent.futures
-import logging
+import functools
+
+from healthcheck.check_suites.base_suite import format_error
 
 
 class CheckExecutor(object):
@@ -25,7 +27,13 @@ class CheckExecutor(object):
         :param _kwargs: Named arguments, optional.
         :param _done_cb: A callback executed when the execution is done, optional.
         """
-        future = self.executor.submit(_func, _args, _kwargs)
+        def wrapper(_check, *_args, **_kwargs):
+            try:
+                return _check(_args, _kwargs)
+            except Exception as e:
+                return format_error(e)
+
+        future = self.executor.submit(functools.partial(wrapper, _func), _args, _kwargs)
         if _done_cb:
             future.add_done_callback(_done_cb)
         self.futures.append(future)
@@ -44,12 +52,8 @@ class CheckExecutor(object):
         """
         Wait for completition of all futures.
         """
-        for r in concurrent.futures.as_completed(self.futures):
-            try:
-                result = r.result()
-                self.result_cb(result)
-            except Exception as e:
-                logging.error(e)
+        for future in concurrent.futures.as_completed(self.futures):
+            self.result_cb(future.result())
 
     def shutdown(self):
         """

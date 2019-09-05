@@ -1,5 +1,5 @@
-
 import math
+import inspect
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.ssh_rex import SshRemoteExecutor
@@ -25,8 +25,26 @@ def format_result(_result, **_kwargs):
     :param _kwargs: A dict with argument name->value pairs to render.
     :return: A string with the rendered result.
     """
-    result = '[+] ' if _result else '[-] '
-    return result + ', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
+    check_name = inspect.stack()[1][3]
+    if _result:
+        result = '[+] '
+    elif _result is False:
+        result = '[-] '
+    else:
+        result = '[~] '
+    result += f'[{check_name}] '
+    return result + f', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
+
+
+def format_error(_exception):
+    """
+    Format an error.
+
+    :param _exception: The exception occurred.
+    :return: A string with the rendered result.
+    """
+    check_name = inspect.stack()[1][3]
+    return f'[*] [{check_name}] FAILED: {_exception}'
 
 
 class CheckSuite(object):

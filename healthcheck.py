@@ -59,7 +59,7 @@ def main(_args):
     # execute check suites
     executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
     for suite in suites:
-        pprint.pprint(suite.__doc__)
+        pprint.pprint('[SUITE] ' + suite.__doc__)
         executor.execute_suite(suite)
 
     # close

@@ -100,4 +100,4 @@ class ApiFetcher(object):
         if rsp.code == 200:
             return json.loads(rsp.read())
         else:
-            raise Exception(str(rsp))
+            raise Exception(f'error during http request (return code {rsp.code}): ' + rsp.read())

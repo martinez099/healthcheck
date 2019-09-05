@@ -32,7 +32,7 @@ class SshRemoteExecutor(object):
         return self._exec_on_node('df -h /tmp', _node_nr)
 
     def get_quorum(self, _node_nr=0):
-        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr} | grep quorum'
+        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr} | grep quorum || echo not found'
         return self._exec_on_node(cmd, _node_nr)
 
     def get_swappiness(self, _node_nr=0):
@@ -131,4 +131,4 @@ class SshRemoteExecutor(object):
             return rsp
         else:
             rsp = proc.stderr.read().decode('utf-8')
-            raise Exception(rsp)
+            raise Exception(f'error during ssh remote execution (return code {proc.returncode}): {rsp}')
