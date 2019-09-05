@@ -14,7 +14,7 @@ SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 class ApiFetcher(object):
     """
-    API Fetcher class.
+    API-Fetcher class.
     """
 
     def __init__(self, _fqdn, _username, _password):

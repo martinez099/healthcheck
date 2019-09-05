@@ -4,9 +4,9 @@ import re
 from subprocess import Popen, PIPE
 
 
-class SshRemoteExecutor(object):
+class SshCommander(object):
     """
-    SSH Remote Executor class.
+    SSH-Commander class.
     """
 
     def __init__(self, _usernae, _hostnames, _keyfile):

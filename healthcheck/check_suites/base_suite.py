@@ -2,7 +2,7 @@ import math
 import inspect
 
 from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.ssh_rex import SshRemoteExecutor
+from healthcheck.ssh_commander import SshCommander
 
 GB = pow(1024, 3)
 
@@ -46,4 +46,4 @@ class CheckSuite(object):
         :param _args: The parsed command line arguments.
         """
         self.api = ApiFetcher(_args.cluster_fqdn, _args.cluster_username, _args.cluster_password)
-        self.ssh = SshRemoteExecutor(_args.ssh_username, _args.ssh_hostnames.split(','), _args.ssh_keyfile)
+        self.ssh = SshCommander(_args.ssh_username, _args.ssh_hostnames.split(','), _args.ssh_keyfile)

@@ -1,4 +1,5 @@
 import datetime
+import concurrent.futures
 
 from healthcheck.check_suites.base_suite import CheckSuite, format_result, to_gb, GB
 
@@ -110,7 +111,11 @@ class RecommendedChecks(CheckSuite):
     def check_log_file_path(self, *_args, **_kwargs):
         """check if log file path is on root filesystem"""
         number_of_nodes = self.api.get_number_of_nodes()
-        log_file_paths = [self.ssh.get_log_file_path(node_nr) for node_nr in range(0, number_of_nodes)]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as e:
+            futures = [e.submit(self.ssh.get_log_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            log_file_paths = [d.result() for d in done]
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
         kwargs = {f'node{i + 1}': log_file_paths[i] for i in range(0, number_of_nodes)}
@@ -119,7 +124,11 @@ class RecommendedChecks(CheckSuite):
     def check_tmp_file_path(self, *_args, **_kwargs):
         """check if tmp file path is on root filesystem"""
         number_of_nodes = self.api.get_number_of_nodes()
-        tmp_file_paths = [self.ssh.get_tmp_file_path(node_nr) for node_nr in range(0, number_of_nodes)]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as e:
+            futures = [e.submit(self.ssh.get_tmp_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            tmp_file_paths = [d.result() for d in done]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
         kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
