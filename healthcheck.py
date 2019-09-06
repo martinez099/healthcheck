@@ -16,7 +16,7 @@ def load_suites(_args, _base_class=BaseCheckSuite):
 
     :param _args: The pasred command line arguments.
     :param _base_class: The base class of the check suites.
-    :return: A list with instantiated check suites.
+    :return: A list with all instantiated check suites.
     """
     suites = []
     for file in glob.glob('healthcheck/check_suites/suite_*.py'):

@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import re
 
@@ -31,11 +32,17 @@ class SshCommander(object):
         match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
         return match.group(1)
 
+    def get_log_file_paths(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_log_file_path, _number_of_nodes)
+
     def get_tmp_file_path(self, _node_nr=0):
         cmd = 'df -h /tmp'
         rsp = self._exec_on_node(cmd, _node_nr)
         match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
         return match.group(1)
+
+    def get_tmp_file_paths(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_tmp_file_path, _number_of_nodes)
 
     def get_quorum_only(self, _node_nr=0):
         cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr + 1} | grep quorum || echo not found'
@@ -43,13 +50,22 @@ class SshCommander(object):
         match = re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL)
         return match.group(1)
 
+    def get_quorum_onlys(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_quorum_only, _number_of_nodes)
+
     def get_swappiness(self, _node_nr=0):
         cmd = 'grep swap /etc/sysctl.conf || echo -n inactive'
         return self._exec_on_node(cmd, _node_nr)
 
-    def get_transparent_hugepages(self, _node_nr=0):
+    def get_swappinesses(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_swappiness, _number_of_nodes)
+
+    def get_transparent_hugepage(self, _node_nr=0):
         cmd = 'cat /sys/kernel/mm/transparent_hugepage/enabled'
         return self._exec_on_node(cmd, _node_nr)
+
+    def get_transaprent_hugepages(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_transparent_hugepage, _number_of_nodes)
 
     def run_rladmin_status(self, _node_nr=0):
         cmd = 'sudo /opt/redislabs/bin/rladmin status extra all'
@@ -75,39 +91,62 @@ class SshCommander(object):
         cmd = 'zgrep error /var/opt/redislabs/log/install.log || echo no error'
         return self._exec_on_node(cmd, _node_nr)
 
-    def _exec_on_all_nodes(self, _cmd):
-        """
-        Execut3e a shh remote command on all configured nodes.
-        :param _cmd:
-        :return:
-        """
-        return [self._exec_on_ip(_cmd, hostname) for hostname in self.hostnames]
-
     def _exec_on_ip(self, _cmd, _ip):
         """
-        Execute a ssh remote command.
+        Execute a SSH command on an IP address.
 
         :param _cmd: The command to execute.
         :param _ip: The IP address of the remote machine.
-        :return: The reponse.
+        :return: The result.
         :raise Exception: If an error occurred.
         """
-        return self._exec_ssh(self.username, _ip, self.keyfile, _cmd)
+        return SshCommander.exec_ssh(self.username, _ip, self.keyfile, _cmd)
+
+    def _exec_on_all_ips(self, _cmd):
+        """
+        Execute a SSH command on all IP addresses.
+
+        :param _cmd: The command to execute.
+        :return: The results.
+        :raise Exception: If an error occurred.
+        """
+        number_of_nodes = len(self.hostnames)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
+            futures = [e.submit(self._exec_on_ip, _cmd, ip) for ip in self.hostnames]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            return [d.result() for d in done]
 
     def _exec_on_node(self, _cmd, _node_nr):
         """
-        Execute a ssh remote command an a configured node.
+        Execute a SSH remote command an a node.
 
         :param _cmd: The command to execute.
         :param _node_nr: The index in the array of the configured IP addresses.
         :return: The response.
         :raise Excpetion: If an error occurred.
         """
-        return self._exec_ssh(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
+        return SshCommander.exec_ssh(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
 
-    def _exec_ssh(self, _user, _host, _keyfile, _cmd):
+    def _exec_on_all_nodes(self, _cmd, _number_of_nodes):
         """
-        Execute a remote command.
+        Execute a SSH command on all nodes.
+
+        :param _cmd: The command to execute.
+        :param _number_of_nodes: The amount of nodes.
+        :return: The results.
+        :raise Excpetion: If an error occurred.
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
+            futures = [e.submit(self._exec_on_node, _cmd, node_nr) for node_nr in range(0, _number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            return [d.result() for d in done]
+
+    @staticmethod
+    def exec_ssh(_user, _host, _keyfile, _cmd):
+        """
+        Execute a SSH command.
 
         :param _user: The remote username.
         :param _host: The remote machine.
@@ -116,12 +155,13 @@ class SshCommander(object):
         :return: The response.
         :raise Exception: If an error occurred.
         """
-        return self._exec_cmd(' '.join(['ssh', '-i {}'.format(_keyfile), '{}@{}'.format(_user, _host), '-C', _cmd]))
+        cmd = ' '.join(['ssh', '-i {}'.format(_keyfile), '{}@{}'.format(_user, _host), '-C', _cmd])
+        return SshCommander.exec_cmd(cmd)
 
     @staticmethod
-    def _exec_cmd(_args):
+    def exec_cmd(_args):
         """
-        Execute a shell command.
+        Execute a SSH command string.
 
         :param _args: The command string.
         :return: The response.
@@ -136,3 +176,19 @@ class SshCommander(object):
         else:
             rsp = proc.stderr.read().decode('utf-8')
             raise Exception(f'error during ssh remote execution (return code {proc.returncode}): {rsp}')
+
+    @staticmethod
+    def exec_func_on_all_nodes(_func, _number_of_nodes):
+        """
+        Execute a function on all noces.
+
+        :param _func: The function to execeute.
+        :param _number_of_nodes: The number of nodes.
+        :return: The results.
+        :raise Exception: If an error occurred.
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
+            futures = [e.submit(_func, node_nr) for node_nr in range(0, _number_of_nodes)]
+            done, undone = concurrent.futures.wait(futures)
+            assert not undone
+            return [d.result() for d in done]

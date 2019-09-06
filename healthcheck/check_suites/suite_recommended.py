@@ -1,51 +1,9 @@
-import datetime
-import concurrent.futures
-
-from healthcheck.common import format_result, to_gb, GB
 from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.common import format_result, to_gb, GB
 
 
 class RecommendedChecks(BaseCheckSuite):
     """Recommended Requirements"""
-
-    def check_master_node(self, *_args, **_kwargs):
-        """get hostname of master node"""
-        master_node = self.ssh.get_master_node()
-
-        return format_result(True, **{'master node': master_node})
-
-    def check_software_version(self, *_args, **_kwargs):
-        """get software version of all nodes"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        software_versions = self.api.get_node_values('software_version')
-
-        kwargs = {f'node{i + 1}': software_versions[i] for i in range(0, number_of_nodes)}
-        return format_result(None, **kwargs)
-
-    def check_license_shards_limit(self, *_args, **_kwargs):
-        """check if shards limit in license is respected"""
-        shards_limit = self.api.get_license_shards_limit()
-        number_of_shards = self.api.get_number_of_shards()
-
-        result = shards_limit >= number_of_shards
-        return format_result(result, **{'shards limit': shards_limit,
-                                        'number of shards': number_of_shards})
-
-    def check_license_expire_date(self, *_args, **_kwargs):
-        """check if expire date is in future"""
-        expire_date = self.api.get_license_expire_date()
-        today = datetime.datetime.now()
-
-        result = expire_date > today
-        return format_result(result, **{'license expire date': expire_date,
-                                        'today': today})
-
-    def check_license_expired(self, *_args, **_kwargs):
-        """check if license is expired"""
-        expired = self.api.get_license_expired()
-
-        result = not expired
-        return format_result(result, **{'license expired': expired})
 
     def check_number_of_shards(self, *_args, **_kwargs):
         """check if enough shards"""
@@ -100,40 +58,6 @@ class RecommendedChecks(BaseCheckSuite):
         result = persistent_storage_size >= min_persistent_size
         return format_result(result, **{'persistent storage size': to_gb(persistent_storage_size),
                                         'min persistent size': to_gb(min_persistent_size)})
-
-    def check_quorum_only(self, *_args, **_kwargs):
-        """get quorumg only nodes"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        quorums = [self.ssh.get_quorum_only(node_nr) for node_nr in range(0, number_of_nodes)]
-
-        kwargs = {f'node{i + 1}': quorums[i] for i in range(0, number_of_nodes)}
-        return format_result(None, **kwargs)
-
-    def check_log_file_path(self, *_args, **_kwargs):
-        """check if log file path is on root filesystem"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
-            futures = [e.submit(self.ssh.get_log_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
-            assert not undone
-            log_file_paths = [d.result() for d in done]
-
-        result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node{i + 1}': log_file_paths[i] for i in range(0, number_of_nodes)}
-        return format_result(result, **kwargs)
-
-    def check_tmp_file_path(self, *_args, **_kwargs):
-        """check if tmp file path is on root filesystem"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
-            futures = [e.submit(self.ssh.get_tmp_file_path, node_nr) for node_nr in range(0, number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
-            assert not undone
-            tmp_file_paths = [d.result() for d in done]
-
-        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
-        kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
-        return format_result(result, **kwargs)
 
     def check_memory_size(self, *_args, **_kwargs):
         """get memory size of all databases"""
@@ -199,82 +123,14 @@ class RecommendedChecks(BaseCheckSuite):
         kwargs = {f'{bdb_names[i]}': replications[i] for i in range(0, len(bdb_names))}
         return format_result(None, **kwargs)
 
-    def check_cluster_and_node_alerts(self, *_args, **_kwargs):
+    def check_cluster_and_node_alert_settings(self, *_args, **_kwargs):
         """get cluster and node alert settings"""
         alerts = self.api.get_cluster_value('alert_settings')
 
         return format_result(None, **{'alerts': alerts})
 
-    def check_bdb_alerts(self, *_args, **_kwargs):
+    def check_bdb_alert_settings(self, *_args, **_kwargs):
         """get database alert settings"""
         alerts = self.api.get_bdb_alerts()
 
         return format_result(None, **{'alerts': alerts})
-
-    def check_os_version(self, *_args, **_kwargs):
-        """get os version of all nodes"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        os_versions = self.api.get_node_values('os_version')
-
-        kwargs = {f'node{i + 1}': os_versions[i] for i in range(0, number_of_nodes)}
-        return format_result(None, **kwargs)
-
-    def check_swappiness(self, *_args, **_kwargs):
-        """get swap setting of all nodes"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
-            futures = [e.submit(self.ssh.get_swappiness, node_nr) for node_nr in range(0, number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
-            assert not undone
-            swappiness = [d.result() for d in done]
-
-        kwargs = {f'node{i + 1}': swappiness[i] for i in range(0, number_of_nodes)}
-        return format_result(None, **kwargs)
-
-    def check_transparent_hugepages(self, *_args, **_kwargs):
-        """get THP setting of all nodes"""
-        number_of_nodes = self.api.get_number_of_nodes()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
-            futures = [e.submit(self.ssh.get_transparent_hugepages, node_nr) for node_nr in range(0, number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
-            assert not undone
-            transparent_hugepages = [d.result() for d in done]
-
-        kwargs = {f'node{i + 1}': transparent_hugepages[i] for i in range(0, number_of_nodes)}
-        return format_result(None, **kwargs)
-
-    def check_rladmin_status(self, *_args, **_kwargs):
-        """get output of rladmin status extra all"""
-        status = self.ssh.run_rladmin_status()
-
-        return format_result(None, **{'rladmin status extra all': status})
-
-    def check_rlcheck_result(self, *_args, **_kwargs):
-        """get output of rlcheck status"""
-        check = self.ssh.run_rlcheck()
-
-        return format_result(None, **{'rlcheck': check})
-
-    def check_cnm_ctl_status(self, *_args, **_kwargs):
-        """get output of cnm_ctl status"""
-        status = self.ssh.run_cnm_ctl_status()
-
-        return format_result(None, **{'cnm_ctl status': status})
-
-    def check_supervisorctl_status(self, *_args, **_kwargs):
-        """get output of supervisorctl status"""
-        status = self.ssh.run_supervisorctl_status()
-
-        return format_result(None, **{'supervisorctl status': status})
-
-    def check_errors_in_syslog(self, *_args, **_kwargs):
-        """get errors in syslog"""
-        errors = self.ssh.find_errors_in_syslog()
-
-        return format_result(None, **{'syslog errors': errors})
-
-    def check_errors_in_install_log(self, *_args, **_kwargs):
-        """get errors in install.log"""
-        errors = self.ssh.find_errors_in_install_log()
-
-        return format_result(None, **{'install.log errors': errors})
