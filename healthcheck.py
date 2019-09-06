@@ -8,6 +8,7 @@ import pprint
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
+from healthcheck.common import format_result
 
 
 def load_suites(_args, _base_class=BaseCheckSuite):
@@ -68,11 +69,15 @@ def main(_args):
             pprint.pprint(f'{suite.__class__.__name__}: {suite.__doc__}')
         return
 
+    # render output
+    def result_cb(result):
+        pprint.pprint(format_result(result[0], result[1], **result[2]), width=160)
+
     # create check executor
-    executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
+    executor = CheckExecutor(result_cb)
 
     # execute single checks
-    if _args.check:
+    if _args.check != 'all':
         for suite in suites:
             checks_names = filter(lambda x: x.startswith('check_') and _args.check.lower() in x.lower(), dir(suite))
             for check_name in checks_names:
@@ -93,5 +98,5 @@ def main(_args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     main(parse_args())

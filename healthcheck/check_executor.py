@@ -1,8 +1,6 @@
 import concurrent.futures
 import functools
 
-from healthcheck.common import format_error
-
 
 class CheckExecutor(object):
     """
@@ -31,7 +29,7 @@ class CheckExecutor(object):
             try:
                 return _check(_args, _kwargs)
             except Exception as e:
-                return format_error(_func.__name__, e)
+                return _check.__name__, Exception, {e.__class__.__name__: str(e)}
 
         future = self.executor.submit(functools.partial(wrapper, _func), _args, _kwargs)
         if _done_cb:

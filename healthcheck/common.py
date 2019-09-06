@@ -14,41 +14,24 @@ def to_gb(_value):
     return '{} GB'.format(math.floor(_value / GB))
 
 
-def format_result(_result, **_kwargs):
+def format_result(_desc, _result, **_kwargs):
     """
     Format a check result.
 
+    :param _desc: The check description.
     :param _result: The result of the check.
     :param _kwargs: A dict with argument name->value pairs to render.
     :return: A string with the rendered result.
     """
-    check_name = inspect.stack()[1][3]
-    if _result:
+    if _result is True:
         result = '[+] '
     elif _result is False:
         result = '[-] '
+    elif _result is Exception:
+        result = '[*] '
+    elif _result == '':
+        return f'[ ] {_desc} skipped'
     else:
         result = '[~] '
-    result += f'[{check_name}] '
+    result += f'[{_desc}] '
     return result + f', '.join([k + ': ' + str(v) for k, v in _kwargs.items()])
-
-
-def format_error(_check_name, _exception):
-    """
-    Format an check error.
-
-    :param _check_name: The name of the check.
-    :param _exception: The exception occurred.
-    :return: A string with the rendered result.
-    """
-    return f'[*] [{_check_name}] FAILED: {_exception}'
-
-
-def format_skipped(_check_name):
-    """
-    Format a skipped check.
-
-    :param _check_name: The name of the check.
-    :return: A string with the rendred result.
-    """
-    return f'[ ] [{_check_name}]'

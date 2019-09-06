@@ -1,7 +1,7 @@
-import concurrent.futures
 import logging
 import re
 
+from concurrent.futures import ThreadPoolExecutor, wait
 from subprocess import Popen, PIPE
 
 
@@ -19,12 +19,6 @@ class SshCommander(object):
         self.username = _usernae
         self.hostnames = _hostnames
         self.keyfile = _keyfile
-
-    def get_master_node(self):
-        cmd = 'sudo /opt/redislabs/bin/rladmin status | grep master'
-        rsp = self._exec_on_node(cmd, 0)
-        match = re.search(r'(node:\d+ master.*)', rsp)
-        return re.split(r'\s+', match.group(1))[4]
 
     def get_log_file_path(self, _node_nr=0):
         cmd = 'df -h /var/opt/redislabs/log'
@@ -44,14 +38,12 @@ class SshCommander(object):
     def get_tmp_file_paths(self, _number_of_nodes):
         return SshCommander.exec_func_on_all_nodes(self.get_tmp_file_path, _number_of_nodes)
 
-    def get_quorum_only(self, _node_nr=0):
-        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr + 1} | grep quorum || echo not found'
-        rsp = self._exec_on_node(cmd, _node_nr)
-        match = re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL)
-        return match.group(1)
+    def get_rladmin_info(self, _node_nr=0):
+        cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr + 1}'
+        return self._exec_on_node(cmd, _node_nr)
 
-    def get_quorum_onlys(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_quorum_only, _number_of_nodes)
+    def get_rladmin_infos(self, _number_of_nodes):
+        return SshCommander.exec_func_on_all_nodes(self.get_rladmin_info, _number_of_nodes)
 
     def get_swappiness(self, _node_nr=0):
         cmd = 'grep swap /etc/sysctl.conf || echo -n inactive'
@@ -68,15 +60,15 @@ class SshCommander(object):
         return SshCommander.exec_func_on_all_nodes(self.get_transparent_hugepage, _number_of_nodes)
 
     def run_rladmin_status(self, _node_nr=0):
-        cmd = 'sudo /opt/redislabs/bin/rladmin status extra all'
+        cmd = 'sudo /opt/redislabs/bin/rladmin status'
         return self._exec_on_node(cmd, _node_nr)
 
     def run_rlcheck(self, _node_nr=0):
-        cmd = 'sudo /opt/redislabs/bin/rlcheck'
+        cmd = '/opt/redislabs/bin/rlcheck'
         return self._exec_on_node(cmd, _node_nr)
 
     def run_cnm_ctl_status(self, _node_nr=0):
-        cmd = 'sudo /opt/redislabs/bin/cnm_ctl status | grep -iv running || echo -n ""'
+        cmd = 'sudo /opt/redislabs/bin/cnm_ctl status'
         return self._exec_on_node(cmd, _node_nr)
 
     def run_supervisorctl_status(self, _node_nr=0):
@@ -88,7 +80,7 @@ class SshCommander(object):
         return self._exec_on_node(cmd, _node_nr)
 
     def find_errors_in_install_log(self, _node_nr=0):
-        cmd = 'zgrep error /var/opt/redislabs/log/install.log || echo ""'
+        cmd = 'grep error /var/opt/redislabs/log/install.log || echo ""'
         return self._exec_on_node(cmd, _node_nr)
 
     def _exec_on_ip(self, _cmd, _ip):
@@ -111,9 +103,9 @@ class SshCommander(object):
         :raise Exception: If an error occurred.
         """
         number_of_nodes = len(self.hostnames)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=number_of_nodes) as e:
+        with ThreadPoolExecutor(max_workers=number_of_nodes) as e:
             futures = [e.submit(self._exec_on_ip, _cmd, ip) for ip in self.hostnames]
-            done, undone = concurrent.futures.wait(futures)
+            done, undone = wait(futures)
             assert not undone
             return [d.result() for d in done]
 
@@ -137,9 +129,9 @@ class SshCommander(object):
         :return: The results.
         :raise Excpetion: If an error occurred.
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
+        with ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
             futures = [e.submit(self._exec_on_node, _cmd, node_nr) for node_nr in range(0, _number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
+            done, undone = wait(futures)
             assert not undone
             return [d.result() for d in done]
 
@@ -187,8 +179,8 @@ class SshCommander(object):
         :return: The results.
         :raise Exception: If an error occurred.
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
+        with ThreadPoolExecutor(max_workers=_number_of_nodes) as e:
             futures = [e.submit(_func, node_nr) for node_nr in range(0, _number_of_nodes)]
-            done, undone = concurrent.futures.wait(futures)
+            done, undone = wait(futures)
             assert not undone
             return [d.result() for d in done]
