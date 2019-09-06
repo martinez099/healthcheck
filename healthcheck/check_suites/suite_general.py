@@ -5,7 +5,7 @@ from healthcheck.common import format_result
 
 
 class GeneralChecks(BaseCheckSuite):
-    """General Settings"""
+    """Check General Settings"""
 
     def check_master_node(self, *_args, **_kwargs):
         """get hostname of master node"""

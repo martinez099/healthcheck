@@ -3,7 +3,7 @@ from healthcheck.common import format_result, to_gb, GB
 
 
 class RecommendedChecks(BaseCheckSuite):
-    """Recommended Requirements"""
+    """Check Recommended Requirements"""
 
     def check_number_of_shards(self, *_args, **_kwargs):
         """check if enough shards"""

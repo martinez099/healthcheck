@@ -4,7 +4,7 @@ from healthcheck.common import format_result
 
 
 class HealthChecks(BaseCheckSuite):
-    """Cluster Health"""
+    """Check Cluster Health"""
 
     def check_cluster_and_node_alerts(self, *_args, **_kwargs):
         alerts = self.api.get_cluster_value('alert_settings')
@@ -12,9 +12,10 @@ class HealthChecks(BaseCheckSuite):
         return format_result(None, **{'alerts': alerts})
 
     def check_bdb_alerts(self, *_args, **_kwargs):
-        alerts = self.api.get_bdb_alerts()
+        all_bdb_alerts = self.api.get_bdb_alerts()
+        triggered = [[filter(lambda x: x['state'], alert) for alert in alerts] for alerts in all_bdb_alerts]
 
-        return format_result(None, **{'alerts': alerts})
+        return format_result(None, **{'triggered_alerts': triggered})
 
     def check_rladmin_status(self, *_args, **_kwargs):
         """get output of rladmin status extra all"""
