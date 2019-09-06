@@ -35,10 +35,20 @@ def format_result(_result, **_kwargs):
 
 def format_error(_check_name, _exception):
     """
-    Format an error.
+    Format an check error.
 
     :param _check_name: The name of the check.
     :param _exception: The exception occurred.
     :return: A string with the rendered result.
     """
     return f'[*] [{_check_name}] FAILED: {_exception}'
+
+
+def format_skipped(_check_name):
+    """
+    Format a skipped check.
+
+    :param _check_name: The name of the check.
+    :return: A string with the rendred result.
+    """
+    return f'[ ] [{_check_name}]'

@@ -33,7 +33,8 @@ class HealthChecks(BaseCheckSuite):
         """get output of cnm_ctl status"""
         status = self.ssh.run_cnm_ctl_status()
 
-        return format_result(None, **{'cnm_ctl status': status})
+        result = not status
+        return format_result(result, **{'cnm_ctl status': status})
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
         """get output of supervisorctl status"""

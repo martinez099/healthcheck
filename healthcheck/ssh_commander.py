@@ -76,7 +76,7 @@ class SshCommander(object):
         return self._exec_on_node(cmd, _node_nr)
 
     def run_cnm_ctl_status(self, _node_nr=0):
-        cmd = 'sudo /opt/redislabs/bin/cnm_ctl status'
+        cmd = 'sudo /opt/redislabs/bin/cnm_ctl status | grep -iv running || echo -n ""'
         return self._exec_on_node(cmd, _node_nr)
 
     def run_supervisorctl_status(self, _node_nr=0):
@@ -84,11 +84,11 @@ class SshCommander(object):
         return self._exec_on_node(cmd, _node_nr)
 
     def find_errors_in_syslog(self, _node_nr=0):
-        cmd = 'sudo grep error /var/log/syslog || echo no error'
+        cmd = 'sudo grep error /var/log/syslog || echo ""'
         return self._exec_on_node(cmd, _node_nr)
 
     def find_errors_in_install_log(self, _node_nr=0):
-        cmd = 'zgrep error /var/opt/redislabs/log/install.log || echo no error'
+        cmd = 'zgrep error /var/opt/redislabs/log/install.log || echo ""'
         return self._exec_on_node(cmd, _node_nr)
 
     def _exec_on_ip(self, _cmd, _ip):

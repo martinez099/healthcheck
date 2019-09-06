@@ -44,9 +44,9 @@ class CheckExecutor(object):
 
         :param check_suite: The check suite.
         """
-        for check in filter(lambda x: x.startswith('check_'), dir(check_suite)):
-            method = getattr(check_suite, check)
-            self.execute(method)
+        for check_name in filter(lambda x: x.startswith('check_'), dir(check_suite)):
+            check_func = getattr(check_suite, check_name)
+            self.execute(check_func)
 
     def wait(self):
         """

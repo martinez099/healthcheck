@@ -41,7 +41,8 @@ def parse_args():
 
     options = parser.add_mutually_exclusive_group()
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
-    options.add_argument('-s', '--suite', help="Specify a check suite to execute.", type=str, default='all')
+    options.add_argument('-s', '--suite', help="Specify a single suite to execute.", type=str, default='all')
+    options.add_argument('-c', '--check', help="Specify a single check to execute.", type=str, default='all')
 
     cluster = parser.add_argument_group('cluster', 'credentials accessing the REST-API')
     cluster.add_argument('cluster_fqdn', help="The FQDN of the Redis Enterprise cluser.", type=str)
@@ -61,13 +62,27 @@ def main(_args):
     # load check suites
     suites = load_suites(_args)
 
+    # list suites
     if _args.list:
         for suite in suites:
             pprint.pprint(f'{suite.__class__.__name__}: {suite.__doc__}')
         return
 
-    # execute check suites
+    # create check executor
     executor = CheckExecutor(lambda x: pprint.pprint(x, width=160))
+
+    # execute single checks
+    if _args.check:
+        for suite in suites:
+            checks_names = filter(lambda x: x.startswith('check_') and _args.check.lower() in x.lower(), dir(suite))
+            for check_name in checks_names:
+                check_func = getattr(suite, check_name)
+                executor.execute(check_func)
+        executor.wait()
+        executor.shutdown()
+        return
+
+    # execute all check suites
     for suite in suites:
         pprint.pprint('[SUITE] ' + suite.__doc__)
         executor.execute_suite(suite)
@@ -78,5 +93,5 @@ def main(_args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     main(parse_args())
