@@ -7,9 +7,9 @@ class BaseCheckSuite(object):
     Base Check Suite class.
     """
 
-    def __init__(self, _args):
+    def __init__(self, _config):
         """
-        :param _args: The parsed command line arguments.
+        :param _config: The configuration.
         """
-        self.api = ApiFetcher(_args.cluster_fqdn, _args.cluster_username, _args.cluster_password)
-        self.ssh = SshCommander(_args.ssh_username, _args.ssh_hostnames.split(','), _args.ssh_keyfile)
+        self.api = ApiFetcher(_config['cluster']['fqdn'], _config['cluster']['user'], _config['cluster']['pass'])
+        self.ssh = SshCommander(_config['ssh']['user'], _config['ssh']['hosts'].split(','), _config['ssh']['key'])

@@ -10,13 +10,13 @@ class SshCommander(object):
     SSH-Commander class.
     """
 
-    def __init__(self, _usernae, _hostnames, _keyfile):
+    def __init__(self, _username, _hostnames, _keyfile):
         """
-        :param _usernae: The ssh username to log in.
+        :param _username: The ssh username to log in.
         :param _hostnames: A list with hostnames to log in.
         :param _keyfile: The path to the ssh identity file.
         """
-        self.username = _usernae
+        self.username = _username
         self.hostnames = _hostnames
         self.keyfile = _keyfile
 

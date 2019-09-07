@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import configparser
 import glob
 import importlib
 import logging
@@ -12,11 +13,12 @@ from healthcheck.common import format_result
 from healthcheck.stats_collector import StatsCollector
 
 
-def load_suites(_args, _base_class=BaseCheckSuite):
+def load_suites(_args, _config, _base_class=BaseCheckSuite):
     """
     Load check suites.
 
     :param _args: The pasred command line arguments.
+    :param _config: The configuration.
     :param _base_class: The base class of the check suites.
     :return: A list with all instantiated check suites.
     """
@@ -28,7 +30,7 @@ def load_suites(_args, _base_class=BaseCheckSuite):
             suite = getattr(module, member)
             if member != _base_class.__name__ and issubclass(suite.__class__, _base_class.__class__):
                 if _args.suite == 'all' or _args.suite.lower() in member.lower():
-                    suites.append(suite(_args))
+                    suites.append(suite(_config))
     assert suites
     return suites
 
@@ -46,26 +48,37 @@ def parse_args():
     options.add_argument('-s', '--suite', help="Specify a single suite to execute.", type=str, default='all')
     options.add_argument('-c', '--check', help="Specify a single check to execute.", type=str, default='all')
 
-    cluster = parser.add_argument_group('cluster', 'credentials accessing the REST-API')
-    cluster.add_argument('cluster_fqdn', help="The FQDN of the Redis Enterprise cluser.", type=str)
-    cluster.add_argument('cluster_username', help="The basic auth username of the cluser.", type=str)
-    cluster.add_argument('cluster_password', help="The basic auth password of the cluser.", type=str)
-
-    ssh = parser.add_argument_group('ssh', 'credentials accessing the nodes via SSH')
-    ssh.add_argument('ssh_username', help="The SSH username to log into nodes of the cluster.", type=str)
-    ssh.add_argument('ssh_hostnames', help="A list with hostnames of the nodes.", type=str)
-    ssh.add_argument('ssh_keyfile', help="The path to the SSH identity file.", type=str)
-
     return parser.parse_args()
 
 
-def main(_args):
+def parse_config():
+    """
+    Parse configuration file.
+
+    :return: The parsed configuration.
+    """
+    config = configparser.ConfigParser()
+    with open('config.ini', 'r') as configfile:
+        config.read_file(configfile)
+    return config
+
+
+def main():
+
+    # configure logging
+    logging.basicConfig(level=logging.INFO)
+
+    # parse command line arguments
+    args = parse_args()
+
+    # parse configuration file
+    config = parse_config()
 
     # load check suites
-    suites = load_suites(_args)
+    suites = load_suites(args, config)
 
     # list suites
-    if _args.list:
+    if args.list:
         for suite in suites:
             pprint.pprint(f'{suite.__class__.__name__}: {suite.__doc__}')
         return
@@ -78,9 +91,9 @@ def main(_args):
     executor = CheckExecutor(result_cb)
 
     # execute single checks
-    if _args.check != 'all':
+    if args.check != 'all':
         for suite in suites:
-            checks_names = filter(lambda x: x.startswith('check_') and _args.check.lower() in x.lower(), dir(suite))
+            checks_names = filter(lambda x: x.startswith('check_') and args.check.lower() in x.lower(), dir(suite))
             for check_name in checks_names:
                 check_func = getattr(suite, check_name)
                 executor.execute(check_func)
@@ -120,5 +133,4 @@ def main(_args):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    main(parse_args())
+    main()
