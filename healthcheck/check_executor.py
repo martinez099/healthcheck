@@ -36,15 +36,16 @@ class CheckExecutor(object):
             future.add_done_callback(_done_cb)
         self.futures.append(future)
 
-    def execute_suite(self, check_suite):
+    def execute_suite(self, _check_suite, _done_cb=None):
         """
         Execute a check suite.
 
-        :param check_suite: The check suite.
+        :param _check_suite: The check suite.
+        :param _done_cb: A callback executed when the execution is done, optional.
         """
-        for check_name in filter(lambda x: x.startswith('check_'), dir(check_suite)):
-            check_func = getattr(check_suite, check_name)
-            self.execute(check_func)
+        for check_name in filter(lambda x: x.startswith('check_'), dir(_check_suite)):
+            check_func = getattr(_check_suite, check_name)
+            self.execute(check_func, _done_cb=_done_cb)
 
     def wait(self):
         """

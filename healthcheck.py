@@ -9,6 +9,7 @@ import pprint
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.common import format_result
+from healthcheck.stats_collector import StatsCollector
 
 
 def load_suites(_args, _base_class=BaseCheckSuite):
@@ -87,11 +88,32 @@ def main(_args):
         executor.shutdown()
         return
 
+    # init statistic collector
+    stats_collector = StatsCollector()
+
+    # collect statistics
+    def done_cb(future):
+        result = future.result()
+        if result[1] is True:
+            stats_collector.incr_success()
+        elif result[1] is False:
+            stats_collector.incr_failed()
+        elif result[1] is None:
+            stats_collector.incr_no_result()
+        elif result[1] is Exception:
+            stats_collector.incr_error()
+        else:
+            stats_collector.incr_skipped()
+
     # execute all check suites
     for suite in suites:
         pprint.pprint('[SUITE] ' + suite.__doc__)
-        executor.execute_suite(suite)
+        executor.execute_suite(suite, done_cb)
         executor.wait()
+
+    # print statistics
+    pprint.pprint("[COLLECTED STATISTICS]")
+    pprint.pprint(stats_collector.get_stats())
 
     # close
     executor.shutdown()
