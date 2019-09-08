@@ -9,7 +9,6 @@ import pprint
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
-from healthcheck.common import format_result
 from healthcheck.stats_collector import StatsCollector
 
 
@@ -86,7 +85,22 @@ def main():
 
     # render output
     def result_cb(result):
-        pprint.pprint(format_result(result[0], result[1], **result[2]), width=160)
+        if result[1] is True:
+            to_print = '[+] '
+        elif result[1] is False:
+            to_print = '[-] '
+        elif result[1] is Exception:
+            to_print = '[*] '
+        elif result[1] == '':
+            to_print = f'[ ] '
+        else:
+            to_print = '[~] '
+        to_print += f'[{result[0]}] '
+        if result[2]:
+            to_print += f', '.join([k + ': ' + str(v) for k, v in result[2].items()])
+        else:
+            to_print += ' skipped'
+        pprint.pprint(to_print, width=160)
 
     # create check executor
     executor = CheckExecutor(result_cb)
@@ -109,7 +123,7 @@ def main():
     def done_cb(future):
         result = future.result()
         if result[1] is True:
-            stats_collector.incr_success()
+            stats_collector.incr_succeeded()
         elif result[1] is False:
             stats_collector.incr_failed()
         elif result[1] is None:

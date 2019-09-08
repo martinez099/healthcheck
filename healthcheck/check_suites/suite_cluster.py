@@ -9,7 +9,7 @@ class ClusterChecks(BaseCheckSuite):
     """Check Cluster Configuration"""
 
     def check_master_node(self, *_args, **_kwargs):
-        rsp = self.ssh.run_rladmin_status()
+        rsp = self.ssh.exec_on_node('sudo /opt/redislabs/bin/rladmin status', 0)
         found = re.search(r'(node:\d+ master.*)', rsp)
         hostname = re.split(r'\s+', found.group(1))[4]
         ip_address = re.split(r'\s+', found.group(1))[3]
@@ -108,9 +108,9 @@ class ClusterChecks(BaseCheckSuite):
 
     def check_quorum_only(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_values('nodes')
-        rsp = self.ssh.get_quorum_onlys(number_of_nodes)
-        match = re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL)
-        quorums = match.group(1)
+        rsps = [self.ssh.exec_on_node(f'sudo /opt/redislabs/bin/rladmin info node {nr + 1}', 0) for nr in range(0, number_of_nodes)]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorums = [match.group(1) for match in matches]
 
         kwargs = {f'node{i + 1}': quorums[i] for i in range(0, number_of_nodes)}
         return "get quorumg only nodes", None, kwargs

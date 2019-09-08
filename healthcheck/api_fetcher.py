@@ -1,5 +1,4 @@
 import base64
-import datetime
 import json
 import logging
 import ssl
@@ -28,21 +27,60 @@ class ApiFetcher(object):
         self.cache = {}
 
     def get(self, _topic):
+        """
+        Get a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :return: The result dictionary.
+        """
         return self._fetch(_topic)
 
     def get_value(self, _topic, _key):
+        """
+        Get a value from a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :param _key: The key of the value.
+        :return: The value.
+        """
         return self._fetch(_topic)[_key]
 
     def get_values(self, _topic, _key):
+        """
+        Get values from a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :param _key: The key of the values.
+        :return: A list with values.
+        """
         return [node[_key] for node in self._fetch(_topic)]
 
     def get_number_of_values(self, _topic):
+        """
+        Get the amount of values from a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :return: The amount of values.
+        """
         return len(self._fetch(_topic))
 
     def get_sum_of_values(self, _topic, _key):
+        """
+        Get the sum of values from a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :param _key: The key of the values.
+        :return: The sum of the values.
+        """
         return sum([node[_key] for node in self._fetch(_topic)])
 
     def _fetch(self, _topic):
+        """
+        Fetch a topic.
+
+        :param _topic: The topic, e.g. 'nodes'
+        :return: The result dictionary.
+        """
         if _topic in self.cache:
             return self.cache[_topic]
         else:
@@ -63,7 +101,7 @@ class ApiFetcher(object):
         """
         req = request.Request(_url, method='GET')
 
-        # set basic auth header
+        # basic auth header
         credentials = ('%s:%s' % (_user, _pass))
         encoded_credentials = base64.b64encode(credentials.encode('ascii'))
         req.add_header('Authorization', 'Basic %s' % encoded_credentials.decode("ascii"))
