@@ -2,7 +2,6 @@ import base64
 import datetime
 import json
 import logging
-import re
 import ssl
 
 from urllib import request
@@ -28,45 +27,20 @@ class ApiFetcher(object):
         self.password = _password
         self.cache = {}
 
-    def get_cluster_value(self, _key):
-        return self._fetch('cluster')[_key]
+    def get(self, _topic):
+        return self._fetch(_topic)
 
-    def get_license_shards_limit(self):
-        rsp = self._fetch('license')
-        match = re.search(r'Shards limit : (\d+)\n', rsp['license'], re.MULTILINE | re.DOTALL)
-        return int(match.group(1))
+    def get_value(self, _topic, _key):
+        return self._fetch(_topic)[_key]
 
-    def get_license_expire_date(self):
-        rsp = self._fetch('license')
-        return datetime.datetime.strptime(rsp['expiration_date'], '%Y-%m-%dT%H:%M:%SZ')
+    def get_values(self, _topic, _key):
+        return [node[_key] for node in self._fetch(_topic)]
 
-    def get_license_expired(self):
-        rsp = self._fetch('license')
-        return rsp['expired']
+    def get_number_of_values(self, _topic):
+        return len(self._fetch(_topic))
 
-    def get_number_of_shards(self):
-        rsp = self._fetch('shards')
-        return len(rsp)
-
-    def get_number_of_nodes(self):
-        rsp = self._fetch('nodes')
-        return len(rsp)
-
-    def get_node_values(self, _key):
-        return [node[_key] for node in self._fetch('nodes')]
-
-    def get_sum_of_node_values(self, _key):
-        return sum([node[_key] for node in self._fetch('nodes')])
-
-    def get_bdb_value(self, _bdb_id, _key):
-        return self._fetch(f'bdbs/{_bdb_id}')[_key]
-
-    def get_bdb_values(self, _key):
-        bdbs = self._fetch('bdbs')
-        return [bdb[_key] for bdb in bdbs]
-
-    def get_bdb_alerts(self, _bdb_id=None):
-        return self._fetch(f'bdbs/alerts/{_bdb_id}') if _bdb_id else self._fetch('bdbs/alerts')
+    def get_sum_of_values(self, _topic, _key):
+        return sum([node[_key] for node in self._fetch(_topic)])
 
     def _fetch(self, _topic):
         if _topic in self.cache:

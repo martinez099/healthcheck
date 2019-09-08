@@ -8,14 +8,14 @@ class SystemChecks(BaseCheckSuite):
     """Check System Health"""
 
     def check_os_version(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_nodes()
-        os_versions = self.api.get_node_values('os_version')
+        number_of_nodes = self.api.get_number_of_values('nodes')
+        os_versions = self.api.get_values('nodes', 'os_version')
 
         kwargs = {f'node{i + 1}': os_versions[i] for i in range(0, number_of_nodes)}
         return "get os version of all nodes", None, kwargs
 
     def check_log_file_path(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_nodes()
+        number_of_nodes = self.api.get_number_of_values('nodes')
         log_file_paths = []
         for log_file_path in SshCommander.exec_func_on_all_nodes(self.ssh.get_log_file_path, number_of_nodes):
             match = re.match(r'^([\w+/]+)\s+.*$', log_file_path.split('\n')[1], re.DOTALL)
@@ -26,7 +26,7 @@ class SystemChecks(BaseCheckSuite):
         return "check if log file path is on root filesystem", result, kwargs
 
     def check_tmp_file_path(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_nodes()
+        number_of_nodes = self.api.get_number_of_values('nodes')
         tmp_file_paths = []
         for tmp_file_path in SshCommander.exec_func_on_all_nodes(self.ssh.get_tmp_file_path, number_of_nodes):
             match = re.match(r'^([\w+/]+)\s+.*$', tmp_file_path.split('\n')[1], re.DOTALL)
@@ -37,14 +37,14 @@ class SystemChecks(BaseCheckSuite):
         return "check if tmp file path is on root filesystem", result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_nodes()
+        number_of_nodes = self.api.get_number_of_values('nodes')
         swappinesses = SshCommander.exec_func_on_all_nodes(self.ssh.get_swappiness, number_of_nodes)
 
         kwargs = {f'node{i + 1}': swappinesses[i] for i in range(0, number_of_nodes)}
         return "get swap setting of all nodes", None, kwargs
 
     def check_transparent_hugepage(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_nodes()
+        number_of_nodes = self.api.get_number_of_values('nodes')
         transparent_hugepages = SshCommander.exec_func_on_all_nodes(self.ssh.get_transparent_hugepage, number_of_nodes)
 
         kwargs = {f'node{i + 1}': transparent_hugepages[i] for i in range(0, number_of_nodes)}
