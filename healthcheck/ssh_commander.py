@@ -18,6 +18,7 @@ class SshCommander(object):
         self.username = _username
         self.hostnames = _hostnames
         self.keyfile = _keyfile
+        self.cache = {}
 
     def get_log_file_path(self, _node_nr=0):
         cmd = 'df -h /var/opt/redislabs/log'
@@ -72,7 +73,7 @@ class SshCommander(object):
         :return: The result.
         :raise Exception: If an error occurred.
         """
-        return SshCommander.exec_ssh(self.username, _ip, self.keyfile, _cmd)
+        return self._exec_ssh(self.username, _ip, self.keyfile, _cmd)
 
     def _exec_on_all_ips(self, _cmd):
         """
@@ -98,7 +99,7 @@ class SshCommander(object):
         :return: The response.
         :raise Excpetion: If an error occurred.
         """
-        return SshCommander.exec_ssh(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
+        return self._exec_ssh(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
 
     def _exec_on_all_nodes(self, _cmd, _number_of_nodes):
         """
@@ -115,8 +116,7 @@ class SshCommander(object):
             assert not undone
             return [d.result() for d in done]
 
-    @staticmethod
-    def exec_ssh(_user, _host, _keyfile, _cmd):
+    def _exec_ssh(self, _user, _host, _keyfile, _cmd):
         """
         Execute a SSH command.
 
@@ -127,8 +127,16 @@ class SshCommander(object):
         :return: The response.
         :raise Exception: If an error occurred.
         """
+        if _host in self.cache and _cmd in self.cache[_host]:
+            return self.cache[_host]
+
         cmd = ' '.join(['ssh', '-i {}'.format(_keyfile), '{}@{}'.format(_user, _host), '-C', _cmd])
-        return SshCommander.exec_cmd(cmd)
+        rsp = SshCommander.exec_cmd(cmd)
+        if _host not in self.cache:
+            self.cache[_host] = {}
+        self.cache[_host][cmd] = rsp
+
+        return rsp
 
     @staticmethod
     def exec_cmd(_args):
