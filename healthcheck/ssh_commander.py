@@ -1,5 +1,4 @@
 import logging
-import re
 
 from concurrent.futures import ThreadPoolExecutor, wait
 from subprocess import Popen, PIPE
@@ -22,42 +21,23 @@ class SshCommander(object):
 
     def get_log_file_path(self, _node_nr=0):
         cmd = 'df -h /var/opt/redislabs/log'
-        rsp = self._exec_on_node(cmd, _node_nr)
-        match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
-        return match.group(1)
-
-    def get_log_file_paths(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_log_file_path, _number_of_nodes)
+        return self._exec_on_node(cmd, _node_nr)
 
     def get_tmp_file_path(self, _node_nr=0):
         cmd = 'df -h /tmp'
-        rsp = self._exec_on_node(cmd, _node_nr)
-        match = re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL)
-        return match.group(1)
-
-    def get_tmp_file_paths(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_tmp_file_path, _number_of_nodes)
+        return self._exec_on_node(cmd, _node_nr)
 
     def get_rladmin_info(self, _node_nr=0):
         cmd = f'sudo /opt/redislabs/bin/rladmin info node {_node_nr + 1}'
         return self._exec_on_node(cmd, _node_nr)
 
-    def get_rladmin_infos(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_rladmin_info, _number_of_nodes)
-
     def get_swappiness(self, _node_nr=0):
         cmd = 'grep swap /etc/sysctl.conf || echo -n inactive'
         return self._exec_on_node(cmd, _node_nr)
 
-    def get_swappinesses(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_swappiness, _number_of_nodes)
-
     def get_transparent_hugepage(self, _node_nr=0):
         cmd = 'cat /sys/kernel/mm/transparent_hugepage/enabled'
         return self._exec_on_node(cmd, _node_nr)
-
-    def get_transaprent_hugepages(self, _number_of_nodes):
-        return SshCommander.exec_func_on_all_nodes(self.get_transparent_hugepage, _number_of_nodes)
 
     def run_rladmin_status(self, _node_nr=0):
         cmd = 'sudo /opt/redislabs/bin/rladmin status'

@@ -29,5 +29,6 @@ class StatsCollector(object):
             'no result': self.no_result,
             'failed': self.failed,
             'error': self.error,
-            'skipped': self.skipped
+            'skipped': self.skipped,
+            'total': sum([self.success, self.no_result, self.failed, self.error, self.skipped])
         }

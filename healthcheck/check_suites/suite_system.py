@@ -1,7 +1,7 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common import format_result
+from healthcheck.ssh_commander import SshCommander
 
 
 class SystemChecks(BaseCheckSuite):
@@ -16,7 +16,10 @@ class SystemChecks(BaseCheckSuite):
 
     def check_log_file_path(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
-        log_file_paths = self.ssh.get_log_file_paths(number_of_nodes)
+        log_file_paths = []
+        for log_file_path in SshCommander.exec_func_on_all_nodes(self.ssh.get_log_file_path, number_of_nodes):
+            match = re.match(r'^([\w+/]+)\s+.*$', log_file_path.split('\n')[1], re.DOTALL)
+            log_file_paths.append( match.group(1))
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
         kwargs = {f'node{i + 1}': log_file_paths[i] for i in range(0, number_of_nodes)}
@@ -24,7 +27,10 @@ class SystemChecks(BaseCheckSuite):
 
     def check_tmp_file_path(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
-        tmp_file_paths = self.ssh.get_tmp_file_paths(number_of_nodes)
+        tmp_file_paths = []
+        for tmp_file_path in SshCommander.exec_func_on_all_nodes(self.ssh.get_tmp_file_path, number_of_nodes):
+            match = re.match(r'^([\w+/]+)\s+.*$', tmp_file_path.split('\n')[1], re.DOTALL)
+            tmp_file_paths.append(match.group(1))
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
         kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
@@ -32,14 +38,14 @@ class SystemChecks(BaseCheckSuite):
 
     def check_swappiness(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
-        swappinesses = self.ssh.get_swappinesses(number_of_nodes)
+        swappinesses = SshCommander.exec_func_on_all_nodes(self.ssh.get_swappiness, number_of_nodes)
 
         kwargs = {f'node{i + 1}': swappinesses[i] for i in range(0, number_of_nodes)}
         return "get swap setting of all nodes", None, kwargs
 
     def check_transparent_hugepage(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_nodes()
-        transparent_hugepages = self.ssh.get_transaprent_hugepages(number_of_nodes)
+        transparent_hugepages = SshCommander.exec_func_on_all_nodes(self.ssh.get_transparent_hugepage, number_of_nodes)
 
         kwargs = {f'node{i + 1}': transparent_hugepages[i] for i in range(0, number_of_nodes)}
         return "get THP setting of all nodes", None, kwargs

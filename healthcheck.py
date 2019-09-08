@@ -27,10 +27,11 @@ def load_suites(_args, _config, _base_class=BaseCheckSuite):
         name = file.replace('/', '.').replace('.py', '')
         module = importlib.import_module(name)
         for member in dir(module):
-            suite = getattr(module, member)
-            if member != _base_class.__name__ and issubclass(suite.__class__, _base_class.__class__):
-                if _args.suite == 'all' or _args.suite.lower() in member.lower():
-                    suites.append(suite(_config))
+            if member != _base_class.__name__:
+                suite = getattr(module, member)
+                if type(suite) == type.__class__ and issubclass(suite, _base_class):
+                    if _args.suite == 'all' or _args.suite.lower() in member.lower():
+                        suites.append(suite(_config))
     assert suites
     return suites
 
