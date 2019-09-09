@@ -89,17 +89,15 @@ def main():
             to_print = '[+] '
         elif result[1] is False:
             to_print = '[-] '
+        elif result[1] is None:
+            to_print = '[~] '
         elif result[1] is Exception:
             to_print = '[*] '
-        elif result[1] == '':
-            to_print = f'[ ] '
         else:
-            to_print = '[~] '
-        to_print += f'[{result[0]}] '
-        if result[2]:
-            to_print += f', '.join([k + ': ' + str(v) for k, v in result[2].items()])
-        else:
-            to_print += ' skipped'
+            pprint.pprint(f'[ ] [{result[0]}] skipped')
+            return
+
+        to_print += f'[{result[0]}] ' + f', '.join([k + ': ' + str(v) for k, v in result[2].items()])
         pprint.pprint(to_print, width=160)
 
     # create check executor
@@ -129,7 +127,7 @@ def main():
         elif result[1] is None:
             stats_collector.incr_no_result()
         elif result[1] is Exception:
-            stats_collector.incr_error()
+            stats_collector.incr_errors()
         else:
             stats_collector.incr_skipped()
 
