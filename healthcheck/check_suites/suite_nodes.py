@@ -3,24 +3,24 @@ import re
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
-class SystemChecks(BaseCheckSuite):
-    """Check System Health"""
+class NodeChecks(BaseCheckSuite):
+    """Check Nodes"""
 
     def check_os_version(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_values('nodes')
         os_versions = self.api.get_values('nodes', 'os_version')
 
-        kwargs = {f'node{i + 1}': os_versions[i] for i in range(0, number_of_nodes)}
+        node_ids = self.api.get_values('nodes', 'uid')
+        kwargs = {f'node:{i + 1}': os_versions[i] for i in node_ids}
         return "get os version of all nodes", None, kwargs
 
     def check_log_file_path(self, *_args, **_kwargs):
-        number_of_nodes = self.api.get_number_of_values('nodes')
         rsps = self.ssh.exec_on_all_nodes('df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
 
+        node_ids = self.api.get_values('nodes', 'uid')
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node{i + 1}': log_file_paths[i] for i in range(0, number_of_nodes)}
+        kwargs = {f'node:{i + 1}': log_file_paths[i] for i in node_ids}
         return "check if log file path is on root filesystem", result, kwargs
 
     def check_tmp_file_path(self, *_args, **_kwargs):
@@ -28,23 +28,23 @@ class SystemChecks(BaseCheckSuite):
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL) for rsp in rsps]
         tmp_file_paths = [match.group(1) for match in matches]
 
-        number_of_nodes = self.api.get_number_of_values('nodes')
+        node_ids = self.api.get_values('nodes', 'uid')
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
-        kwargs = {f'node{i + 1}': tmp_file_paths[i] for i in range(0, number_of_nodes)}
+        kwargs = {f'node:{i + 1}': tmp_file_paths[i] for i in node_ids}
         return "check if tmp file path is on root filesystem", result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
         swappinesses = self.ssh.exec_on_all_nodes('grep swap /etc/sysctl.conf || echo -n inactive')
 
-        number_of_nodes = self.api.get_number_of_values('nodes')
-        kwargs = {f'node{i + 1}': swappinesses[i] for i in range(0, number_of_nodes)}
+        node_ids = self.api.get_values('nodes', 'uid')
+        kwargs = {f'node:{i + 1}': swappinesses[i] for i in node_ids}
         return "get swap setting of all nodes", None, kwargs
 
     def check_transparent_hugepage(self, *_args, **_kwargs):
         transparent_hugepages = self.ssh.exec_on_all_nodes('cat /sys/kernel/mm/transparent_hugepage/enabled')
 
-        number_of_nodes = self.api.get_number_of_values('nodes')
-        kwargs = {f'node{i + 1}': transparent_hugepages[i] for i in range(0, number_of_nodes)}
+        node_ids = self.api.get_values('nodes', 'uid')
+        kwargs = {f'node:{i + 1}': transparent_hugepages[i] for i in node_ids}
         return "get THP setting of all nodes", None, kwargs
 
     def check_rladmin_status(self, *_args, **_kwargs):

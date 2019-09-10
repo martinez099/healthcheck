@@ -4,12 +4,29 @@ import argparse
 import configparser
 import glob
 import importlib
+import json
 import logging
 import pprint
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
+
+
+def load_params(_args):
+    """
+    Load a parameter map.
+
+    :param _args: The name of the parameter map.
+    :return: A dictionary with the parameters.
+    """
+    if _args.params:
+        for file in glob.glob('healthcheck/parameter_maps/*.json'):
+            if _args.params.lower() in file.lower():
+                with open(file) as f:
+                    params = json.loads(f.read())
+                return params
+    return {}
 
 
 def load_suites(_args, _config, _base_class=BaseCheckSuite):
@@ -29,7 +46,7 @@ def load_suites(_args, _config, _base_class=BaseCheckSuite):
             if member != _base_class.__name__:
                 suite = getattr(module, member)
                 if type(suite) == type.__class__ and issubclass(suite, _base_class):
-                    if _args.suite == 'all' or _args.suite.lower() in member.lower():
+                    if _args.suite.lower() in member.lower():
                         suites.append(suite(_config))
     assert suites
     return suites
@@ -45,8 +62,11 @@ def parse_args():
 
     options = parser.add_mutually_exclusive_group()
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
-    options.add_argument('-s', '--suite', help="Specify a single suite to execute.", type=str, default='all')
-    options.add_argument('-c', '--check', help="Specify a single check to execute.", type=str, default='all')
+    options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
+    options.add_argument('-c', '--check', help="Specify a check to execute.", type=str, default='all')
+
+    params = parser.add_argument_group()
+    params.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
 
     return parser.parse_args()
 
@@ -85,6 +105,8 @@ def main():
 
     # render output
     def result_cb(result):
+        if type(result) == list:
+            return [result_cb(r) for r in result]
         if result[1] is True:
             to_print = '[+] '
         elif result[1] is False:
@@ -97,8 +119,8 @@ def main():
             pprint.pprint(f'[ ] [{result[0]}] skipped')
             return
 
-        to_print += f'[{result[0]}] ' + f', '.join([k + ': ' + str(v) for k, v in result[2].items()])
-        pprint.pprint(to_print, width=160)
+        to_print += f'[{result[0]}] ' + f', '.join([str(k) + ': ' + str(v) for k, v in result[2].items()])
+        pprint.pprint(to_print, width=320)
 
     # create check executor
     executor = CheckExecutor(result_cb)
@@ -118,8 +140,7 @@ def main():
     stats_collector = StatsCollector()
 
     # collect statistics
-    def done_cb(future):
-        result = future.result()
+    def collect_stats(result):
         if result[1] is True:
             stats_collector.incr_succeeded()
         elif result[1] is False:
@@ -131,10 +152,20 @@ def main():
         else:
             stats_collector.incr_skipped()
 
-    # execute all check suites
+    # define done callback3
+    def done_cb(future):
+        result = future.result()
+        if type(result) == list:
+            [collect_stats(r) for r in result]
+        else:
+            collect_stats(result)
+
+    # execute check suites
     for suite in suites:
-        pprint.pprint('[SUITE] ' + suite.__doc__)
-        executor.execute_suite(suite, done_cb)
+        pprint.pprint('[SUITE] {}'.format(suite.__doc__))
+        params = load_params(args)
+        pprint.pprint('[PARAMS] {}'.format(args.params if args.params else 'None'))
+        executor.execute_suite(suite, _kwargs=params, _done_cb=done_cb)
         executor.wait()
 
     # print statistics

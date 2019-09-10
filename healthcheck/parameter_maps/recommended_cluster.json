@@ -1,0 +1,8 @@
+{
+  "min_shards": 2,
+  "min_nodes": 3,
+  "min_cores": 24,
+  "min_memory": 90,
+  "min_ephemeral_storage": 360,
+  "min_persistent_storage": 540
+}

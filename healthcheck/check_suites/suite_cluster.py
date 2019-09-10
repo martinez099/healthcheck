@@ -6,7 +6,7 @@ from healthcheck.common import to_gb, GB
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Check Cluster Configuration"""
+    """Check Cluster"""
 
     def check_master_node(self, *_args, **_kwargs):
         rsp = self.ssh.exec_on_node('sudo /opt/redislabs/bin/rladmin status', 0)
@@ -47,52 +47,46 @@ class ClusterChecks(BaseCheckSuite):
 
     def check_number_of_shards(self, *_args, **_kwargs):
         number_of_shards = self.api.get_number_of_values('shards')
-        min_shards = 2
 
-        result = number_of_shards >= min_shards
-        kwargs = {'numbe of shards': number_of_shards, 'min shards': min_shards}
+        result = number_of_shards >= _kwargs['min_shards']
+        kwargs = {'numbe of shards': number_of_shards, 'min shards': _kwargs['min_shards']}
         return "check if enough shards", result, kwargs
 
     def check_number_of_nodes(self, *_args, **_kwargs):
         number_of_nodes = self.api.get_number_of_values('nodes')
-        min_nodes = 3
 
-        result = number_of_nodes >= min_nodes
-        kwargs = {'number of nodes': number_of_nodes, 'min nodes': min_nodes}
+        result = number_of_nodes >= _kwargs['min_nodes']
+        kwargs = {'number of nodes': number_of_nodes, 'min nodes': _kwargs['min_nodes']}
         return "check if enough nodes",result, kwargs
 
     def check_number_of_cores(self, *_args, **_kwargs):
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
-        min_cores = 24
 
-        result = number_of_cores >= min_cores
-        kwargs = {'number of cores': number_of_cores, 'min cores': min_cores}
+        result = number_of_cores >= _kwargs['min_cores']
+        kwargs = {'number of cores': number_of_cores, 'min cores': _kwargs['min_cores']}
         return "check if enough cores", result, kwargs
 
     def check_total_memory(self, *_args, **_kwargs):
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
-        min_memory = 90 * GB
 
-        result = total_memory >= min_memory
-        kwargs = {'total memory': to_gb(total_memory), 'min memory': to_gb(min_memory)}
+        result = total_memory >= _kwargs['min_memory'] * GB
+        kwargs = {'total memory': '{} GB'.format(to_gb(total_memory)), 'min memory': '{} GB'.format(_kwargs['min_memory'])}
         return "check if enough RAM", result, kwargs
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
-        min_ephemeral_size = 360 * GB
 
-        result = epehemeral_storage_size >= min_ephemeral_size
-        kwargs = {'ephemeral storage size': to_gb(epehemeral_storage_size),
-                  'min ephemeral size': to_gb(min_ephemeral_size)}
+        result = epehemeral_storage_size >= _kwargs['min_ephemeral_storage'] * GB
+        kwargs = {'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
+                  'min ephemeral size': '{} GB'.format(_kwargs['min_ephemeral_storage'])}
         return "check if enough ephemeral storage", result, kwargs
 
     def check_persistent_storage(self, *_args, **_kwargs):
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
-        min_persistent_size = 540 * GB
 
-        result = persistent_storage_size >= min_persistent_size
-        kwargs =  {'persistent storage size': to_gb(persistent_storage_size),
-                   'min persistent size': to_gb(min_persistent_size)}
+        result = persistent_storage_size >= _kwargs['min_persistent_storage'] * GB
+        kwargs = {'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size)),
+                  'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage'] )}
         return "check if enough persistent storage", result, kwargs
 
     def check_cluster_and_node_alerts(self, *_args, **_kwargs):

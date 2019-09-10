@@ -1,7 +1,6 @@
-import logging
-
 from concurrent.futures import ThreadPoolExecutor, wait
-from subprocess import Popen, PIPE
+
+from healthcheck.common import exec_cmd
 
 
 class SshCommander(object):
@@ -20,7 +19,7 @@ class SshCommander(object):
         self.keyfile = _keyfile
         self.cache = {}
 
-    def _exec_on_ip(self, _cmd, _ip):
+    def exec_on_ip(self, _cmd, _ip):
         """
         Execute a SSH command on an IP address.
 
@@ -29,9 +28,9 @@ class SshCommander(object):
         :return: The result.
         :raise Exception: If an error occurred.
         """
-        return self._exec_ssh(self.username, _ip, self.keyfile, _cmd)
+        return self._exec(self.username, _ip, self.keyfile, _cmd)
 
-    def _exec_on_all_ips(self, _cmd):
+    def exec_on_all_ips(self, _cmd):
         """
         Execute a SSH command on all IP addresses.
 
@@ -40,7 +39,7 @@ class SshCommander(object):
         :raise Exception: If an error occurred.
         """
         with ThreadPoolExecutor(max_workers=len(self.hostnames)) as e:
-            futures = [e.submit(self._exec_on_ip, _cmd, ip) for ip in self.hostnames]
+            futures = [e.submit(self.exec_on_ip, _cmd, ip) for ip in self.hostnames]
             done, undone = wait(futures)
             assert not undone
             return [d.result() for d in done]
@@ -54,7 +53,7 @@ class SshCommander(object):
         :return: The response.
         :raise Excpetion: If an error occurred.
         """
-        return self._exec_ssh(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
+        return self._exec(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
 
     def exec_on_all_nodes(self, _cmd):
         """
@@ -71,7 +70,7 @@ class SshCommander(object):
             assert not undone
             return [d.result() for d in done]
 
-    def _exec_ssh(self, _user, _host, _keyfile, _cmd):
+    def _exec(self, _user, _host, _keyfile, _cmd):
         """
         Execute a SSH command.
 
@@ -82,32 +81,18 @@ class SshCommander(object):
         :return: The response.
         :raise Exception: If an error occurred.
         """
+
+        # lookup from cache
         if _host in self.cache and _cmd in self.cache[_host]:
             return self.cache[_host]
 
+        # execute command
         cmd = ' '.join(['ssh', '-i {}'.format(_keyfile), '{}@{}'.format(_user, _host), '-C', _cmd])
-        rsp = SshCommander.exec_cmd(cmd)
+        rsp = exec_cmd(cmd)
+
+        # put into cache
         if _host not in self.cache:
             self.cache[_host] = {}
         self.cache[_host][cmd] = rsp
 
         return rsp
-
-    @staticmethod
-    def exec_cmd(_args):
-        """
-        Execute a SSH command string.
-
-        :param _args: The command string.
-        :return: The response.
-        :raise Exception: If an error occurred.
-        """
-        logging.debug(_args)
-        proc = Popen(_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
-        proc.wait()
-        if proc.returncode == 0:
-            rsp = proc.stdout.read().decode('utf-8')
-            return rsp
-        else:
-            rsp = proc.stderr.read().decode('utf-8')
-            raise Exception(f'error during ssh remote execution (return code {proc.returncode}): {rsp}')

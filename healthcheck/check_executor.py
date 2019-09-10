@@ -16,18 +16,18 @@ class CheckExecutor(object):
         self.futures = []
         self.result_cb = _result_cb
 
-    def execute(self, _func, _args=None, _kwargs=None, _done_cb=None):
+    def execute(self, _func, _args=[], _kwargs={}, _done_cb=None):
         """
         Execute a function.
 
         :param _func: The function to execute.
-        :param _args: Unamed arguments, optional.
-        :param _kwargs: Named arguments, optional.
+        :param _args: A list of arguments, optional.
+        :param _kwargs: A dict of keyword arguments, optional.
         :param _done_cb: A callback executed when the execution is done, optional.
         """
-        def wrapper(_check, *_args, **_kwargs):
+        def wrapper(_check, _args, _params):
             try:
-                return _check(_args, _kwargs)
+                return _check(*_args, **_params)
             except Exception as e:
                 return _check.__name__, Exception, {e.__class__.__name__: str(e)}
 
@@ -36,16 +36,18 @@ class CheckExecutor(object):
             future.add_done_callback(_done_cb)
         self.futures.append(future)
 
-    def execute_suite(self, _check_suite, _done_cb=None):
+    def execute_suite(self, _check_suite, _args=[], _kwargs={}, _done_cb=None):
         """
         Execute a check suite.
 
         :param _check_suite: The check suite.
+        :param _args: A list of arguments, optional.
+        :param _kwargs: A dict of keyword arguments, optional.
         :param _done_cb: A callback executed when the execution is done, optional.
         """
         for check_name in filter(lambda x: x.startswith('check_'), dir(_check_suite)):
             check_func = getattr(_check_suite, check_name)
-            self.execute(check_func, _done_cb=_done_cb)
+            self.execute(check_func, _args=_args, _kwargs=_kwargs, _done_cb=_done_cb)
 
     def wait(self):
         """
