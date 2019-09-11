@@ -82,10 +82,3 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size)),
                   'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage'] )}
         return result, kwargs
-
-    def check_cluster_and_node_alert_settings(self, *_args, **_kwargs):
-        """get cluster and node alert settings"""
-        alerts = self.api.get_value('cluster', 'alert_settings')
-
-        kwargs = {'alerts': alerts}
-        return None, kwargs
