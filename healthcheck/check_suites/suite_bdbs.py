@@ -2,9 +2,10 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class BdbChecks(BaseCheckSuite):
-    """Check Databases"""
+    """Check Databases via API"""
 
     def check_bdbs(self, *_args, **_kwargs):
+        """check bdbs"""
         bdbs = self.api.get('bdbs')
         results = []
         for bdb in bdbs:
@@ -14,10 +15,11 @@ class BdbChecks(BaseCheckSuite):
         return results
 
     def _check_bdb(self, _uid, _dict):
+        f"""check bdb:{_uid}"""
         bdb = self.api.get(f'bdbs/{_uid}')
-        result, kwargs = {}, {}
+        result, kwargs = {}, {'bdb_id': _uid}
         for k, v in _dict.items():
             result[k] = v == bdb[k]
             kwargs[k] = bdb[k]
 
-        return f"check bdb:{_uid}", all(result.values()), kwargs
+        return all(result.values()), kwargs

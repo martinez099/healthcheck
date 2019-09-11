@@ -1,88 +1,146 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.common import exec_cmd
 
 
 class NodeChecks(BaseCheckSuite):
-    """Check Nodes"""
+    """Check Nodes via SSH"""
+
+    def check_hostnames(self, *_args, **_kwargs):
+        """check configured hosts"""
+        nodes = self.api.get('nodes')
+        rsps = self.ssh.exec_on_all_hosts('hostname -I')
+        uid_addrs = [(node['uid'], node['addr']) for node in nodes]
+        uid_addrs.sort(key=lambda x: x[0])
+
+        result = all([rsp.result() == uid_addrs[1] for rsp, uid_addrs in zip(rsps, uid_addrs)])
+        kwargs = {'node:{}'.format(uid): address for uid, address in uid_addrs}
+        return result, kwargs
+
+    def check_hosts(self, *_args, **_kwargs):
+        """check host reachabilities"""
+        [exec_cmd(f'ping -qont 1 {hostname}') for hostname in self.ssh.hostnames]
+
+        kwargs = {hostname: True for hostname in self.ssh.hostnames}
+        return True, {'hostnames': kwargs}
+
+    def check_master_node(self, *_args, **_kwargs):
+        """get master node"""
+        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
+        found = re.search(r'(node:\d+ master.*)', rsp)
+        hostname = re.split(r'\s+', found.group(1))[4]
+        ip_address = re.split(r'\s+', found.group(1))[3]
+
+        return True, {'hostname': hostname, 'IP address': ip_address}
+
+    def check_quorum_only(self, *_args, **_kwargs):
+        """get quorumg only nodes"""
+        node_ids = self.api.get_values('nodes', 'uid')
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {uid}', self.ssh.hostnames[0]) for uid in node_ids]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorums = [match.group(1) for match in matches]
+
+        kwargs = {rsp.ip: quorum for rsp, quorum in zip(rsps, quorums)}
+        return None, kwargs
 
     def check_os_version(self, *_args, **_kwargs):
-        os_versions = self.api.get_values('nodes', 'os_version')
+        """get os version"""
+        rsps = self.ssh.exec_on_all_hosts('cat /etc/os-release | grep PRETTY_NAME')
+        matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
+        os_versions = [match.group(1) for match in matches]
 
+        kwargs = {rsp.ip: os_version for rsp, os_version in zip(rsps, os_versions)}
+        return None, kwargs
+
+    def check_software_version(self, *_args, **_kwargs):
+        """get software version of all nodes"""
         node_ids = self.api.get_values('nodes', 'uid')
-        kwargs = {f'node:{i + 1}': os_versions[i] for i in node_ids}
-        return "get os version of all nodes", None, kwargs
+        software_versions = self.api.get_values('nodes', 'software_version')
+
+        kwargs = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
+        return None, kwargs
 
     def check_log_file_path(self, *_args, **_kwargs):
-        rsps = self.ssh.exec_on_all_nodes('df -h /var/opt/redislabs/log')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL) for rsp in rsps]
+        """check if log file path is NOT on root filesystem"""
+        rsps = self.ssh.exec_on_all_hosts('df -h /var/opt/redislabs/log')
+        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
 
-        node_ids = self.api.get_values('nodes', 'uid')
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node:{i + 1}': log_file_paths[i] for i in node_ids}
-        return "check if log file path is on root filesystem", result, kwargs
+        kwargs = {rsp.ip: log_file_path for rsp, log_file_path in zip(rsps, log_file_paths)}
+        return result, kwargs
 
     def check_tmp_file_path(self, *_args, **_kwargs):
-        rsps = self.ssh.exec_on_all_nodes('df -h /tmp')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.split('\n')[1], re.DOTALL) for rsp in rsps]
+        """check if tmp file path is NOT on root filesystem"""
+        rsps = self.ssh.exec_on_all_hosts('df -h /tmp')
+        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         tmp_file_paths = [match.group(1) for match in matches]
 
-        node_ids = self.api.get_values('nodes', 'uid')
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
-        kwargs = {f'node:{i + 1}': tmp_file_paths[i] for i in node_ids}
-        return "check if tmp file path is on root filesystem", result, kwargs
+        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, tmp_file_paths)}
+        return result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
-        swappinesses = self.ssh.exec_on_all_nodes('grep swap /etc/sysctl.conf || echo -n inactive')
+        """check swap setting"""
+        rsps = self.ssh.exec_on_all_hosts('grep swap /etc/sysctl.conf || echo inactive')
+        swappinesses = [rsp.result() for rsp in rsps]
 
-        node_ids = self.api.get_values('nodes', 'uid')
-        kwargs = {f'node:{i + 1}': swappinesses[i] for i in node_ids}
-        return "get swap setting of all nodes", None, kwargs
+        result = any([swappiness == 'inactive' for swappiness in swappinesses])
+        kwargs = {rsp.ip: swappiness for rsp, swappiness in zip(rsps, swappinesses)}
+        return result, kwargs
 
     def check_transparent_hugepage(self, *_args, **_kwargs):
-        transparent_hugepages = self.ssh.exec_on_all_nodes('cat /sys/kernel/mm/transparent_hugepage/enabled')
+        """get THP setting of all nodes"""
+        rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
+        transparent_hugepages = [rsp.result() for rsp in rsps]
 
-        node_ids = self.api.get_values('nodes', 'uid')
-        kwargs = {f'node:{i + 1}': transparent_hugepages[i] for i in node_ids}
-        return "get THP setting of all nodes", None, kwargs
+        result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
+        kwargs = {rsp.ip: transparent_hugepage for rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
+        return result, kwargs
 
     def check_rladmin_status(self, *_args, **_kwargs):
-        rsp = self.ssh.exec_on_node('sudo /opt/redislabs/bin/rladmin status', 0)
-        found = re.findall(r'^((?!OK).)*$', rsp.strip(), re.MULTILINE)
+        """check rladmin status"""
+        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node', self.ssh.hostnames[0])
+        found = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
         not_ok = len(found)
 
-        return "check rladmin status", not not_ok, {'not OK': not_ok}
+        return not not_ok, {'not OK': not_ok}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
-        rsps = self.ssh.exec_on_all_nodes('/opt/redislabs/bin/rlcheck')
-        founds = [re.findall(r'^((?!error).)*$', rsp.strip(), re.MULTILINE) for rsp in rsps]
+        """check rlcheck status"""
+        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
+        founds = [re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE) for rsp in rsps]
         errors = sum([len(found) for found in founds])
 
-        return "check rlcheck status", not errors, {'rlcheck errors': errors}
+        return not errors, {'rlcheck errors': errors}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
-        rsps = self.ssh.exec_on_all_nodes('sudo /opt/redislabs/bin/cnm_ctl status')
-        founds = [re.findall(r'^((?!RUNNING).)*$', rsp.strip(), re.MULTILINE) for rsp in rsps]
+        """check cnm_ctl status"""
+        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
+        founds = [re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE) for rsp in rsps]
         not_running = sum([len(found) for found in founds])
 
-        return "check cnm_ctl status", not_running == 0, {'not RUNNING': not_running}
+        return not_running == 0, {'not RUNNING': not_running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
-        rsps = self.ssh.exec_on_all_nodes('sudo /opt/redislabs/bin/supervisorctl status')
-        founds = [re.findall(r'^((?!RUNNING).)*$', rsp.strip(), re.MULTILINE) for rsp in rsps]
+        """check supervisorctl status"""
+        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
+        founds = [re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE) for rsp in rsps]
         not_running = sum([len(found) for found in founds])
 
-        return "check supervisorctl status", not not_running, {'not RUNNING': not_running}
+        return not_running == 1 * len(rsps), {'not RUNNING': not_running}
 
     def check_errors_in_syslog(self, *_args, **_kwargs):
-        errors = self.ssh.exec_on_all_nodes( 'sudo grep error /var/log/syslog || echo ""')
-        found = sum([len(error.strip()) for error in errors])
+        """check errors in syslog"""
+        rsps = self.ssh.exec_on_all_hosts( 'sudo grep error /var/log/syslog || echo ""')
+        found = sum([len(rsp.result()) for rsp in rsps])
 
-        return "check errors in syslog", not found, {'syslog errors': found}
+        return not found, {'syslog errors': found}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
-        errors = self.ssh.exec_on_all_nodes('grep error /var/opt/redislabs/log/install.log || echo ""')
-        found = sum([len(error.strip()) for error in errors])
+        """check errors in install.log"""
+        rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
+        found = sum([len(rsp.result()) for rsp in rsps])
 
-        return "check errors in install.log", not found, {'install.log errors': found}
+        return not found, {'install.log errors': found}

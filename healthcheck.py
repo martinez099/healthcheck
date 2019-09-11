@@ -25,8 +25,8 @@ def load_params(_args):
             if _args.params.lower() in file.lower():
                 with open(file) as f:
                     params = json.loads(f.read())
-                return params
-    return {}
+                return file, params
+    return '', {}
 
 
 def load_suites(_args, _config, _base_class=BaseCheckSuite):
@@ -46,9 +46,8 @@ def load_suites(_args, _config, _base_class=BaseCheckSuite):
             if member != _base_class.__name__:
                 suite = getattr(module, member)
                 if type(suite) == type.__class__ and issubclass(suite, _base_class):
-                    if _args.suite.lower() in member.lower():
+                    if _args.list or _args.suite and _args.suite.lower() in member.lower():
                         suites.append(suite(_config))
-    assert suites
     return suites
 
 
@@ -60,13 +59,11 @@ def parse_args():
     """
     parser = argparse.ArgumentParser()
 
-    options = parser.add_mutually_exclusive_group()
+    options = parser.add_argument_group()
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
     options.add_argument('-c', '--check', help="Specify a check to execute.", type=str, default='all')
-
-    params = parser.add_argument_group()
-    params.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
+    options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
 
     return parser.parse_args()
 
@@ -104,25 +101,30 @@ def main():
         return
 
     # render output
-    def result_cb(result):
-        if type(result) == list:
-            return [result_cb(r) for r in result]
-        if result[1] is True:
+    def render_result(_result, _func):
+        if _result[0] is True:
             to_print = '[+] '
-        elif result[1] is False:
+        elif _result[0] is False:
             to_print = '[-] '
-        elif result[1] is None:
+        elif _result[0] is None:
             to_print = '[~] '
-        elif result[1] is Exception:
+        elif _result[0] is Exception:
             to_print = '[*] '
         else:
-            pprint.pprint(f'[ ] [{result[0]}] skipped')
+            pprint.pprint(f'[ ] [{_func.__doc__}] skipped')
             return
 
-        to_print += f'[{result[0]}] ' + f', '.join([str(k) + ': ' + str(v) for k, v in result[2].items()])
+        to_print += f'[{_func.__doc__}] ' + f', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()])
         pprint.pprint(to_print, width=320)
 
-    # create check executor
+    # define result callback
+    def result_cb(_result, _func, _args, _kwargs):
+        if type(_result) == list:
+            return [result_cb(r, _func, _args, _kwargs) for r in _result]
+        else:
+            return render_result(_result, _func)
+
+    # create executor
     executor = CheckExecutor(result_cb)
 
     # execute single checks
@@ -140,21 +142,21 @@ def main():
     stats_collector = StatsCollector()
 
     # collect statistics
-    def collect_stats(result):
-        if result[1] is True:
+    def collect_stats(_result):
+        if _result[0] is True:
             stats_collector.incr_succeeded()
-        elif result[1] is False:
+        elif _result[0] is False:
             stats_collector.incr_failed()
-        elif result[1] is None:
+        elif _result[0] is None:
             stats_collector.incr_no_result()
-        elif result[1] is Exception:
+        elif _result[0] is Exception:
             stats_collector.incr_errors()
         else:
             stats_collector.incr_skipped()
 
-    # define done callback3
-    def done_cb(future):
-        result = future.result()
+    # define done callback
+    def done_cb(_future):
+        result = _future.result()
         if type(result) == list:
             [collect_stats(r) for r in result]
         else:
@@ -162,10 +164,12 @@ def main():
 
     # execute check suites
     for suite in suites:
-        pprint.pprint('[SUITE] {}'.format(suite.__doc__))
+        to_print = '[SUITE] {}'.format(suite.__doc__)
         params = load_params(args)
-        pprint.pprint('[PARAMS] {}'.format(args.params if args.params else 'None'))
-        executor.execute_suite(suite, _kwargs=params, _done_cb=done_cb)
+        if params:
+            to_print += ' ' + params[0]
+        pprint.pprint(to_print)
+        executor.execute_suite(suite, _kwargs=params[1], _done_cb=done_cb)
         executor.wait()
 
     # print statistics

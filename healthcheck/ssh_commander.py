@@ -19,9 +19,9 @@ class SshCommander(object):
         self.keyfile = _keyfile
         self.cache = {}
 
-    def exec_on_ip(self, _cmd, _ip):
+    def exec_on_host(self, _cmd, _ip):
         """
-        Execute a SSH command on an IP address.
+        Execute a SSH command on a host.
 
         :param _cmd: The command to execute.
         :param _ip: The IP address of the remote machine.
@@ -30,45 +30,26 @@ class SshCommander(object):
         """
         return self._exec(self.username, _ip, self.keyfile, _cmd)
 
-    def exec_on_all_ips(self, _cmd):
+    def exec_on_all_hosts(self, _cmd, *_args, **_kwargs):
         """
-        Execute a SSH command on all IP addresses.
+        Execute a SSH command on all hosts.
 
         :param _cmd: The command to execute.
         :return: The results.
         :raise Exception: If an error occurred.
         """
         with ThreadPoolExecutor(max_workers=len(self.hostnames)) as e:
-            futures = [e.submit(self.exec_on_ip, _cmd, ip) for ip in self.hostnames]
+            futures = []
+            for ip in self.hostnames:
+                future = e.submit(self.exec_on_host, _cmd, ip)
+                future.ip = ip
+                future.cmd = _cmd
+                future.args = _args
+                future.kwargs = _kwargs
+                futures.append(future)
             done, undone = wait(futures)
             assert not undone
-            return [d.result() for d in done]
-
-    def exec_on_node(self, _cmd, _node_nr):
-        """
-        Execute a SSH remote command an a node.
-
-        :param _cmd: The command to execute.
-        :param _node_nr: The index in the array of the configured IP addresses.
-        :return: The response.
-        :raise Excpetion: If an error occurred.
-        """
-        return self._exec(self.username, self.hostnames[_node_nr], self.keyfile, _cmd)
-
-    def exec_on_all_nodes(self, _cmd):
-        """
-        Execute a SSH command on all nodes.
-
-        :param _cmd: The command to execute.
-        :return: The results.
-        :raise Excpetion: If an error occurred.
-        """
-        number_of_nodes = len(self.hostnames)
-        with ThreadPoolExecutor(max_workers=number_of_nodes) as e:
-            futures = [e.submit(self.exec_on_node, _cmd, node_nr) for node_nr in range(0, number_of_nodes)]
-            done, undone = wait(futures)
-            assert not undone
-            return [d.result() for d in done]
+            return done
 
     def _exec(self, _user, _host, _keyfile, _cmd):
         """
