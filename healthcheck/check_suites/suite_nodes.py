@@ -20,9 +20,9 @@ class NodeChecks(BaseCheckSuite):
 
     def check_hosts(self, *_args, **_kwargs):
         """check host reachabilities"""
-        [exec_cmd(f'ping -qont 1 {hostname}') for hostname in self.ssh.hostnames]
+        results = [exec_cmd(f'ping -c 1 {hostname} > /dev/null && echo $?') for hostname in self.ssh.hostnames]
 
-        kwargs = {hostname: True for hostname in self.ssh.hostnames}
+        kwargs = {hostname: result == '0' for hostname, result in zip(self.ssh.hostnames, results)}
         return True, {'hostnames': kwargs}
 
     def check_master_node(self, *_args, **_kwargs):
@@ -133,7 +133,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_errors_in_syslog(self, *_args, **_kwargs):
         """check errors in syslog"""
-        rsps = self.ssh.exec_on_all_hosts( 'sudo grep error /var/log/syslog || echo ""')
+        rsps = self.ssh.exec_on_all_hosts('sudo grep error /var/log/syslog || echo ""')
         found = sum([len(rsp.result()) for rsp in rsps])
 
         return not found, {'syslog errors': found}
@@ -144,3 +144,16 @@ class NodeChecks(BaseCheckSuite):
         found = sum([len(rsp.result()) for rsp in rsps])
 
         return not found, {'install.log errors': found}
+
+    def check_network_speed(self, *_args, **_kwargs):
+        """check network link"""
+        results = {}
+        for source in self.ssh.hostnames:
+            for target in self.ssh.hostnames:
+                if source == target:
+                    continue
+                result = self.ssh.exec_on_host(f'ping -c 3 {target}', source)
+                lines = result.split('\n')
+                results[f'{source} -> {target}'] = lines[-1:][0]
+
+        return None, results
