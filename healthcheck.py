@@ -2,53 +2,12 @@
 
 import argparse
 import configparser
-import glob
-import importlib
-import json
 import logging
 import pprint
 
-from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.check_suites.base_suite import load_suites
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
-
-
-def load_params(_args):
-    """
-    Load a parameter map.
-
-    :param _args: The name of the parameter map.
-    :return: A dictionary with the parameters.
-    """
-    if _args.params:
-        for file in glob.glob('healthcheck/parameter_maps/*.json'):
-            if _args.params.lower() in file.lower():
-                with open(file) as f:
-                    params = json.loads(f.read())
-                return file, params
-    return '', {}
-
-
-def load_suites(_args, _config, _base_class=BaseCheckSuite):
-    """
-    Load check suites.
-
-    :param _args: The pasred command line arguments.
-    :param _config: The configuration.
-    :param _base_class: The base class of the check suites.
-    :return: A list with all instantiated check suites.
-    """
-    suites = []
-    for file in glob.glob('healthcheck/check_suites/suite_*.py'):
-        name = file.replace('/', '.').replace('.py', '')
-        module = importlib.import_module(name)
-        for member in dir(module):
-            if member != _base_class.__name__:
-                suite = getattr(module, member)
-                if type(suite) == type.__class__ and issubclass(suite, _base_class):
-                    if _args.list or _args.suite and _args.suite.lower() in suite.__doc__.lower():
-                        suites.append(suite(_config))
-    return suites
 
 
 def parse_args():
@@ -165,11 +124,11 @@ def main():
     # execute check suites
     for suite in suites:
         to_print = '[SUITE] {}'.format(suite.__doc__)
-        params = load_params(args)
-        if params:
-            to_print += ' ' + params[0]
+        if args.params:
+            to_print += ' ' + args.params
         pprint.pprint(to_print)
-        executor.execute_suite(suite, _kwargs=params[1], _done_cb=done_cb)
+        params = map(lambda x: x[1], filter(lambda x: args.params in x[0].lower(), suite.params.items()))
+        executor.execute_suite(suite, _kwargs=list(params)[0] if args.params else {}, _done_cb=done_cb)
         executor.wait()
 
     # print statistics
