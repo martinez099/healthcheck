@@ -46,7 +46,7 @@ def load_suites(_args, _config, _base_class=BaseCheckSuite):
             if member != _base_class.__name__:
                 suite = getattr(module, member)
                 if type(suite) == type.__class__ and issubclass(suite, _base_class):
-                    if _args.list or _args.suite and _args.suite.lower() in member.lower():
+                    if _args.list or _args.suite and _args.suite.lower() in suite.__doc__.lower():
                         suites.append(suite(_config))
     return suites
 
