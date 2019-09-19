@@ -30,7 +30,26 @@ class SshCommander(object):
         """
         return self._exec(self.username, _ip, self.keyfile, _cmd)
 
-    def exec_on_all_hosts(self, _cmd, *_args, **_kwargs):
+    def exec_on_hosts(self, _cmd_ips):
+        """
+        Execute multiple SSH commands.
+
+        :param _cmd_ips: A list of (commands, IP addresses).
+        :return: The result.
+        :raise Exception: If an error occurred.
+        """
+        with ThreadPoolExecutor(max_workers=len(_cmd_ips)) as e:
+            futures = []
+            for cmd, ip in _cmd_ips:
+                future = e.submit(self._exec, self.username, ip, self.keyfile, cmd)
+                future.ip = ip
+                future.cmd = cmd
+                futures.append(future)
+            done, undone = wait(futures)
+            assert not undone
+            return done
+
+    def exec_on_all_hosts(self, _cmd):
         """
         Execute a SSH command on all hosts.
 
@@ -44,8 +63,6 @@ class SshCommander(object):
                 future = e.submit(self.exec_on_host, _cmd, ip)
                 future.ip = ip
                 future.cmd = _cmd
-                future.args = _args
-                future.kwargs = _kwargs
                 futures.append(future)
             done, undone = wait(futures)
             assert not undone

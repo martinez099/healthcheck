@@ -7,23 +7,22 @@ from healthcheck.common import exec_cmd
 class NodeChecks(BaseCheckSuite):
     """Check Nodes via SSH"""
 
-    def check_hostnames(self, *_args, **_kwargs):
-        """check configured hosts"""
+    def check_private_ip(self, *_args, **_kwargs):
+        """check private IP address"""
         nodes = self.api.get('nodes')
         rsps = self.ssh.exec_on_all_hosts('hostname -I')
         uid_addrs = [(node['uid'], node['addr']) for node in nodes]
-        uid_addrs.sort(key=lambda x: x[0])
 
-        result = all([rsp.result() == uid_addrs[1] for rsp, uid_addrs in zip(rsps, uid_addrs)])
+        result = all(rsp.result() in map(lambda x: x[1], uid_addrs) for rsp in rsps)
         kwargs = {'node:{}'.format(uid): address for uid, address in uid_addrs}
         return result, kwargs
 
-    def check_hosts(self, *_args, **_kwargs):
-        """check host reachabilities"""
+    def check_reachability(self, *_args, **_kwargs):
+        """check host reachability"""
         results = [exec_cmd(f'ping -c 1 {hostname} > /dev/null && echo $?') for hostname in self.ssh.hostnames]
 
         kwargs = {hostname: result == '0' for hostname, result in zip(self.ssh.hostnames, results)}
-        return True, {'hostnames': kwargs}
+        return all(result == '0' for result in results), {'hostnames': kwargs}
 
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
@@ -41,7 +40,7 @@ class NodeChecks(BaseCheckSuite):
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorums = [match.group(1) for match in matches]
 
-        kwargs = {rsp.ip: quorum for rsp, quorum in zip(rsps, quorums)}
+        kwargs = {node_id: quorum for node_id, quorum in zip(node_ids, quorums)}
         return None, kwargs
 
     def check_os_version(self, *_args, **_kwargs):
@@ -105,7 +104,7 @@ class NodeChecks(BaseCheckSuite):
         found = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
         not_ok = len(found)
 
-        return not not_ok, {'not OK': not_ok}
+        return not not_ok, {'not OK': found}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check rlcheck status"""
@@ -147,13 +146,16 @@ class NodeChecks(BaseCheckSuite):
 
     def check_network_speed(self, *_args, **_kwargs):
         """check network link"""
-        results = {}
+        cmd_ips = []
         for source in self.ssh.hostnames:
             for target in self.ssh.hostnames:
                 if source == target:
                     continue
-                result = self.ssh.exec_on_host(f'ping -c 3 {target}', source)
-                lines = result.split('\n')
-                results[f'{source} -> {target}'] = lines[-1:][0]
+                cmd_ips.append((f'ping -c 3 {target}', source))
+        results = self.ssh.exec_on_hosts(cmd_ips)
+        kwargs = {}
+        for result in results:
+            lines = result.result().split('\n')
+            kwargs[f'{result.ip}: {result.cmd}'] = lines[-1:][0]
 
-        return None, results
+        return None, kwargs
