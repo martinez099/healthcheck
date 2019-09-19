@@ -1,4 +1,5 @@
 from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.common import GB
 
 
 class StatChecks(BaseCheckSuite):
@@ -75,10 +76,10 @@ class StatChecks(BaseCheckSuite):
 
             # througput
             m = max([int['total_req'] for int in filter(lambda x: x.get('total_req'), ints)])
-            kwargs[uid]['max_throughput'] = m
+            kwargs[uid]['max_throughput (sizing factor)'] = '{} ({:.2f})'.format(m, m / 25000)
 
             # RAM usage
             m = max([int['used_memory_peak'] for int in filter(lambda x: x.get('used_memory_peak'), ints)])
-            kwargs[uid]['max_memory_usage'] = m
+            kwargs[uid]['max_memory_usage (sizing factor)'] = '{} ({:.2f})'.format(m, m / (25 * GB))
 
         return None, kwargs
