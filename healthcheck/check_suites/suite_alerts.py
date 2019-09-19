@@ -14,7 +14,11 @@ class AlertChecks(BaseCheckSuite):
     def check_bdb_alerts(self, *_args, **_kwargs):
         """check database alerts"""
         all_bdb_alerts = self.api.get('bdbs/alerts')
-        triggered = [[filter(lambda x: x['state'], alert) for alert in alerts] for alerts in all_bdb_alerts]
+        triggered = {}
+        for alerts_k, alerts_v in all_bdb_alerts.items():
+            for alert_k, alert_v in alerts_v.items():
+                if alert_v['state']:
+                    triggered[alert_k] = alert_v
 
         return None, {'triggered_alerts': triggered}
 
