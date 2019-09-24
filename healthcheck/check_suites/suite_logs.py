@@ -2,26 +2,26 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class LogChecks(BaseCheckSuite):
-    """Check logs via API"""
+    """Check logs"""
 
     def check_warnings(self, *_args, **_kwargs):
         """get warnings"""
         logs = self.api.get('logs')
 
-        kwargs = {'warnings': []}
+        result = []
         for log in logs:
             if log['severity'] == 'WARNING':
-                kwargs['warnings'].append(log)
+                result.append(log)
 
-        return None, kwargs
+        return not len(result), {'warnings': len(result)}
 
     def check_errors(self, *_args, **_kwargs):
         """get errors"""
         logs = self.api.get('logs')
 
-        kwargs = {'errors': []}
+        result = []
         for log in logs:
             if log['severity'] == 'ERROR':
-                kwargs['errors'].append(log)
+                result.append(log)
 
-        return None, kwargs
+        return not len(result), {'errors': len(result)}

@@ -6,7 +6,7 @@ from healthcheck.common import to_gb, GB
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Check Cluster via API"""
+    """Check cluster [params]"""
 
     def check_license_shards_limit(self, *_args, **_kwargs):
         """"check if shards limit in license is respected"""
@@ -45,7 +45,7 @@ class ClusterChecks(BaseCheckSuite):
         """check if enough nodes"""
         number_of_nodes = self.api.get_number_of_values('nodes')
 
-        result = number_of_nodes >= _kwargs['min_nodes']
+        result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0
         kwargs = {'number of nodes': number_of_nodes, 'min nodes': _kwargs['min_nodes']}
         return result, kwargs
 
@@ -82,3 +82,33 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size)),
                   'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage'] )}
         return result, kwargs
+
+    def check_alert_settings(self, *_args, **_kwargs):
+        """get cluster and node alert settings"""
+        alerts = self.api.get_value('cluster', 'alert_settings')
+
+        kwargs = {'alerts': alerts}
+        return None, kwargs
+
+    def check_shards_balance(self, *_args, **_kwargs):
+        """check if shards are balanced accross nodes"""
+        nodes = self.api.get('nodes')
+        node_ids = list(map(lambda x: x['uid'], nodes))
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {uid}',
+                                      self.ssh.hostnames[0]) for uid in node_ids]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorum_onlys = {node_id: match.group(1) == 'enabled' for node_id, match in zip(node_ids, matches)}
+        shards = self.api.get('shards')
+        shards_per_node = {}
+        for shard in shards:
+            if shard['node_uid'] not in shards_per_node:
+                shards_per_node[shard['node_uid']] = 0
+            shards_per_node[shard['node_uid']] += 1
+
+        result = True
+        for node_id, shards in shards_per_node.items():
+            if quorum_onlys[int(node_id)] and shards > 0:
+                result = False
+
+        unbalanced = min(shards_per_node.values()) - max(shards_per_node.values()) > 1
+        return result and not unbalanced, shards_per_node

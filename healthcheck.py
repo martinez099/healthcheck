@@ -61,6 +61,9 @@ def main():
 
     # render output
     def render_result(_result, _func):
+        if not _result[1]:
+            pprint.pprint(f'[ ] [{_func.__doc__}] skipped')
+            return
         if _result[0] is True:
             to_print = '[+] '
         elif _result[0] is False:
@@ -70,8 +73,7 @@ def main():
         elif _result[0] is Exception:
             to_print = '[*] '
         else:
-            pprint.pprint(f'[ ] [{_func.__doc__}] skipped')
-            return
+            raise NotImplementedError()
 
         to_print += f'[{_func.__doc__}] ' + f', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()])
         pprint.pprint(to_print, width=320)
@@ -89,8 +91,8 @@ def main():
     # execute single checks
     if args.check != 'all':
         for suite in suites:
-            checks_names = filter(lambda x: x.startswith('check_') and args.check.lower() in x.lower(), dir(suite))
-            for check_name in checks_names:
+            check_names = filter(lambda x: x.startswith('check_') and args.check.lower() in x.lower(), dir(suite))
+            for check_name in check_names:
                 check_func = getattr(suite, check_name)
                 executor.execute(check_func)
         executor.wait()
@@ -102,7 +104,9 @@ def main():
 
     # collect statistics
     def collect_stats(_result):
-        if _result[0] is True:
+        if not _result[1]:
+            stats_collector.incr_skipped()
+        elif _result[0] is True:
             stats_collector.incr_succeeded()
         elif _result[0] is False:
             stats_collector.incr_failed()
@@ -111,7 +115,7 @@ def main():
         elif _result[0] is Exception:
             stats_collector.incr_errors()
         else:
-            stats_collector.incr_skipped()
+            raise NotImplementedError()
 
     # define done callback
     def done_cb(_future):

@@ -1,4 +1,3 @@
-
 class StatsCollector(object):
 
     def __init__(self):
@@ -30,5 +29,5 @@ class StatsCollector(object):
             'failed': self.failed,
             'errors': self.errors,
             'skipped': self.skipped,
-            'total': sum([self.succeeded, self.no_result, self.failed, self.errors, self.skipped])
+            'TOTAL': sum([self.succeeded, self.no_result, self.failed, self.errors, self.skipped])
         }
