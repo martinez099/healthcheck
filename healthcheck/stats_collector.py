@@ -24,10 +24,10 @@ class StatsCollector(object):
 
     def get_stats(self):
         return {
-            'succeeded': self.succeeded,
+            'satisfied': self.succeeded,
             'no result': self.no_result,
-            'failed': self.failed,
-            'errors': self.errors,
+            'not satisfied': self.failed,
+            'failed with error': self.errors,
             'skipped': self.skipped,
             'TOTAL': sum([self.succeeded, self.no_result, self.failed, self.errors, self.skipped])
         }

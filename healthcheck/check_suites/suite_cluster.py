@@ -110,5 +110,5 @@ class ClusterChecks(BaseCheckSuite):
             if quorum_onlys[int(node_id)] and shards > 0:
                 result = False
 
-        unbalanced = min(shards_per_node.values()) - max(shards_per_node.values()) > 1
+        unbalanced = max(shards_per_node.values()) - min(shards_per_node.values()) > 1
         return result and not unbalanced, shards_per_node
