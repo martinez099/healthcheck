@@ -4,6 +4,7 @@ import argparse
 import configparser
 import logging
 import pprint
+import os
 
 from healthcheck.check_suites.base_suite import load_suites
 from healthcheck.check_executor import CheckExecutor
@@ -23,18 +24,22 @@ def parse_args():
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
     options.add_argument('-c', '--check', help="Specify a check to execute.", type=str, default='all')
     options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
+    options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
 
     return parser.parse_args()
 
 
-def parse_config():
+def parse_config(args):
     """
     Parse configuration file.
 
     :return: The parsed configuration.
     """
+    if not os.path.isfile(args.config):
+        raise Exception('could not find configfuration file')
+
     config = configparser.ConfigParser()
-    with open('config.ini', 'r') as configfile:
+    with open(args.config, 'r') as configfile:
         config.read_file(configfile)
     return config
 
@@ -48,15 +53,23 @@ def main():
     args = parse_args()
 
     # parse configuration file
-    config = parse_config()
+    config = parse_config(args)
 
     # load check suites
     suites = load_suites(args, config)
 
     # list suites
     if args.list:
+        result = []
         for suite in suites:
-            pprint.pprint(f'{suite.__class__.__name__}: {suite.__doc__}')
+            result.append(f'{suite.__class__.__name__}: {suite.__doc__}')
+            check_names = filter(lambda x: x.startswith('check_'), dir(suite))
+            checks = []
+            for check_name in check_names:
+                check_func = getattr(suite, check_name)
+                checks.append(f'{check_name}: {check_func.__doc__}')
+            result.append(checks)
+        pprint.pprint(result, indent=2)
         return
 
     # render output
@@ -120,10 +133,7 @@ def main():
     # define done callback
     def done_cb(_future):
         result = _future.result()
-        if type(result) == list:
-            [collect_stats(r) for r in result]
-        else:
-            collect_stats(result)
+        [collect_stats(r) for r in result] if type(result) == list else collect_stats(result)
 
     # execute check suites
     for suite in suites:
