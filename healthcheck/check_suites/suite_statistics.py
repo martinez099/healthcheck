@@ -13,11 +13,11 @@ class StatChecks(BaseCheckSuite):
         ints = stats['intervals']
 
         # througput
-        m = max([int['total_req'] for int in filter(lambda x: x.get('total_req'), ints)])
+        m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
         kwargs['max_throughput'] = m
 
         # RAM usage
-        m = min([int['free_memory'] for int in filter(lambda x: x.get('free_memory'), ints)])
+        m = min([i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints)])
         kwargs['max_memory_usage'] = m
 
         return None, kwargs
@@ -34,14 +34,14 @@ class StatChecks(BaseCheckSuite):
             kwargs[uid] = {}
 
             # RAM usage
-            min_free_memory = min(int['free_memory'] for int in filter(lambda x: x.get('free_memory'), ints))
+            min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
             result = min_free_memory < total_memory * (2/3)
             kwargs[uid]['low memory'] = result
             results.append(result)
 
             # CPU usage
-            max_cpu_user = max(int['cpu_user'] for int in filter(lambda x: x.get('cpu_user'), ints))
+            max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
             result = max_cpu_user > 0.8
             kwargs[uid]['high CPU'] = result
             results.append(result)
@@ -64,7 +64,7 @@ class StatChecks(BaseCheckSuite):
             kwargs[name] = {}
 
             # througput
-            max_throughput = max([int['instantaneous_ops_per_sec'] for int in filter(lambda x: x.get('instantaneous_ops_per_sec'), ints)])
+            max_throughput = max([i['instantaneous_ops_per_sec'] for i in filter(lambda x: x.get('instantaneous_ops_per_sec'), ints)])
             if bigstore:
                 result = max_throughput > (number_of_shards * 5000)
             elif crdb:
@@ -75,7 +75,7 @@ class StatChecks(BaseCheckSuite):
             results.append(result)
 
             # RAM usage
-            max_memory_usage = max([int['used_memory'] for int in filter(lambda x: x.get('used_memory'), ints)])
+            max_memory_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), ints)])
             if bigstore:
                 result = max_memory_usage > (number_of_shards * 50 * GB)
             else:
@@ -100,7 +100,7 @@ class StatChecks(BaseCheckSuite):
             kwargs[uid] = {}
 
             # througput
-            max_total_requests = max([int['total_req'] for int in filter(lambda x: x.get('total_req'), ints)])
+            max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
             if bigstore:
                 result = max_total_requests > 5000
             elif crdb:
@@ -111,7 +111,7 @@ class StatChecks(BaseCheckSuite):
             results.append(result)
 
             # RAM usage
-            max_ram_usage = max([int['used_memory_peak'] for int in filter(lambda x: x.get('used_memory_peak'), ints)])
+            max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), ints)])
             if bigstore:
                 result = max_ram_usage > (50 * GB)
             else:
