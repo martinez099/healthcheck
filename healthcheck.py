@@ -67,7 +67,7 @@ def main():
 
     # check SSH connectivity
     logging.info(f'checking SSH connectivity ...')
-    ssh = SshCommander(config['ssh']['user'], config['ssh']['hosts'], config['ssh']['key'])
+    ssh = SshCommander(config['ssh']['hosts'], config['ssh']['user'], config['ssh']['key'])
     for ip in ssh.hostnames:
         try:
             ssh.exec_on_host('sudo -v', ip)
