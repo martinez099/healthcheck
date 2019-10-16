@@ -83,7 +83,7 @@ def main():
         fqdn = api.get_value('cluster', 'name')
         logging.info('successfully connected to {}'.format(fqdn))
     except Exception as e:
-        logging.error('could not connect to Redis Enterprise REST-API', e)
+        logging.error('could not connect to Redis Enterprise REST-API')
         raise e
 
     # render result
@@ -98,12 +98,19 @@ def main():
 
     # execute single checks
     if args.check != 'all':
+        found = False
         for suite in suites:
-            check_names = filter(lambda x: x.startswith('check_') and args.check.lower() in x.lower(), dir(suite))
-            for check_name in check_names:
-                print('Running single check [{}] ...'.format(check_name))
-                check_func = getattr(suite, check_name)
-                executor.execute(check_func)
+            for check in filter(lambda x: x.startswith('check_'), dir(suite)):
+                check_func = getattr(suite, check)
+                if args.check.lower() in check_func.__doc__.lower():
+                    found = True
+                    print('Running single check: {} ...'.format(check_func.__doc__))
+                    executor.execute(check_func)
+
+        if not found:
+            print('Could not find check, use -l!')
+            exit(1)
+
         executor.wait()
         executor.shutdown()
         return
@@ -112,18 +119,27 @@ def main():
     stats_collector = StatsCollector()
 
     # collect statistics
-    def collect_stats(_future):
+    def collect(_future):
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
     # execute check suites
     for suite in suites:
-        to_print = 'Running check suite [{}] ...'.format(suite.__doc__)
+        to_print = ['Running check suite: {}'.format(suite.__doc__)]
+        params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
+        if args.params and not params:
+            print('Could not find paramter map, use -l!')
+            exit(1)
+
+        if args.params.lower() not in suite.__doc__.lower():
+            print('Wrong parameter map, use -l!')
+            exit(1)
+
         if args.params:
-            to_print += ' ' + args.params
-        print(to_print)
-        params = map(lambda x: x[1], filter(lambda x: args.params in x[0].lower(), suite.params.items()))
-        executor.execute_suite(suite, _kwargs=list(params)[0] if args.params else {}, _done_cb=collect_stats)
+            to_print.append('with paramter map "{}"'.format(params[0][0]))
+        to_print.append('...')
+        print(' '.join(to_print))
+        executor.execute_suite(suite, _kwargs=params[0][1] if args.params else {}, _done_cb=collect)
         executor.wait()
 
     # print statistics
