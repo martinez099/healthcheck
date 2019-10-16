@@ -39,7 +39,7 @@ class BdbChecks(BaseCheckSuite):
     def _check_bdb(self, _uid, _values):
         f"""check bdb:{_uid}"""
         bdb = self.api.get(f'bdbs/{_uid}')
-        result, kwargs = {}, {'name': bdb['name'], 'not satisfied': {}}
+        result, kwargs = {}, {'name': bdb['name'], 'failed': {}}
         for k, v in _values.items():
             result[k] = v == bdb[k]
             if not result[k]:

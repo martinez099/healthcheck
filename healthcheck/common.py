@@ -23,6 +23,16 @@ cyan = lambda text: '\033[0;36m' + text + '\033[0m'
 white = lambda text: '\033[0;37m' + text + '\033[0m'
 
 
+def to_kops(_value):
+    """
+    Concert a numeric value in readable ops/sec
+
+    :param _value:
+    :return:
+    """
+    return '{}K ops/sec'.format(math.ceil(_value / 1000))
+
+
 def to_gb(_value):
     """
     Convert a numeric value from bytes to gigabytes.

@@ -3,27 +3,9 @@
     "data_persistence": "disabled",
     "rack_aware": false,
     "replica_sync": "disabled",
-    "shards_placement": "dense",
-    "proxy_policy": "single",
-    "replication": true,
-    "oss_cluster": false
-  },
-  "db1": {
-    "memory_size": 1073741824,
-    "rack_aware": false,
     "shards_placement": "sparse",
     "proxy_policy": "single",
     "replication": false,
-    "oss_cluster": false
-  },
-  "db2": {
-    "memory_size": 1073741824,
-    "data_persistence": "disabled",
-    "rack_aware": false,
-    "replica_sync": "disabled",
-    "shards_placement": "dense",
-    "proxy_policy": "single",
-    "replication": true,
     "oss_cluster": false
   }
 }

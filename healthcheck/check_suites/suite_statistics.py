@@ -1,12 +1,12 @@
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common import GB
+from healthcheck.common import GB, to_gb, to_kops
 
 
 class StatChecks(BaseCheckSuite):
     """Check statistics"""
 
     def check_cluster(self):
-        """check cluster statistics"""
+        """get cluster statistics"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
@@ -14,11 +14,11 @@ class StatChecks(BaseCheckSuite):
 
         # througput
         m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
-        kwargs['max_throughput'] = m
+        kwargs['maximum throughput'] = to_kops(m)
 
         # RAM usage
         m = min([i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints)])
-        kwargs['max_memory_usage'] = m
+        kwargs['minimum free memory'] = '{} GB'.format(to_gb(m))
 
         return None, kwargs
 
@@ -31,19 +31,19 @@ class StatChecks(BaseCheckSuite):
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
-            kwargs[uid] = {}
+            kwargs[f'node:{uid}'] = {}
 
             # RAM usage
             min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
             result = min_free_memory < total_memory * (2/3)
-            kwargs[uid]['low memory'] = result
+            kwargs[f'node:{uid}']['too less memory'] = result
             results.append(result)
 
             # CPU usage
             max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
             result = max_cpu_user > 0.8
-            kwargs[uid]['high CPU'] = result
+            kwargs[f'node:{uid}']['too much CPU usage'] = result
             results.append(result)
 
         return not any(results), kwargs
@@ -71,7 +71,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_throughput > (number_of_shards * 17500)
             else:
                 result = max_throughput > (number_of_shards * 25000)
-            kwargs[name]['high throughput'] = result
+            kwargs[name]['too much throughput'] = result
             results.append(result)
 
             # RAM usage
@@ -80,7 +80,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_memory_usage > (number_of_shards * 50 * GB)
             else:
                 result = max_memory_usage > (number_of_shards * 25 * GB)
-            kwargs[name]['high memory'] = result
+            kwargs[name]['too much memory'] = result
             results.append(result)
 
         return not any(results), kwargs
@@ -97,7 +97,7 @@ class StatChecks(BaseCheckSuite):
             bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            kwargs[uid] = {}
+            kwargs[f'shard:{uid}'] = {}
 
             # througput
             max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
@@ -107,7 +107,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_total_requests > 17500
             else:
                 result = max_total_requests > 25000
-            kwargs[uid][' high throughput'] = result
+            kwargs[f'shard:{uid}']['too much throughput'] = result
             results.append(result)
 
             # RAM usage
@@ -116,7 +116,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_ram_usage > (50 * GB)
             else:
                 result = max_ram_usage > (25 * GB)
-            kwargs[uid]['high memory'] = result
+            kwargs[f'shard:{uid}']['too much memory'] = result
             results.append(result)
 
         return not any(results), kwargs
