@@ -3,7 +3,6 @@
 import argparse
 import configparser
 import logging
-import pprint
 import os
 
 from healthcheck.check_suites.base_suite import load_suites
@@ -11,6 +10,7 @@ from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
 from healthcheck.ssh_commander import SshCommander
 from healthcheck.api_fetcher import ApiFetcher
+from healthcheck.render_engine import render_result, render_stats, render_list
 
 
 def parse_args():
@@ -62,16 +62,7 @@ def main():
 
     # list suites
     if args.list:
-        result = []
-        for suite in suites:
-            result.append(f'{suite.__class__.__name__}: {suite.__doc__}')
-            check_names = filter(lambda x: x.startswith('check_'), dir(suite))
-            checks = []
-            for check_name in check_names:
-                check_func = getattr(suite, check_name)
-                checks.append(f'{check_name}: {check_func.__doc__}')
-            result.append(checks)
-        pprint.pprint(result, indent=2)
+        render_list(suites)
         return
 
     # check SSH connectivity
@@ -89,45 +80,27 @@ def main():
         logging.info('checking API connectivity ...')
         api = ApiFetcher(config['api']['fqdn'], config['api']['user'], config['api']['pass'])
         fqdn = api.get_value('cluster', 'name')
-        logging.info('successfully connected to {}'.format(fqdn))
+        logging.info('successfully connected to cluster {}'.format(fqdn))
     except Exception as e:
         logging.error('could not connect to API via HTTP', e)
         exit(1)
 
-    # render output
-    def render_result(_result, _func):
-        if not _result[1]:
-            pprint.pprint(f'[ ] [{_func.__doc__}] skipped')
-            return
-        if _result[0] is True:
-            to_print = '[+] '
-        elif _result[0] is False:
-            to_print = '[-] '
-        elif _result[0] is None:
-            to_print = '[~] '
-        elif _result[0] is Exception:
-            to_print = '[*] '
-        else:
-            raise NotImplementedError()
-
-        to_print += f'[{_func.__doc__}] ' + f', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()])
-        pprint.pprint(to_print, width=320)
-
-    # define result callback
-    def result_cb(_result, _func, _args, _kwargs):
+    # render result
+    def render(_result, _func, _args, _kwargs):
         if type(_result) == list:
-            return [result_cb(r, _func, _args, _kwargs) for r in _result]
+            return [render(r, _func, _args, _kwargs) for r in _result]
         else:
             return render_result(_result, _func)
 
     # create executor
-    executor = CheckExecutor(result_cb)
+    executor = CheckExecutor(render)
 
     # execute single checks
     if args.check != 'all':
         for suite in suites:
             check_names = filter(lambda x: x.startswith('check_') and args.check.lower() in x.lower(), dir(suite))
             for check_name in check_names:
+                print('Running single check [{}] ...'.format(check_name))
                 check_func = getattr(suite, check_name)
                 executor.execute(check_func)
         executor.wait()
@@ -138,38 +111,22 @@ def main():
     stats_collector = StatsCollector()
 
     # collect statistics
-    def collect_stats(_result):
-        if not _result[1]:
-            stats_collector.incr_skipped()
-        elif _result[0] is True:
-            stats_collector.incr_succeeded()
-        elif _result[0] is False:
-            stats_collector.incr_failed()
-        elif _result[0] is None:
-            stats_collector.incr_no_result()
-        elif _result[0] is Exception:
-            stats_collector.incr_errors()
-        else:
-            raise NotImplementedError()
-
-    # define done callback
-    def done_cb(_future):
+    def collect_stats(_future):
         result = _future.result()
-        [collect_stats(r) for r in result] if type(result) == list else collect_stats(result)
+        [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
     # execute check suites
     for suite in suites:
-        to_print = '[SUITE] {}'.format(suite.__doc__)
+        to_print = 'Running check suite [{}] ...'.format(suite.__doc__)
         if args.params:
             to_print += ' ' + args.params
-        pprint.pprint(to_print)
+        print(to_print)
         params = map(lambda x: x[1], filter(lambda x: args.params in x[0].lower(), suite.params.items()))
-        executor.execute_suite(suite, _kwargs=list(params)[0] if args.params else {}, _done_cb=done_cb)
+        executor.execute_suite(suite, _kwargs=list(params)[0] if args.params else {}, _done_cb=collect_stats)
         executor.wait()
 
     # print statistics
-    pprint.pprint("[COLLECTED STATISTICS]")
-    pprint.pprint(stats_collector.get_stats())
+    render_stats(stats_collector)
 
     # close
     executor.shutdown()

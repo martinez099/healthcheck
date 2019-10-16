@@ -7,27 +7,26 @@ class StatsCollector(object):
         self.errors = 0
         self.skipped = 0
 
-    def incr_succeeded(self):
-        self.succeeded += 1
+    def collect(self, _result):
+        if not _result[1]:
+            self.skipped += 1
+        elif _result[0] is True:
+            self.succeeded += 1
+        elif _result[0] is False:
+            self.failed += 1
+        elif _result[0] is None:
+            self.no_result += 1
+        elif _result[0] is Exception:
+            self.errors += 1
+        else:
+            raise NotImplementedError()
 
-    def incr_no_result(self):
-        self.no_result += 1
-
-    def incr_failed(self):
-        self.failed += 1
-
-    def incr_errors(self):
-        self.errors += 1
-
-    def incr_skipped(self):
-        self.skipped += 1
-
-    def get_stats(self):
+    def get(self):
         return {
-            'satisfied': self.succeeded,
+            'success': self.succeeded,
             'no result': self.no_result,
-            'not satisfied': self.failed,
-            'failed with error': self.errors,
+            'failed': self.failed,
+            'error': self.errors,
             'skipped': self.skipped,
             'TOTAL': sum([self.succeeded, self.no_result, self.failed, self.errors, self.skipped])
         }

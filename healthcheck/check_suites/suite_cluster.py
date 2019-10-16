@@ -6,10 +6,10 @@ from healthcheck.common import to_gb, GB
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Check cluster [params]"""
+    """Check cluster [minimum|recommended]"""
 
     def check_license_shards_limit(self, *_args, **_kwargs):
-        """"check if shards limit in license is respected"""
+        """check if shards limit in license is respected"""
         number_of_shards = self.api.get_number_of_values('shards')
         match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
         shards_limit = int(match.group(1))

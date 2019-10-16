@@ -2,7 +2,7 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class BdbChecks(BaseCheckSuite):
-    """Check databases [params]"""
+    """Check databases [sizing1]"""
 
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS API"""
