@@ -7,6 +7,13 @@ from healthcheck.common import exec_cmd
 class NodeChecks(BaseCheckSuite):
     """Check nodes"""
 
+    def check_reachability(self, *_args, **_kwargs):
+        """check host reachability"""
+        results = [exec_cmd(f'ping -c 1 {hostname} > /dev/null && echo $?') for hostname in self.ssh.hostnames]
+
+        kwargs = {hostname: result == '0' for hostname, result in zip(self.ssh.hostnames, results)}
+        return all(result == '0' for result in results), {'hostnames': kwargs}
+
     def check_private_ip(self, *_args, **_kwargs):
         """check private IP address"""
         nodes = self.api.get('nodes')
@@ -16,13 +23,6 @@ class NodeChecks(BaseCheckSuite):
         result = all(rsp.result() in map(lambda x: x[1], uid_addrs) for rsp in rsps)
         kwargs = {'node:{}'.format(uid): address for uid, address in uid_addrs}
         return result, kwargs
-
-    def check_reachability(self, *_args, **_kwargs):
-        """check host reachability"""
-        results = [exec_cmd(f'ping -c 1 {hostname} > /dev/null && echo $?') for hostname in self.ssh.hostnames]
-
-        kwargs = {hostname: result == '0' for hostname, result in zip(self.ssh.hostnames, results)}
-        return all(result == '0' for result in results), {'hostnames': kwargs}
 
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
@@ -118,13 +118,6 @@ class NodeChecks(BaseCheckSuite):
         not_running = sum([len(r[0]) for r in running])
 
         return not_running == 1 * len(rsps), {r[1]: len(r[0]) == 1 for r in running}
-
-    def check_errors_in_syslog(self, *_args, **_kwargs):
-        """check errors in syslog"""
-        rsps = self.ssh.exec_on_all_hosts('sudo grep error /var/log/syslog || echo ""')
-        errors = sum([len(rsp.result()) for rsp in rsps])
-
-        return not errors, {rsp.ip: len(rsp.result()) for rsp in rsps}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
         """check errors in install.log"""

@@ -11,11 +11,11 @@ class SshCommander(object):
     def __init__(self, _username, _hostnames, _keyfile):
         """
         :param _username: The ssh username to log in.
-        :param _hostnames: A list with hostnames to log in.
+        :param _hostnames: A string containing CSV with hostnames to log in.
         :param _keyfile: The path to the ssh identity file.
         """
         self.username = _username
-        self.hostnames = _hostnames
+        self.hostnames = list(map(lambda x: x.strip(), _hostnames.split(',')))
         self.keyfile = _keyfile
         self.cache = {}
 

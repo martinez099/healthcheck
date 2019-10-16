@@ -16,7 +16,7 @@ class BaseCheckSuite(object):
         :param _config: The configuration.
         """
         self.api = ApiFetcher(_config['api']['fqdn'], _config['api']['user'], _config['api']['pass'])
-        self.ssh = SshCommander(_config['ssh']['user'], _config['ssh']['hosts'].split(','), _config['ssh']['key'])
+        self.ssh = SshCommander(_config['ssh']['user'], _config['ssh']['hosts'], _config['ssh']['key'])
         self.params = load_params()
 
 

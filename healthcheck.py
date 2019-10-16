@@ -9,6 +9,8 @@ import os
 from healthcheck.check_suites.base_suite import load_suites
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
+from healthcheck.ssh_commander import SshCommander
+from healthcheck.api_fetcher import ApiFetcher
 
 
 def parse_args():
@@ -21,7 +23,7 @@ def parse_args():
 
     options = parser.add_argument_group()
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
-    options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
+    options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str, default='nodes')
     options.add_argument('-c', '--check', help="Specify a check to execute.", type=str, default='all')
     options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
     options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
@@ -71,6 +73,26 @@ def main():
             result.append(checks)
         pprint.pprint(result, indent=2)
         return
+
+    # check SSH connectivity
+    try:
+        logging.info('checking SSH connectivity ...')
+        ssh = SshCommander(config['ssh']['user'], config['ssh']['hosts'], config['ssh']['key'])
+        ips = ssh.exec_on_all_hosts('sudo -v')
+        logging.info({r.ip: 'OK' for r in ips})
+    except Exception as e:
+        logging.error('could not connect host via SSH', e)
+        exit(1)
+
+    # check API connectivity
+    try:
+        logging.info('checking API connectivity ...')
+        api = ApiFetcher(config['api']['fqdn'], config['api']['user'], config['api']['pass'])
+        fqdn = api.get_value('cluster', 'name')
+        logging.info('successfully connected to {}'.format(fqdn))
+    except Exception as e:
+        logging.error('could not connect to API via HTTP', e)
+        exit(1)
 
     # render output
     def render_result(_result, _func):
