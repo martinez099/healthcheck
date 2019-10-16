@@ -1,7 +1,6 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common import exec_cmd
 
 
 class NodeChecks(BaseCheckSuite):
@@ -132,6 +131,6 @@ class NodeChecks(BaseCheckSuite):
         kwargs = {}
         for result in results:
             lines = result.result().split('\n')
-            kwargs[f'{result.ip}: {result.cmd}'] = lines[-1:][0]
+            kwargs[f'{result.ip}'] = lines[-1:][0]
 
         return None, kwargs
