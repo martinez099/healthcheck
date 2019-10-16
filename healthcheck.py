@@ -66,24 +66,25 @@ def main():
         return
 
     # check SSH connectivity
-    try:
-        logging.info('checking SSH connectivity ...')
-        ssh = SshCommander(config['ssh']['user'], config['ssh']['hosts'], config['ssh']['key'])
-        ips = ssh.exec_on_all_hosts('sudo -v')
-        logging.info({r.ip: 'OK' for r in ips})
-    except Exception as e:
-        logging.error('could not connect host via SSH', e)
-        exit(1)
+    logging.info(f'checking SSH connectivity ...')
+    ssh = SshCommander(config['ssh']['user'], config['ssh']['hosts'], config['ssh']['key'])
+    for ip in ssh.hostnames:
+        try:
+            ssh.exec_on_host('sudo -v', ip)
+            logging.info(f'successfully connected to {ip}')
+        except Exception as e:
+            logging.error(f'could not connect to host {ip}')
+            raise e
 
     # check API connectivity
     try:
         logging.info('checking API connectivity ...')
         api = ApiFetcher(config['api']['fqdn'], config['api']['user'], config['api']['pass'])
         fqdn = api.get_value('cluster', 'name')
-        logging.info('successfully connected to cluster {}'.format(fqdn))
+        logging.info('successfully connected to {}'.format(fqdn))
     except Exception as e:
-        logging.error('could not connect to API via HTTP', e)
-        exit(1)
+        logging.error('could not connect to Redis Enterprise REST-API', e)
+        raise e
 
     # render result
     def render(_result, _func, _args, _kwargs):
@@ -130,6 +131,7 @@ def main():
 
     # close
     executor.shutdown()
+    logging.shutdown()
 
 
 if __name__ == '__main__':
