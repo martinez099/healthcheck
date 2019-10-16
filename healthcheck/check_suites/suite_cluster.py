@@ -18,15 +18,6 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards}
         return result, kwargs
 
-    def check_license_expire_date(self, *_args, **_kwargs):
-        """check if expire date is in future"""
-        expire_date = datetime.datetime.strptime(self.api.get('license')['expiration_date'], '%Y-%m-%dT%H:%M:%SZ')
-        today = datetime.datetime.now()
-
-        result = expire_date > today
-        kwargs = {'license expire date': expire_date, 'today': today}
-        return result, kwargs
-
     def check_license_expired(self, *_args, **_kwargs):
         """check if license is expired"""
         expired = self.api.get('license')['expired']

@@ -7,13 +7,6 @@ from healthcheck.common import exec_cmd
 class NodeChecks(BaseCheckSuite):
     """Check nodes"""
 
-    def check_reachability(self, *_args, **_kwargs):
-        """check host reachability"""
-        results = [exec_cmd(f'ping -c 1 {hostname} > /dev/null && echo $?') for hostname in self.ssh.hostnames]
-
-        kwargs = {hostname: result == '0' for hostname, result in zip(self.ssh.hostnames, results)}
-        return all(result == '0' for result in results), {'hostnames': kwargs}
-
     def check_private_ip(self, *_args, **_kwargs):
         """check private IP address"""
         nodes = self.api.get('nodes')
