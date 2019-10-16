@@ -1,6 +1,8 @@
 # healthcheck
 This is a command-line tool to check the health of a Redis Enterprise cluster.
-It does read-only operations via SSH and the Redis Enterprise REST-API.
+- It does read-only operations via SSH and the Redis Enterprise REST-API.
+- You can run single checks or whole check suites.
+- Check suites may or may not have parameter maps.
 
 ## Prerequisites
 
@@ -14,30 +16,20 @@ Fill in the `config.ini` in the main directory.
 
 ## Run
 
-### Help
-
-`healthcheck.py -h`
-
-### List all check suites
-
-`healthcheck.py -l`
-
-### Run a check suite
-
-`healthcheck.py -s <SUITE_NAME>`
-
-### Run a single check
-
-`healtchcheck.py -s <SUITE_NAME> -c <CHECK_NAME>`
-
-### Run a check suite with parameters
-
-`healthcheck.py -s <SUITE_NAME> -p <PARAMETER_MAP_NAME>`
+- The best way to start is to run `healthcheck.py -l` to see all available check suites.
+- Then chose a suite with `healthcheck.py -s <SUITE_NAME>`.
+- Or run a single check with `healtchcheck.py -c <CHECK_NAME>`.
+- If a suite requires parameters:
+  - run it with `healthcheck.py -s <SUITE_NAME> -p <PARAMETER_MAP_NAME>`.
+  - you can find available parameter maps by typing `healthcheck.py -l`.
+- For a quick help, type `healthcheck.py -h`.
 
 ## Result
 
-- `[+]` check satisfied
-- `[-]` check not satisfied
-- `[*]` check failed with error
-- `[~]` check w/o result
-- `[ ]` check skipped
+Each check has a result which is indicated by:
+
+- `[+]` check was successful
+- `[-]` check has failed
+- `[~]` check has no result
+- `[*]` check has an error
+- `[ ]` check was skipped
