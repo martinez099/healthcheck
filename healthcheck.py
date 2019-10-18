@@ -142,6 +142,9 @@ def main():
         print(' '.join(to_print))
         executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()
+    else:
+        print('Could not find check suite, use -l!')
+        exit(1)
 
     # print statistics
     render_stats(stats_collector)
