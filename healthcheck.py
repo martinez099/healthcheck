@@ -126,20 +126,21 @@ def main():
     # execute check suites
     for suite in suites:
         to_print = ['Running check suite: {}'.format(suite.__doc__)]
-        params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
-        if args.params and not params:
-            print('Could not find paramter map, use -l!')
-            exit(1)
-
-        if args.params.lower() not in suite.__doc__.lower():
-            print('Wrong parameter map, use -l!')
-            exit(1)
-
+        params = None
         if args.params:
+            params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
+            if args.params and not params:
+                print('Could not find paramter map, use -l!')
+                exit(1)
+
+            if args.params.lower() not in suite.__doc__.lower():
+                print('Wrong parameter map, use -l!')
+                exit(1)
+
             to_print.append('with paramter map "{}"'.format(params[0][0]))
         to_print.append('...')
         print(' '.join(to_print))
-        executor.execute_suite(suite, _kwargs=params[0][1] if args.params else {}, _done_cb=collect)
+        executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()
 
     # print statistics
