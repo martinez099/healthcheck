@@ -35,7 +35,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_software_version(self, *_args, **_kwargs):
-        """get software version of all nodes"""
+        """get software version"""
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
 
@@ -72,7 +72,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
-        """get THP setting of all nodes"""
+        """check THP setting"""
         rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
@@ -85,7 +85,7 @@ class NodeChecks(BaseCheckSuite):
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node', self.ssh.hostnames[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
-        return len(not_ok) == 0, {'not OK': len(not_ok)}
+        return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check rlcheck status"""

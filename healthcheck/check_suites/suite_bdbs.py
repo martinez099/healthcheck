@@ -2,10 +2,10 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class BdbChecks(BaseCheckSuite):
-    """Check databases [sizing1]"""
+    """Check database configurations. Parameter maps: sizing1."""
 
     def check_oss_api(self, *_args, **_kwargs):
-        """check for OSS API"""
+        """check for OSS cluster API"""
         bdbs = self.api.get('bdbs')
         results = []
         kwargs = {}
@@ -24,7 +24,7 @@ class BdbChecks(BaseCheckSuite):
         return None, {'alerts': alerts}
 
     def check_bdbs(self, *_args, **_kwargs):
-        """check databases"""
+        """check databases accoring to given paramter maps"""
         bdbs = self.api.get('bdbs')
         results = []
         for bdb in bdbs:
