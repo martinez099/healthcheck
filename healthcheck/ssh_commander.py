@@ -1,3 +1,4 @@
+from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from healthcheck.common import exec_cmd
@@ -17,6 +18,7 @@ class SshCommander(object):
         self.hostnames = list(map(lambda x: x.strip(), _hostnames.split(',')))
         self.username = _username
         self.keyfile = _keyfile
+        self.locks = {}
         self.cache = {}
 
     def exec_on_host(self, _cmd, _ip):
@@ -95,8 +97,16 @@ class SshCommander(object):
         parts.append('-C {}'.format(_cmd))
         cmd = ' '.join(parts)
 
+        # acuqire lock
+        if _host not in self.locks:
+            self.locks[_host] = Lock()
+        self.locks[_host].acquire()
+
         # execute command
         rsp = exec_cmd(cmd)
+
+        # release lock
+        self.locks[_host].release()
 
         # put into cache
         if _host not in self.cache:
