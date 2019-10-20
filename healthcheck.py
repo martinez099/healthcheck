@@ -108,7 +108,7 @@ def main():
                     executor.execute(check_func)
 
         if not found:
-            print('Could not find check, use -l!')
+            print('Could not find any single check, use -l!')
             exit(1)
 
         executor.wait()
@@ -122,6 +122,10 @@ def main():
     def collect(_future):
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
+
+    if not suites:
+        print('Could not find any check suite, use -l!')
+        exit(1)
 
     # execute check suites
     for suite in suites:
@@ -142,9 +146,6 @@ def main():
         print(' '.join(to_print))
         executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()
-    else:
-        print('Could not find check suite, use -l!')
-        exit(1)
 
     # print statistics
     render_stats(stats_collector)
