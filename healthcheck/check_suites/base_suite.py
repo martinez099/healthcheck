@@ -17,20 +17,19 @@ class BaseCheckSuite(object):
         """
         self.api = ApiFetcher(_config['api']['fqdn'], _config['api']['user'], _config['api']['pass'])
         self.ssh = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
-        self.params = load_params()
+        self.params = {}
 
+    def load_params(self, _dir):
+        """
+        Load parameter maps.
 
-def load_params():
-    """
-    Load parameter maps.
-
-    :return: A dictionary with the parameters.
-    """
-    params = {}
-    for path in glob.glob(f'healthcheck/check_suites/params_*/*.json'):
-        with open(path) as file:
-            params[path] = json.loads(file.read())
-    return params
+        :return: A dictionary with the parameters.
+        """
+        params = {}
+        for path in glob.glob(f'healthcheck/check_suites/{_dir}/*.json'):
+            with open(path) as file:
+                params[path] = json.loads(file.read())
+        self.params = params
 
 
 def load_suites(_args, _config, _base_class=BaseCheckSuite):

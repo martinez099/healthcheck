@@ -5,7 +5,11 @@ from healthcheck.common import to_gb, GB
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Check cluster capabilities. Paramter maps: minimum, recommended."""
+    """Check cluster capabilities"""
+
+    def __init__(self, _config):
+        super().__init__(_config)
+        self.load_params('params_cluster')
 
     def check_license_shards_limit(self, *_args, **_kwargs):
         """check if shards limit in license"""

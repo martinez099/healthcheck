@@ -37,7 +37,7 @@ class StatChecks(BaseCheckSuite):
             min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
             result = min_free_memory < total_memory * (2/3)
-            kwargs[f'node:{uid}']['too less memory'] = result
+            kwargs[f'node:{uid}']['too much memory usage'] = result
             results.append(result)
 
             # CPU usage
@@ -80,7 +80,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_memory_usage > (number_of_shards * 50 * GB)
             else:
                 result = max_memory_usage > (number_of_shards * 25 * GB)
-            kwargs[name]['too much memory'] = result
+            kwargs[name]['too much memory usage'] = result
             results.append(result)
 
         return not any(results), kwargs
@@ -116,7 +116,7 @@ class StatChecks(BaseCheckSuite):
                 result = max_ram_usage > (50 * GB)
             else:
                 result = max_ram_usage > (25 * GB)
-            kwargs[f'shard:{uid}']['too much memory'] = result
+            kwargs[f'shard:{uid}']['too much memory usage'] = result
             results.append(result)
 
         return not any(results), kwargs

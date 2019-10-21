@@ -47,12 +47,19 @@ def render_list(_list):
     :param _list:
     :return:
     """
-    result = []
     for suite in _list:
         print(f'\n{suite.__doc__}')
+        if suite.params:
+            print('Parameter maps: {}'.format(suite.params.keys()))
         check_names = filter(lambda x: x.startswith('check_'), dir(suite))
-        checks = []
         for check_name in check_names:
             check_func = getattr(suite, check_name)
             print(f'- {check_func.__doc__}')
-        result.append(checks)
+
+
+def print_error(_msg):
+    print(red(_msg))
+
+
+def print_success(_msg):
+    print(green(_msg))

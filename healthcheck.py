@@ -10,7 +10,7 @@ from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
 from healthcheck.ssh_commander import SshCommander
 from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.render_engine import render_result, render_stats, render_list
+from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_success
 
 
 def parse_args():
@@ -66,24 +66,24 @@ def main():
         return
 
     # check SSH connectivity
-    logging.info(f'checking SSH connectivity ...')
+    print('checking SSH connectivity ...')
     ssh = SshCommander(config['ssh']['hosts'], config['ssh']['user'], config['ssh']['key'])
     for ip in ssh.hostnames:
         try:
             ssh.exec_on_host('sudo -v', ip)
-            logging.info(f'successfully connected to {ip}')
+            print_success(f'successfully connected to {ip}')
         except Exception as e:
-            logging.error(f'could not connect to host {ip}')
+            print_error(f'could not connect to host {ip}')
             raise e
 
     # check API connectivity
     try:
-        logging.info('checking API connectivity ...')
+        print('checking API connectivity ...')
         api = ApiFetcher(config['api']['fqdn'], config['api']['user'], config['api']['pass'])
         fqdn = api.get_value('cluster', 'name')
-        logging.info('successfully connected to {}'.format(fqdn))
+        print_success(f'successfully connected to {fqdn}')
     except Exception as e:
-        logging.error('could not connect to Redis Enterprise REST-API')
+        print_error('could not connect to Redis Enterprise REST-API')
         raise e
 
     # render result
@@ -104,11 +104,11 @@ def main():
                 check_func = getattr(suite, check)
                 if args.check.lower() in check_func.__doc__.lower():
                     found = True
-                    print('Running single check: {} ...'.format(check_func.__doc__))
+                    print('\nRunning single check: {} ...'.format(check_func.__doc__))
                     executor.execute(check_func)
 
         if not found:
-            print('Could not find any single check, use -l!')
+            print_error('\nCould not find any single check, use -l!')
             exit(1)
 
         executor.wait()
@@ -123,27 +123,26 @@ def main():
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
+    # execute check suites
     if not suites:
-        print('Could not find any check suite, use -l!')
+        print_error('\nCould not find any check suite, use -l!')
         exit(1)
 
-    # execute check suites
     for suite in suites:
-        to_print = ['Running check suite: {}'.format(suite.__doc__)]
+        if suite.params and not args.params:
+            print_error('\nMissing parameter map, use -p!')
+            exit(1)
+
+        print(f'\nRunning check suite: {suite.__doc__} ...')
         params = None
         if args.params:
             params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
             if args.params and not params:
-                print('Could not find paramter map, use -l!')
+                print_error('Could not find paramter map, use -l!')
                 exit(1)
 
-            if args.params.lower() not in suite.__doc__.lower():
-                print('Wrong parameter map, use -l!')
-                exit(1)
+            print('- using paramter map: {}'.format(params[0][0]))
 
-            to_print.append('with paramter map "{}"'.format(params[0][0]))
-        to_print.append('...')
-        print(' '.join(to_print))
         executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()
 

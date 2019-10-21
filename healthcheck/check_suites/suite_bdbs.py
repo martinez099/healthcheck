@@ -2,7 +2,11 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class BdbChecks(BaseCheckSuite):
-    """Check database configurations. Parameter maps: sizing1."""
+    """Check database configurations"""
+
+    def __init__(self, _config):
+        super().__init__(_config)
+        self.load_params('params_bdbs')
 
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS cluster API"""
