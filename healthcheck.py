@@ -108,7 +108,7 @@ def main():
                     executor.execute(check_func)
 
         if not found:
-            print_error('\nCould not find any single check, use -l!')
+            print_error('\nCould not find any single check, check -c!')
             exit(1)
 
         executor.wait()
@@ -125,7 +125,7 @@ def main():
 
     # execute check suites
     if not suites:
-        print_error('\nCould not find any check suite, use -l!')
+        print_error('\nCould not find any check suite, check -s!')
         exit(1)
 
     for suite in suites:
@@ -139,6 +139,10 @@ def main():
             params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
             if args.params and not params:
                 print_error('Could not find paramter map, use -l!')
+                exit(1)
+
+            if len(params) > 1:
+                print_error('Multiple parameter maps found, check -p!')
                 exit(1)
 
             print('- using paramter map: {}'.format(params[0][0]))
