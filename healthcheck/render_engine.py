@@ -36,8 +36,12 @@ def render_stats(_stats):
     :param _stats:
     :return:
     """
-
-    print("\n[STATISTICS] " + str(_stats.get()))
+    print("\nChecks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
+    print(f'- success: {_stats.succeeded}')
+    print(f'- no result: {_stats.no_result}')
+    print(f'- failed: {_stats.failed}')
+    print(f'- error: {_stats.errors}')
+    print(f'- skipped: {_stats.skipped}')
 
 
 def render_list(_list):

@@ -20,13 +20,3 @@ class StatsCollector(object):
             self.errors += 1
         else:
             raise NotImplementedError()
-
-    def get(self):
-        return {
-            'success': self.succeeded,
-            'no result': self.no_result,
-            'failed': self.failed,
-            'error': self.errors,
-            'skipped': self.skipped,
-            'TOTAL': sum([self.succeeded, self.no_result, self.failed, self.errors, self.skipped])
-        }
