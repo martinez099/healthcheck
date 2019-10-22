@@ -1,4 +1,4 @@
-from healthcheck.common import green, red, yellow, magenta
+from healthcheck.common import green, red, yellow, magenta, get_parameter_map_name
 
 
 def render_result(_result, _func):
@@ -13,7 +13,7 @@ def render_result(_result, _func):
         print('[ ] SKIPPED [{}]'.format(_func.__doc__))
         return
     if _result[0] is True:
-        to_print = [green('[+] SUCCESS  ')]
+        to_print = [green('[+] SUCCEEDED')]
     elif _result[0] is False:
         to_print = [red('[-] FAILED   ')]
     elif _result[0] is None:
@@ -37,10 +37,10 @@ def render_stats(_stats):
     :return:
     """
     print("\nChecks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
-    print(f'- success: {_stats.succeeded}')
+    print(f'- succeeded: {_stats.succeeded}')
     print(f'- no result: {_stats.no_result}')
     print(f'- failed: {_stats.failed}')
-    print(f'- error: {_stats.errors}')
+    print(f'- errors: {_stats.errors}')
     print(f'- skipped: {_stats.skipped}')
 
 
@@ -54,7 +54,7 @@ def render_list(_list):
     for suite in _list:
         print(f'\n{suite.__doc__}')
         if suite.params:
-            print('Parameter maps: {}'.format(suite.params.keys()))
+            print('Parameter maps: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
         check_names = filter(lambda x: x.startswith('check_'), dir(suite))
         for check_name in check_names:
             check_func = getattr(suite, check_name)

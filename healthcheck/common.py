@@ -85,3 +85,14 @@ def http_get(_url, _user, _pass):
         return json.loads(rsp.read())
     else:
         raise Exception(f'error during http request (return code {rsp.code}): ' + rsp.read())
+
+
+def get_parameter_map_name(_path):
+    """
+    Get the name of a parameter map out of its file path.
+
+    :param _path: The file path of the parameter map.
+    :return: The name of the parameter map.
+    """
+    fname = _path.split('/')[-1:]
+    return fname[0].split('.')[0]
