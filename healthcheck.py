@@ -24,7 +24,7 @@ def parse_args():
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str, default='nodes')
     options.add_argument('-c', '--check', help="Specify a check to execute.", type=str, default='all')
-    options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
+    options.add_argument('-p', '--paramap', help="Specify a parameter map to use.", type=str)
     options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
 
     return parser.parse_args()
@@ -37,7 +37,8 @@ def parse_config(args):
     :return: The parsed configuration.
     """
     if not os.path.isfile(args.config):
-        raise Exception('could not find configfuration file')
+        print_error('Could not find configuration file, examine argument of --config!')
+        exit(1)
 
     config = configparser.ConfigParser()
     with open(args.config, 'r') as configfile:
@@ -82,11 +83,12 @@ def main():
                 check_func = getattr(suite, check)
                 if args.check.lower() in check_func.__doc__.lower():
                     found = True
-                    print('\nRunning single check: {} ...'.format(check_func.__doc__))
+                    print('Running single check: {} ...'.format(check_func.__doc__))
+                    suite.connectivity_check()
                     executor.execute(check_func)
 
         if not found:
-            print_error('\nCould not find any single check, check -c!')
+            print_error('Could not find any single check, examine argument of --check!')
             exit(1)
 
         executor.wait()
@@ -103,28 +105,30 @@ def main():
 
     # execute check suites
     if not suites:
-        print_error('\nCould not find any check suite, check -s!')
+        print_error('Could not find any check suite, examine argument of --suite!')
         exit(1)
 
     for suite in suites:
-        if suite.params and not args.params:
-            print_error('\nMissing parameter map, use -p!')
+        if suite.params and not args.paramap:
+            print_error('Missing parameter map, pass argument to --paramap!')
             exit(1)
 
-        print(f'\nRunning check suite: {suite.__doc__} ...')
+        to_print = [f'Running check suite: {suite.__doc__} ...']
         params = None
-        if args.params:
-            params = list(filter(lambda x: args.params.lower() in get_parameter_map_name(x[0].lower()), suite.params.items()))
-            if args.params and not params:
-                print_error('Could not find paramter map, use -l!')
+        if args.paramap:
+            params = list(filter(lambda x: args.paramap.lower() in get_parameter_map_name(x[0].lower()), suite.params.items()))
+            if args.paramap and not params:
+                print_error('Could not find paramter map, pass argument to --list!')
                 exit(1)
 
             if len(params) > 1:
-                print_error('Multiple parameter maps found, check -p!')
+                print_error('Multiple parameter maps found, examine argument of --paramap!')
                 exit(1)
 
-            print('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
+            to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
 
+        print('\n'.join(to_print))
+        suite.connectivity_check()
         executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()
 

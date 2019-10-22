@@ -6,8 +6,7 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 class NodeChecks(BaseCheckSuite):
     """Check nodes"""
 
-    def __init__(self, _config):
-        super().__init__(_config)
+    def _connectivity_check(self):
         self._check_api_connectivity()
         self._check_ssh_connectivity()
 

@@ -1,4 +1,4 @@
-from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 
 
 class BdbChecks(BaseCheckSuite):
@@ -6,8 +6,10 @@ class BdbChecks(BaseCheckSuite):
 
     def __init__(self, _config):
         super().__init__(_config)
+        self.params = load_params('params_bdbs')
+
+    def _connectivity_check(self):
         self._check_api_connectivity()
-        self._load_params('params_bdbs')
 
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS cluster API"""

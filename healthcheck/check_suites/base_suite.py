@@ -20,6 +20,14 @@ class BaseCheckSuite(object):
         self.ssh = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
         self.params = {}
 
+    def connectivity_check(self):
+        print('')
+        self._connectivity_check()
+        print('')
+
+    def _connectivity_check(self):
+        raise NotImplementedError()
+
     def _check_ssh_connectivity(self):
         print('checking SSH connectivity ...')
         for ip in self.ssh.hostnames:
@@ -39,17 +47,19 @@ class BaseCheckSuite(object):
             print_error('could not connect to Redis Enterprise REST-API')
             raise e
 
-    def _load_params(self, _dir):
-        """
-        Load parameter maps.
 
-        :return: A dictionary with the parameters.
-        """
-        params = {}
-        for path in glob.glob(f'healthcheck/check_suites/{_dir}/*.json'):
-            with open(path) as file:
-                params[path] = json.loads(file.read())
-        self.params = params
+def load_params(_dir):
+    """
+    Load parameter maps.
+
+    :param _dir: The subdirectory of the parameter map.
+    :return: A dictionary with the parameters.
+    """
+    params = {}
+    for path in glob.glob(f'healthcheck/check_suites/{_dir}/*.json'):
+        with open(path) as file:
+            params[path] = json.loads(file.read())
+    return params
 
 
 def load_suites(_args, _config, _base_class=BaseCheckSuite):
@@ -57,7 +67,7 @@ def load_suites(_args, _config, _base_class=BaseCheckSuite):
     Load check suites.
 
     :param _args: The pasred command line arguments.
-    :param _config: The configuration.
+    :param _config: The parsed configuration.
     :param _base_class: The base class of the check suites.
     :return: A list with all instantiated check suites.
     """

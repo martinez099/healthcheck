@@ -5,8 +5,7 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 class StatChecks(BaseCheckSuite):
     """Check statistics"""
 
-    def __init__(self, _config):
-        super().__init__(_config)
+    def _connectivity_check(self):
         self._check_api_connectivity()
 
     def check_cluster(self):
