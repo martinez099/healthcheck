@@ -97,16 +97,13 @@ class SshCommander(object):
         parts.append('-C {}'.format(_cmd))
         cmd = ' '.join(parts)
 
-        # acuqire lock
+        # create lock
         if _host not in self.locks:
             self.locks[_host] = Lock()
-        self.locks[_host].acquire()
 
         # execute command
-        rsp = exec_cmd(cmd)
-
-        # release lock
-        self.locks[_host].release()
+        with self.locks[_host]:
+            rsp = exec_cmd(cmd)
 
         # put into cache
         if _host not in self.cache:
