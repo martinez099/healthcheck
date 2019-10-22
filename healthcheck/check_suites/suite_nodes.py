@@ -6,6 +6,11 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 class NodeChecks(BaseCheckSuite):
     """Check nodes"""
 
+    def __init__(self, _config):
+        super().__init__(_config)
+        self._check_api_connectivity()
+        self._check_ssh_connectivity()
+
     def check_private_ip(self, *_args, **_kwargs):
         """check private IP address"""
         nodes = self.api.get('nodes')
@@ -118,8 +123,8 @@ class NodeChecks(BaseCheckSuite):
 
         return not errors, {rsp.ip: len(rsp.result()) for rsp in rsps}
 
-    def check_network_speed(self, *_args, **_kwargs):
-        """check network link speed"""
+    def check_network_link(self, *_args, **_kwargs):
+        """get network link"""
         cmd_ips = []
         for source in self.ssh.hostnames:
             for target in self.ssh.hostnames:

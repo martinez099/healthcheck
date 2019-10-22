@@ -1,7 +1,7 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common import to_gb, GB
+from healthcheck.common_funcs import to_gb, GB
 
 
 class ClusterChecks(BaseCheckSuite):
@@ -9,7 +9,9 @@ class ClusterChecks(BaseCheckSuite):
 
     def __init__(self, _config):
         super().__init__(_config)
-        self.load_params('params_cluster')
+        self._check_api_connectivity()
+        self._check_ssh_connectivity()
+        self._load_params('params_cluster')
 
     def check_license_shards_limit(self, *_args, **_kwargs):
         """check if shards limit in license"""

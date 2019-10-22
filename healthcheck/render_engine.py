@@ -1,4 +1,4 @@
-from healthcheck.common import green, red, yellow, magenta, white, get_parameter_map_name
+from healthcheck.common_funcs import green, red, yellow, magenta, get_parameter_map_name
 
 
 def render_result(_result, _func):

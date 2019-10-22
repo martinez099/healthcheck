@@ -8,10 +8,8 @@ import os
 from healthcheck.check_suites.base_suite import load_suites
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
-from healthcheck.ssh_commander import SshCommander
-from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_success
-from healthcheck.common import get_parameter_map_name
+from healthcheck.render_engine import render_result, render_stats, render_list, print_error
+from healthcheck.common_funcs import get_parameter_map_name
 
 
 def parse_args():
@@ -65,27 +63,6 @@ def main():
     if args.list:
         render_list(suites)
         return
-
-    # check SSH connectivity
-    print('checking SSH connectivity ...')
-    ssh = SshCommander(config['ssh']['hosts'], config['ssh']['user'], config['ssh']['key'])
-    for ip in ssh.hostnames:
-        try:
-            ssh.exec_on_host('sudo -v', ip)
-            print_success(f'successfully connected to {ip}')
-        except Exception as e:
-            print_error(f'could not connect to host {ip}')
-            raise e
-
-    # check API connectivity
-    try:
-        print('checking API connectivity ...')
-        api = ApiFetcher(config['api']['fqdn'], config['api']['user'], config['api']['pass'])
-        fqdn = api.get_value('cluster', 'name')
-        print_success(f'successfully connected to {fqdn}')
-    except Exception as e:
-        print_error('could not connect to Redis Enterprise REST-API')
-        raise e
 
     # render result
     def render(_result, _func, _args, _kwargs):

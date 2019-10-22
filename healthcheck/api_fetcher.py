@@ -1,4 +1,4 @@
-from healthcheck.common import http_get
+from healthcheck.common_funcs import http_get
 
 
 class ApiFetcher(object):

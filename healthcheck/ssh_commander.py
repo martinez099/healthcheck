@@ -1,7 +1,7 @@
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, wait
 
-from healthcheck.common import exec_cmd
+from healthcheck.common_funcs import exec_cmd
 
 
 class SshCommander(object):

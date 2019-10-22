@@ -4,6 +4,7 @@ import json
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.ssh_commander import SshCommander
+from healthcheck.render_engine import print_error, print_success
 
 
 class BaseCheckSuite(object):
@@ -19,7 +20,26 @@ class BaseCheckSuite(object):
         self.ssh = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
         self.params = {}
 
-    def load_params(self, _dir):
+    def _check_ssh_connectivity(self):
+        print('checking SSH connectivity ...')
+        for ip in self.ssh.hostnames:
+            try:
+                self.ssh.exec_on_host('sudo -v', ip)
+                print_success(f'successfully connected to {ip}')
+            except Exception as e:
+                print_error(f'could not connect to host {ip}')
+                raise e
+
+    def _check_api_connectivity(self):
+        try:
+            print('checking API connectivity ...')
+            fqdn = self.api.get_value('cluster', 'name')
+            print_success(f'successfully connected to {fqdn}')
+        except Exception as e:
+            print_error('could not connect to Redis Enterprise REST-API')
+            raise e
+
+    def _load_params(self, _dir):
         """
         Load parameter maps.
 

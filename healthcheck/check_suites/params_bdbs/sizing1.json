@@ -1,6 +1,6 @@
 {
   "__default__": {
-    "data_persistence": "disabled",
+    "data_persistence": "enabled",
     "rack_aware": false,
     "replica_sync": "disabled",
     "shards_placement": "sparse",

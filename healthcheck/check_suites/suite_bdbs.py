@@ -6,20 +6,17 @@ class BdbChecks(BaseCheckSuite):
 
     def __init__(self, _config):
         super().__init__(_config)
-        self.load_params('params_bdbs')
+        self._check_api_connectivity()
+        self._load_params('params_bdbs')
 
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS cluster API"""
         bdbs = self.api.get('bdbs')
-        results = []
         kwargs = {}
-        for bdb in bdbs:
-            if bdb['oss_cluster']:
-                result = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
-                kwargs[bdb['name']] = result
-                results.append(result)
+        for bdb in filter(lambda x: x['oss_cluster'], bdbs):
+            kwargs[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
 
-        return all(results), kwargs
+        return all(kwargs.values()), kwargs
 
     def _check_bdb_alert_settings(self, *_args, **_kwargs):
         """get database alert settings"""
@@ -28,7 +25,7 @@ class BdbChecks(BaseCheckSuite):
         return None, {'alerts': alerts}
 
     def check_bdbs(self, *_args, **_kwargs):
-        """check databases accoring to given paramter maps"""
+        """check databases according to given paramter map"""
         bdbs = self.api.get('bdbs')
         results = []
         for bdb in bdbs:
@@ -43,10 +40,10 @@ class BdbChecks(BaseCheckSuite):
     def _check_bdb(self, _uid, _values):
         f"""check bdb:{_uid}"""
         bdb = self.api.get(f'bdbs/{_uid}')
-        result, kwargs = {}, {'name': bdb['name'], 'failed': {}}
+        kwargs = {bdb['name']: {}}
         for k, v in _values.items():
-            result[k] = v == bdb[k]
-            if not result[k]:
-                kwargs['not satisfied'][k] = bdb[k]
+            result = v == bdb[k]
+            if not result:
+                kwargs[bdb['name']][k] = bdb[k]
 
-        return all(result.values()), kwargs
+        return not any(kwargs[bdb['name']].values()), kwargs
