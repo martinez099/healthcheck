@@ -11,6 +11,7 @@ from healthcheck.stats_collector import StatsCollector
 from healthcheck.ssh_commander import SshCommander
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_success
+from healthcheck.common import get_parameter_map_name
 
 
 def parse_args():
@@ -136,7 +137,7 @@ def main():
         print(f'\nRunning check suite: {suite.__doc__} ...')
         params = None
         if args.params:
-            params = list(filter(lambda x: args.params.lower() in x[0].lower(), suite.params.items()))
+            params = list(filter(lambda x: args.params.lower() in get_parameter_map_name(x[0].lower()), suite.params.items()))
             if args.params and not params:
                 print_error('Could not find paramter map, use -l!')
                 exit(1)
@@ -145,7 +146,7 @@ def main():
                 print_error('Multiple parameter maps found, check -p!')
                 exit(1)
 
-            print('- using paramter map: {}'.format(params[0][0]))
+            print('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
 
         executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
         executor.wait()

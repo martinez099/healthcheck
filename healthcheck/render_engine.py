@@ -1,4 +1,4 @@
-from healthcheck.common import green, red, yellow, magenta, get_parameter_map_name
+from healthcheck.common import green, red, yellow, magenta, white, get_parameter_map_name
 
 
 def render_result(_result, _func):
@@ -10,23 +10,22 @@ def render_result(_result, _func):
     :return:
     """
     if not _result[1]:
-        print('[ ] SKIPPED [{}]'.format(_func.__doc__))
+        print('[ ] {} [SKIPPED]'.format(_func.__doc__))
         return
     if _result[0] is True:
-        to_print = [green('[+] SUCCEEDED')]
+        to_print = [green('[+]'), _func.__doc__, green('[SUCCEEDED]')]
     elif _result[0] is False:
-        to_print = [red('[-] FAILED   ')]
+        to_print = [red('[-]'), _func.__doc__,  red('[FAILED]')]
     elif _result[0] is None:
-        to_print = [yellow('[~] NO RESULT')]
+        to_print = [yellow('[~]'), _func.__doc__, yellow('[NO RESULT]')]
     elif _result[0] is Exception:
-        to_print = [magenta('[*] ERROR    ')]
+        to_print = [magenta('[*]'), _func.__doc__, magenta('[ERROR]')]
     else:
         raise NotImplementedError()
 
-    to_print.append(_func.__doc__)
     to_print.append(', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()]))
 
-    print('{} [{}] {}'.format(*to_print))
+    print('{} {} {} {}'.format(*to_print))
 
 
 def render_stats(_stats):
@@ -36,11 +35,11 @@ def render_stats(_stats):
     :param _stats:
     :return:
     """
-    print("\nChecks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
-    print(f'- succeeded: {_stats.succeeded}')
-    print(f'- no result: {_stats.no_result}')
-    print(f'- failed: {_stats.failed}')
-    print(f'- errors: {_stats.errors}')
+    print("\nTOTAL: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
+    print(f'- {green("succeeded")}: {_stats.succeeded}')
+    print(f'- {yellow("no result")}: {_stats.no_result}')
+    print(f'- {red("failed")}: {_stats.failed}')
+    print(f'- {magenta("errors")}: {_stats.errors}')
     print(f'- skipped: {_stats.skipped}')
 
 
@@ -62,8 +61,20 @@ def render_list(_list):
 
 
 def print_error(_msg):
+    """
+    Print an error message.
+
+    :param _msg: The error message.
+    :return:
+    """
     print(red(_msg))
 
 
 def print_success(_msg):
+    """
+    Print a success message.
+
+    :param _msg: The success message.
+    :return:
+    """
     print(green(_msg))
