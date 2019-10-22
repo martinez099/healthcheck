@@ -1,11 +1,11 @@
 {
-  "__default__": {
-    "data_persistence": "enabled",
-    "rack_aware": false,
-    "replica_sync": "disabled",
-    "shards_placement": "sparse",
-    "proxy_policy": "single",
-    "replication": false,
-    "oss_cluster": false
-  }
+    "__default__": {
+        "data_persistence": "enabled",
+        "rack_aware": false,
+        "replica_sync": "disabled",
+        "shards_placement": "sparse",
+        "proxy_policy": "single",
+        "replication": false,
+        "oss_cluster": false
+    }
 }
