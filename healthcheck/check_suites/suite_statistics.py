@@ -5,7 +5,7 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 class StatChecks(BaseCheckSuite):
     """Check statistics"""
 
-    def _connectivity_check(self):
+    def _check_connectivity(self):
         self._check_api_connectivity()
 
     def check_cluster(self):
@@ -17,7 +17,7 @@ class StatChecks(BaseCheckSuite):
 
         # througput
         m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
-        kwargs['maximum throughput'] = to_kops(m)
+        kwargs['maximum throughput'] = '{}K ops/sec'.format(to_kops(m))
 
         # RAM usage
         m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), ints)])

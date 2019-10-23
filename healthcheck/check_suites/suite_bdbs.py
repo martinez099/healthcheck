@@ -8,7 +8,7 @@ class BdbChecks(BaseCheckSuite):
         super().__init__(_config)
         self.params = load_params('params_bdbs')
 
-    def _connectivity_check(self):
+    def _check_connectivity(self):
         self._check_api_connectivity()
 
     def check_oss_api(self, *_args, **_kwargs):

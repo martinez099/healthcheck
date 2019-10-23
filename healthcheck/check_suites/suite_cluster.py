@@ -11,7 +11,7 @@ class ClusterChecks(BaseCheckSuite):
         super().__init__(_config)
         self.params = load_params('params_cluster')
 
-    def _connectivity_check(self):
+    def _check_connectivity(self):
         self._check_api_connectivity()
         self._check_ssh_connectivity()
 
@@ -91,22 +91,16 @@ class ClusterChecks(BaseCheckSuite):
     def check_shards_balance(self, *_args, **_kwargs):
         """check if shards are balanced accross nodes"""
         nodes = self.api.get('nodes')
-        node_ids = list(map(lambda x: x['uid'], nodes))
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {uid}',
-                                      self.ssh.hostnames[0]) for uid in node_ids]
+        shards_per_node = {f'node:{node["uid"]}': node['shard_count'] for node in nodes}
+
+        # remove quorum-only nodes
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                      self.ssh.hostnames[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = {node_id: match.group(1) == 'enabled' for node_id, match in zip(node_ids, matches)}
-        shards = self.api.get('shards')
-        shards_per_node = {}
-        for shard in shards:
-            if shard['node_uid'] not in shards_per_node:
-                shards_per_node[shard['node_uid']] = 0
-            shards_per_node[shard['node_uid']] += 1
+        quorum_onlys = {f'node:{node["uid"]}': match.group(1) == 'enabled' for node, match in zip(nodes, matches)}
+        for node, shards in set(shards_per_node.items()):
+            if quorum_onlys[node]:
+                del shards_per_node[node]
 
-        result = True
-        for node_id, shards in shards_per_node.items():
-            if quorum_onlys[int(node_id)] and shards > 0:
-                result = False
-
-        unbalanced = max(shards_per_node.values()) - min(shards_per_node.values()) > 1
-        return result and not unbalanced, shards_per_node
+        balanced = max(shards_per_node.values()) - min(shards_per_node.values()) <= 1
+        return balanced, shards_per_node

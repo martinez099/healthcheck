@@ -60,6 +60,16 @@ def render_list(_list):
             print(f'- {check_func.__doc__}')
 
 
+def print_msg(_msg):
+    """
+    Print neutral message.
+
+    :param _msg: The neutral message.
+    :return:
+    """
+    print(_msg)
+
+
 def print_error(_msg):
     """
     Print an error message.
