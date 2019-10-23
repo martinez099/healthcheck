@@ -13,7 +13,6 @@ class ClusterChecks(BaseCheckSuite):
 
     def _check_connectivity(self):
         self._check_api_connectivity()
-        self._check_ssh_connectivity()
 
     def check_license_shards_limit(self, *_args, **_kwargs):
         """check if shards limit in license"""
@@ -87,20 +86,3 @@ class ClusterChecks(BaseCheckSuite):
 
         kwargs = {'alerts': alerts}
         return None, kwargs
-
-    def check_shards_balance(self, *_args, **_kwargs):
-        """check if shards are balanced accross nodes"""
-        nodes = self.api.get('nodes')
-        shards_per_node = {f'node:{node["uid"]}': node['shard_count'] for node in nodes}
-
-        # remove quorum-only nodes
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = {f'node:{node["uid"]}': match.group(1) == 'enabled' for node, match in zip(nodes, matches)}
-        for node, shards in set(shards_per_node.items()):
-            if quorum_onlys[node]:
-                del shards_per_node[node]
-
-        balanced = max(shards_per_node.values()) - min(shards_per_node.values()) <= 1
-        return balanced, shards_per_node
