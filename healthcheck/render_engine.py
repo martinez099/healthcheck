@@ -35,7 +35,7 @@ def render_stats(_stats):
     :param _stats:
     :return:
     """
-    print("\nTOTAL: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
+    print("\nTOTAL checks: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print(f'- {green("succeeded")}: {_stats.succeeded}')
     print(f'- {yellow("no result")}: {_stats.no_result}')
     print(f'- {red("failed")}: {_stats.failed}')
@@ -51,11 +51,10 @@ def render_list(_list):
     :return:
     """
     for suite in _list:
-        print(f'\n{suite.__doc__}')
+        print(f'\nSuite: {suite.__doc__}')
         if suite.params:
             print('Parameter maps: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
-        check_names = filter(lambda x: x.startswith('check_'), dir(suite))
-        for check_name in check_names:
+        for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
             print(f'- {check_func.__doc__}')
 

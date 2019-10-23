@@ -1,11 +1,11 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
-from healthcheck.common_funcs import to_gb, GB
+from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Check cluster capabilities"""
+    """Cluster checks"""
 
     def __init__(self, _config):
         super().__init__(_config)
@@ -35,7 +35,7 @@ class ClusterChecks(BaseCheckSuite):
         number_of_shards = self.api.get_number_of_values('shards')
 
         result = number_of_shards >= _kwargs['min_shards']
-        kwargs = {'numbe of shards': number_of_shards, 'min shards': _kwargs['min_shards']}
+        kwargs = {'number of shards': number_of_shards, 'min shards': _kwargs['min_shards']}
         return result, kwargs
 
     def check_number_of_nodes(self, *_args, **_kwargs):
@@ -85,4 +85,29 @@ class ClusterChecks(BaseCheckSuite):
         alerts = self.api.get_value('cluster', 'alert_settings')
 
         kwargs = {'alerts': alerts}
+        return None, kwargs
+
+    def check_stats(self):
+        """get cluster statistics"""
+        kwargs = {}
+        stats = self.api.get('cluster/stats')
+
+        ints = stats['intervals']
+
+        # througput
+        m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
+        kwargs['maximum throughput'] = '{}K ops/sec'.format(to_kops(m))
+
+        # RAM usage
+        m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), ints)])
+        kwargs['minimum available memory'] = '{} GB'.format(to_gb(m))
+
+        # persistent storage
+        m = min([i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints)])
+        kwargs['minimum available peristent storage'] = '{} GB'.format(to_gb(m))
+
+        # ephemeral storage
+        m = min([i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints)])
+        kwargs['minimum available ephemeral storage'] = '{} GB'.format(to_gb(m))
+
         return None, kwargs

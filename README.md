@@ -20,7 +20,6 @@ This is a command-line tool to check the health of a Redis Enterprise cluster.
 - The best way to start is to run `healthcheck.py -l` to see all available checks.
 - Chose a suite with `healthcheck.py -s <SUITE_NAME>`, e.g.
   - run `healthcheck.py -s node` for node checks.
-  - run `healthcheck.py -s stat` for statistic checks.
 - If a suite requires parameters, run `healthcheck.py -s <SUITE_NAME> -p <PARAMETER_MAP_NAME>`, e.g.
   - run `healthcheck.py -s cluster -p reco` for cluster checks with `recommended` HW requriments.
   - run `healthcheck.py -s cluster -p mini` for cluster checks with `minimum` HW requirements.

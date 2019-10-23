@@ -4,7 +4,7 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class NodeChecks(BaseCheckSuite):
-    """Check nodes"""
+    """Node checks"""
 
     def _check_connectivity(self):
         self._check_api_connectivity()
@@ -48,7 +48,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_log_file_path(self, *_args, **_kwargs):
         """check if log file path is NOT on root filesystem"""
-        rsps = self.ssh.exec_on_all_hosts('df -h /var/opt/redislabs/log')
+        rsps = self.ssh.exec_on_all_hosts('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
 
@@ -58,7 +58,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_tmp_file_path(self, *_args, **_kwargs):
         """check if tmp file path is NOT on root filesystem"""
-        rsps = self.ssh.exec_on_all_hosts('df -h /tmp')
+        rsps = self.ssh.exec_on_all_hosts('sudo df -h /tmp')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         tmp_file_paths = [match.group(1) for match in matches]
 
@@ -131,6 +131,7 @@ class NodeChecks(BaseCheckSuite):
                     continue
                 cmd_ips.append((f'ping -c 4 {target}', source))
 
+        # TODO: check vice versa (fix bug)
         results = self.ssh.exec_on_hosts(cmd_ips)
         kwargs = {}
         for result in results:
@@ -155,3 +156,30 @@ class NodeChecks(BaseCheckSuite):
 
         balanced = max(shards_per_node.values()) - min(shards_per_node.values()) <= 1
         return balanced, shards_per_node
+
+    def check_stats(self):
+        """check node statistics"""
+        kwargs = {}
+        stats = self.api.get('nodes/stats')
+
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+            kwargs[f'node:{uid}'] = {}
+
+            # RAM usage
+            min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+            total_memory = self.api.get(f'nodes/{uid}')['total_memory']
+            result = min_free_memory < total_memory * (2/3)
+            if result:
+                kwargs[f'node:{uid}']['too much memory usage'] = result
+
+            # CPU usage
+            max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
+            result = max_cpu_user > 0.8
+            if result:
+                kwargs[f'node:{uid}']['too much CPU usage'] = result
+
+            # TODO: check storage
+
+        return not any(any(result.values()) for result in kwargs.values()), kwargs
