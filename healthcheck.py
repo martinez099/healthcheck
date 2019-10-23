@@ -120,11 +120,11 @@ def main():
     if args.paramap:
         params = list(filter(lambda x: args.paramap.lower() in get_parameter_map_name(x[0].lower()), suites[0].params.items()))
         if args.paramap and not params:
-            print_error('Could not find paramter map, pass argument to --list!')
+            print_error('Could not find paramter map, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
             exit(1)
 
         if len(params) > 1:
-            print_error('Multiple parameter maps found, examine argument of --paramap!')
+            print_error('Multiple parameter maps found, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
             exit(1)
 
         to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
