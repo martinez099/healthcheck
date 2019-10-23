@@ -20,7 +20,7 @@ class BaseCheckSuite(object):
         self.ssh = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
         self.params = {}
 
-    def connectivity_check(self):
+    def run_connectivity_checks(self):
         print_msg('')
         self._check_connectivity()
         print_msg('')

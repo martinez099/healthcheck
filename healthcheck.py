@@ -84,7 +84,7 @@ def main():
                 if args.check.lower() in check_func.__doc__.lower():
                     found = True
                     print_msg('Running single check: {} ...'.format(check_func.__doc__))
-                    suite.connectivity_check()
+                    suite.run_connectivity_checks()
                     executor.execute(check_func)
 
         if not found:
@@ -130,7 +130,7 @@ def main():
         to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
 
     print_msg('\n'.join(to_print))
-    suites[0].connectivity_check()
+    suites[0].run_connectivity_checks()
     executor.execute_suite(suites[0], _kwargs=params[0][1] if params else {}, _done_cb=collect)
     executor.wait()
 
