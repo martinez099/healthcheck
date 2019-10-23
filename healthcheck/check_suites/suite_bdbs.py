@@ -3,7 +3,7 @@ from healthcheck.common_funcs import GB
 
 
 class BdbChecks(BaseCheckSuite):
-    """Database checks"""
+    """Databases"""
 
     def __init__(self, _config):
         super().__init__(_config)
@@ -51,7 +51,7 @@ class BdbChecks(BaseCheckSuite):
 
         return not any(kwargs[bdb['name']].values()), kwargs
 
-    def check_stats(self):
+    def check_stats(self, *_args, **_kwargs):
         """check bdb statistics"""
         kwargs = {}
         stats = self.api.get('bdbs/stats')
@@ -88,7 +88,7 @@ class BdbChecks(BaseCheckSuite):
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs
 
-    def check_shard_stats(self):
+    def check_shard_stats(self, *_args, **_kwargs):
         """check shard statistcs"""
         kwargs = {}
         stats = self.api.get('shards/stats')

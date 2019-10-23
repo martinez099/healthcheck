@@ -4,7 +4,7 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 
 
 class NodeChecks(BaseCheckSuite):
-    """Node checks"""
+    """Nodes"""
 
     def _check_connectivity(self):
         self._check_api_connectivity()
@@ -131,13 +131,22 @@ class NodeChecks(BaseCheckSuite):
                     continue
                 cmd_ips.append((f'ping -c 4 {target}', source))
 
-        # TODO: check vice versa (fix bug)
-        results = self.ssh.exec_on_hosts(cmd_ips)
-        kwargs = {}
-        for result in results:
-            lines = result.result().split('\n')
-            kwargs[f'{result.ip}'] = lines[-1:][0]
+        _min, avg, _max, mdev = .0, .0, .0, .0
+        futures = self.ssh.exec_on_hosts(cmd_ips)
+        key = 'rtt min/avg/max/mdev'
+        for future in futures:
+            lines = future.result().split('\n')
+            key = lines[-1:][0].split(' = ')[0]
+            parts = lines[-1:][0].split(' = ')[1].split('/')
+            _min = min(float(parts[0]), _min) if _min else float(parts[0])
+            avg += float(parts[1])
+            _max = max(float(parts[2]), _max)
+            mdev += float(parts[3].split(' ')[0])
 
+        avg /= len(futures)
+        mdev /= len(futures)
+
+        kwargs = {key: '{:.3f}/{:.3f}/{:.3f}/{:.3f} ms'.format(_min, avg, _max, mdev)}
         return None, kwargs
 
     def check_shards_balance(self, *_args, **_kwargs):

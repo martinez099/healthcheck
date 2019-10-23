@@ -35,7 +35,7 @@ def render_stats(_stats):
     :param _stats:
     :return:
     """
-    print("\nTOTAL checks: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
+    print("\nchecks TOTAL: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print(f'- {green("succeeded")}: {_stats.succeeded}')
     print(f'- {yellow("no result")}: {_stats.no_result}')
     print(f'- {red("failed")}: {_stats.failed}')

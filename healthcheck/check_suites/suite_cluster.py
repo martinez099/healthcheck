@@ -5,7 +5,7 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Cluster checks"""
+    """Cluster"""
 
     def __init__(self, _config):
         super().__init__(_config)
@@ -87,7 +87,7 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'alerts': alerts}
         return None, kwargs
 
-    def check_stats(self):
+    def check_stats(self, *_args, **_kwargs):
         """get cluster statistics"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
