@@ -9,7 +9,7 @@ class ClusterChecks(BaseCheckSuite):
 
     def __init__(self, _config):
         super().__init__(_config)
-        self.params = load_params('params_cluster')
+        self.params = load_params('cluster')
 
     def _check_connectivity(self):
         self._check_api_connectivity()

@@ -7,7 +7,7 @@ class BdbChecks(BaseCheckSuite):
 
     def __init__(self, _config):
         super().__init__(_config)
-        self.params = load_params('params_bdbs')
+        self.params = load_params('databases')
 
     def _check_connectivity(self):
         self._check_api_connectivity()
