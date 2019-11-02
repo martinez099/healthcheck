@@ -87,27 +87,37 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'alerts': alerts}
         return None, kwargs
 
-    def check_stats(self, *_args, **_kwargs):
-        """get cluster statistics"""
+    def check_cpu_usage(self, *_args, **_kwargs):
+        """get CPU usage"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
-        ints = stats['intervals']
-
-        # througput
-        m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
+        m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
         kwargs['maximum throughput'] = '{}K ops/sec'.format(to_kops(m))
 
-        # RAM usage
-        m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), ints)])
+        return None, kwargs
+
+    def check_ram_usage(self, *_args, **_kwargs):
+        """get RAM usage"""
+        kwargs = {}
+        stats = self.api.get('cluster/stats')
+
+        m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), stats['intervals'])])
         kwargs['minimum available memory'] = '{} GB'.format(to_gb(m))
 
+        return None, kwargs
+
+    def check_storage_usage(self, *_args, **_kwargs):
+        """get storage usage"""
+        kwargs = {}
+        stats = self.api.get('cluster/stats')
+
         # persistent storage
-        m = min([i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints)])
+        m = min([i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
         kwargs['minimum available peristent storage'] = '{} GB'.format(to_gb(m))
 
         # ephemeral storage
-        m = min([i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints)])
+        m = min([i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
         kwargs['minimum available ephemeral storage'] = '{} GB'.format(to_gb(m))
 
         return None, kwargs

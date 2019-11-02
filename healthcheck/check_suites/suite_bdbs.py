@@ -1,5 +1,5 @@
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
-from healthcheck.common_funcs import GB
+from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class BdbChecks(BaseCheckSuite):
@@ -28,7 +28,7 @@ class BdbChecks(BaseCheckSuite):
         return None, {'alerts': alerts}
 
     def check_bdbs(self, *_args, **_kwargs):
-        """check databases according to given paramter map"""
+        """check database configuration"""
         bdbs = self.api.get('bdbs')
         results = []
         for bdb in bdbs:
@@ -41,7 +41,7 @@ class BdbChecks(BaseCheckSuite):
         return results
 
     def _check_bdb(self, _uid, _values):
-        f"""check bdb:{_uid}"""
+        f"""check configuration of bdb:{_uid}"""
         bdb = self.api.get(f'bdbs/{_uid}')
         kwargs = {bdb['name']: {}}
         for k, v in _values.items():
@@ -49,64 +49,23 @@ class BdbChecks(BaseCheckSuite):
             if not result:
                 kwargs[bdb['name']][k] = bdb[k]
 
-        return not any(kwargs[bdb['name']].values()), kwargs
+        return not bool(kwargs[bdb['name']]), kwargs
 
-    def check_bdb_stats(self, *_args, **_kwargs):
-        """check bdb statistics"""
-        kwargs = {}
-        stats = self.api.get('bdbs/stats')
-
-        for stat_idx in range(0, len(stats)):
-            ints = stats[stat_idx]['intervals']
-            uid = stats[stat_idx]['uid']
-            name = self.api.get(f'bdbs/{uid}')['name']
-            number_of_shards = self.api.get(f'bdbs/{uid}')['shards_count']
-            shard_list = self.api.get(f'bdbs/{uid}')['shard_list']
-            sharding = self.api.get(f'bdbs/{uid}')['sharding']
-            master_shards = number_of_shards / 2 if sharding else number_of_shards
-            bigstore = self.api.get(f'bdbs/{uid}')['bigstore']
-            crdb = self.api.get(f'bdbs/{uid}')['crdt_sync'] != 'disabled'
-            kwargs[name] = {}
-
-            # througput
-            max_throughput = max([i['instantaneous_ops_per_sec'] for i in filter(lambda x: x.get('instantaneous_ops_per_sec'), ints)])
-            if bigstore:
-                result = max_throughput > (master_shards * 5000)
-            elif crdb:
-                result = max_throughput > (master_shards * 17500)
-            else:
-                result = max_throughput > (master_shards * 25000)
-            if result:
-                kwargs[name]['too much throughput'] = result
-
-            # RAM usage
-            max_memory_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), ints)])
-            if bigstore:
-                result = max_memory_usage > (master_shards * 50 * GB)
-            elif crdb:
-                result = max_memory_usage > (master_shards * 12.5 * GB)
-            else:
-                result = max_memory_usage > (master_shards * 25 * GB)
-            if result:
-                kwargs[name]['too much memory usage'] = result
-
-        return not any(any(result.values()) for result in kwargs.values()), kwargs
-
-    def check_shard_stats(self, *_args, **_kwargs):
-        """check shard statistcs"""
+    def check_cpu_usage(self, *_args, **_kwargs):
+        """check CPU usage"""
         kwargs = {}
         stats = self.api.get('shards/stats')
 
         for stat_idx in range(0, len(stats)):
-            ints = stats[stat_idx]['intervals']
             uid = stats[stat_idx]['uid']
             bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
+            bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            kwargs[f'shard:{uid}'] = {}
+            if bdb_name not in kwargs:
+                kwargs[bdb_name] = {}
 
-            # througput
-            max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), ints)])
+            max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats[stat_idx]['intervals'])])
             if bigstore:
                 result = max_total_requests > 5000
             elif crdb:
@@ -114,17 +73,30 @@ class BdbChecks(BaseCheckSuite):
             else:
                 result = max_total_requests > 25000
             if result:
-                kwargs[f'shard:{uid}']['too much throughput'] = result
+                kwargs[bdb_name][f'shard:{uid}'] = '{}K ops/sec'.format(to_kops(max_total_requests))
 
-            # RAM usage
-            max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), ints)])
+        return not any(any(result.values()) for result in kwargs.values()), kwargs
+
+    def check_ram_usage(self, *_args, **_kwargs):
+        """check RAM usage"""
+        kwargs = {}
+        stats = self.api.get('shards/stats')
+
+        for stat_idx in range(0, len(stats)):
+            uid = stats[stat_idx]['uid']
+            bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
+            bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
+            bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
+            crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
+            if bdb_name not in kwargs:
+                kwargs[bdb_name] = {}
+
+            max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), stats[stat_idx]['intervals'])])
             if bigstore:
                 result = max_ram_usage > (50 * GB)
-            elif crdb:
-                result = max_ram_usage > (12.5 * GB)
             else:
                 result = max_ram_usage > (25 * GB)
             if result:
-                kwargs[f'shard:{uid}']['too much memory usage'] = result
+                kwargs[bdb_name][f'shard:{uid}'] = '{} GB'.format(to_gb(max_ram_usage))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs

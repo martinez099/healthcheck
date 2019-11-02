@@ -1,6 +1,7 @@
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
+from healthcheck.common_funcs import to_gb, to_percent
 
 
 class NodeChecks(BaseCheckSuite):
@@ -166,8 +167,8 @@ class NodeChecks(BaseCheckSuite):
         balanced = max(shards_per_node.values()) - min(shards_per_node.values()) <= 1
         return balanced, shards_per_node
 
-    def check_stats(self):
-        """check node statistics"""
+    def check_cpu_usage(self):
+        """check CPU usage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
@@ -176,19 +177,27 @@ class NodeChecks(BaseCheckSuite):
             uid = stats[i]['uid']
             kwargs[f'node:{uid}'] = {}
 
-            # RAM usage
+            max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
+            result = max_cpu_user > 0.8
+            if result:
+                kwargs[f'node:{uid}']['max CPU usage'] = '{}%'.format(to_percent(max_cpu_user))
+
+        return not any(any(result.values()) for result in kwargs.values()), kwargs
+
+    def check_ram_usage(self):
+        """check RAM usage"""
+        kwargs = {}
+        stats = self.api.get('nodes/stats')
+
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+            kwargs[f'node:{uid}'] = {}
+
             min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
             result = min_free_memory < total_memory * (2/3)
             if result:
-                kwargs[f'node:{uid}']['too much memory usage'] = result
-
-            # CPU usage
-            max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
-            result = max_cpu_user > 0.8
-            if result:
-                kwargs[f'node:{uid}']['too much CPU usage'] = result
-
-            # TODO: check storage
+                kwargs[f'node:{uid}']['min free memory'] = '{} GB'.format(to_gb(min_free_memory))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs

@@ -23,6 +23,16 @@ cyan = lambda text: '\033[0;36m' + text + '\033[0m'
 white = lambda text: '\033[0;37m' + text + '\033[0m'
 
 
+def to_percent(_value):
+    """
+    Convert a numeric value to percentage.
+
+    :param _value: The numeric value in decimal.
+    :return:
+    """
+    return _value * 100
+
+
 def to_kops(_value):
     """
     Convert a numeric value from bytes to kilobytes

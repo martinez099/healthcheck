@@ -84,7 +84,7 @@ def main():
                 check_func = getattr(suite, check)
                 if args.check.lower() in check_func.__doc__.lower():
                     found = True
-                    print_msg('running single check: {} ...'.format(check_func.__doc__))
+                    print_msg('running single check: {}'.format(check_func.__doc__))
                     suite.run_connectivity_checks()
                     executor.execute(check_func)
 
@@ -117,7 +117,7 @@ def main():
         exit(1)
 
     params = None
-    to_print = [f'running check suite: {suites[0].__doc__} ...']
+    to_print = [f'running check suite: {suites[0].__doc__}']
     if args.paramap:
         if args.paramap.endswith('.json'):
             if not os.path.exists(args.paramap):
