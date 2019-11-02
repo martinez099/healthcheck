@@ -51,17 +51,19 @@ class BdbChecks(BaseCheckSuite):
 
         return not any(kwargs[bdb['name']].values()), kwargs
 
-    def check_stats(self, *_args, **_kwargs):
+    def check_bdb_stats(self, *_args, **_kwargs):
         """check bdb statistics"""
         kwargs = {}
         stats = self.api.get('bdbs/stats')
 
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
+        for stat_idx in range(0, len(stats)):
+            ints = stats[stat_idx]['intervals']
+            uid = stats[stat_idx]['uid']
             name = self.api.get(f'bdbs/{uid}')['name']
             number_of_shards = self.api.get(f'bdbs/{uid}')['shards_count']
-            # TODO: take care of replication
+            shard_list = self.api.get(f'bdbs/{uid}')['shard_list']
+            sharding = self.api.get(f'bdbs/{uid}')['sharding']
+            master_shards = number_of_shards / 2 if sharding else number_of_shards
             bigstore = self.api.get(f'bdbs/{uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{uid}')['crdt_sync'] != 'disabled'
             kwargs[name] = {}
@@ -69,20 +71,22 @@ class BdbChecks(BaseCheckSuite):
             # througput
             max_throughput = max([i['instantaneous_ops_per_sec'] for i in filter(lambda x: x.get('instantaneous_ops_per_sec'), ints)])
             if bigstore:
-                result = max_throughput > (number_of_shards * 5000)
+                result = max_throughput > (master_shards * 5000)
             elif crdb:
-                result = max_throughput > (number_of_shards * 17500)
+                result = max_throughput > (master_shards * 17500)
             else:
-                result = max_throughput > (number_of_shards * 25000)
+                result = max_throughput > (master_shards * 25000)
             if result:
                 kwargs[name]['too much throughput'] = result
 
             # RAM usage
             max_memory_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), ints)])
             if bigstore:
-                result = max_memory_usage > (number_of_shards * 50 * GB)
+                result = max_memory_usage > (master_shards * 50 * GB)
+            elif crdb:
+                result = max_memory_usage > (master_shards * 12.5 * GB)
             else:
-                result = max_memory_usage > (number_of_shards * 25 * GB)
+                result = max_memory_usage > (master_shards * 25 * GB)
             if result:
                 kwargs[name]['too much memory usage'] = result
 
@@ -93,9 +97,9 @@ class BdbChecks(BaseCheckSuite):
         kwargs = {}
         stats = self.api.get('shards/stats')
 
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
+        for stat_idx in range(0, len(stats)):
+            ints = stats[stat_idx]['intervals']
+            uid = stats[stat_idx]['uid']
             bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
@@ -116,6 +120,8 @@ class BdbChecks(BaseCheckSuite):
             max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), ints)])
             if bigstore:
                 result = max_ram_usage > (50 * GB)
+            elif crdb:
+                result = max_ram_usage > (12.5 * GB)
             else:
                 result = max_ram_usage > (25 * GB)
             if result:
