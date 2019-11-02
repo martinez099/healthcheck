@@ -51,12 +51,12 @@ def render_list(_list):
     :return:
     """
     for suite in _list:
-        print(f'\nSuite: {suite.__doc__}')
+        print(f'\n{green("Suite")}: {suite.__doc__}')
         if suite.params:
-            print('Parameter maps: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
+            print('{}: {}'.format(red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
-            print(f'- {check_func.__doc__}')
+            print(f'{yellow("-")} {check_func.__doc__}')
 
 
 def print_msg(_msg):
