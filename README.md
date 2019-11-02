@@ -22,7 +22,7 @@ This is a command-line tool to check the health of a Redis Enterprise cluster.
 - If a suite requires a parameter map, run `healthcheck.py -s <SUITE> -p <PARAMAP>`, e.g.
   - run `healthcheck.py -s cluster -p reco` for cluster checks with `recommended` HW requriments.
   - run `healthcheck.py -s cluster -p mini` for cluster checks with `minimum` HW requirements.
-  - run `healthcheck.py -s database -p 1` for database checks with parameters given in `sizing1.json`.
+  - run `healthcheck.py -s database -p 1` for database checks with parameters given in `config1.json`.
 - Alternatively run a single check with `healtchcheck.py -c <CHECK>`, e.g.
   - run `healthcheck.py -c link` to get the network link between the nodes.
 - For a quick help, run `healthcheck.py -h`.

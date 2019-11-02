@@ -63,7 +63,7 @@ def load_params(_dir):
     :return: A dictionary with the parameters.
     """
     params = {}
-    for path in glob.glob(f'healthcheck/check_suites/{_dir}/*.json'):
+    for path in glob.glob(f'{_dir}/*.json'):
         with open(path) as file:
             params[path] = json.loads(file.read())
     return params
