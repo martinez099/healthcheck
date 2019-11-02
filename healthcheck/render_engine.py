@@ -79,6 +79,19 @@ def print_error(_msg):
     print(red(_msg))
 
 
+def print_exception(_ex):
+    """
+    Print an exception
+
+    :param _ex: The exception.
+    :return:
+    """
+    if hasattr(_ex, 'reason'):
+        print_error(_ex.reason.strerror)
+    else:
+        print_error(_ex.strerror)
+
+
 def print_success(_msg):
     """
     Print a success message.

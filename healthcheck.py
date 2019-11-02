@@ -2,6 +2,7 @@
 
 import argparse
 import configparser
+import json
 import logging
 import os
 
@@ -37,7 +38,7 @@ def parse_config(args):
     :return: The parsed configuration.
     """
     if not os.path.isfile(args.config):
-        print_error('Could not find configuration file, examine argument of --config!')
+        print_error('could not find configuration file, examine argument of --config')
         exit(1)
 
     config = configparser.ConfigParser()
@@ -83,12 +84,12 @@ def main():
                 check_func = getattr(suite, check)
                 if args.check.lower() in check_func.__doc__.lower():
                     found = True
-                    print_msg('Running single check: {} ...'.format(check_func.__doc__))
+                    print_msg('running single check: {} ...'.format(check_func.__doc__))
                     suite.run_connectivity_checks()
                     executor.execute(check_func)
 
         if not found:
-            print_error('Could not find any single check, examine argument of --check!')
+            print_error('could not find any single check, examine argument of --check')
             exit(1)
 
         executor.wait()
@@ -106,26 +107,35 @@ def main():
     # execute check suites
     if len(suites) != 1:
         if args.suite:
-            print_error('Could not find check suite, examine argument of --suite!')
+            print_error('could not find check suite, examine argument of --suite')
         else:
-            print_error('Missing check suite, pass argument to --suite!')
+            print_error('missing check suite, pass argument to --suite')
         exit(1)
 
     if suites[0].params and not args.paramap:
-        print_error('Missing parameter map, pass argument to --paramap!')
+        print_error('missing parameter map, pass argument to --paramap')
         exit(1)
 
     params = None
-    to_print = [f'Running check suite: {suites[0].__doc__} ...']
+    to_print = [f'running check suite: {suites[0].__doc__} ...']
     if args.paramap:
-        params = list(filter(lambda x: args.paramap.lower() in get_parameter_map_name(x[0].lower()), suites[0].params.items()))
-        if args.paramap and not params:
-            print_error('Could not find paramter map, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
-            exit(1)
+        if args.paramap.endswith('.json'):
+            if not os.path.exists(args.paramap):
+                print_error("could not find parameter map, examine argument of --paramap")
+                exit(1)
 
-        if len(params) > 1:
-            print_error('Multiple parameter maps found, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
-            exit(1)
+            with open(args.paramap) as file:
+                params = [(args.paramap, json.loads(file.read()))]
+
+        else:
+            params = list(filter(lambda x: args.paramap.lower() in get_parameter_map_name(x[0].lower()), suites[0].params.items()))
+            if args.paramap and not params:
+                print_error('could not find paramter map, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
+                exit(1)
+
+            if len(params) > 1:
+                print_error('multiple parameter maps found, options are: {}'.format(list(map(get_parameter_map_name, suites[0].params.keys()))))
+                exit(1)
 
         to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
 
