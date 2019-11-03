@@ -31,7 +31,7 @@ class ClusterChecks(BaseCheckSuite):
         return not expired, {'license expired': expired}
 
     def check_number_of_shards(self, *_args, **_kwargs):
-        """check if enough shards according to HW requirements"""
+        """check if enough shards"""
         number_of_shards = self.api.get_number_of_values('shards')
 
         result = number_of_shards >= _kwargs['min_shards']
@@ -39,7 +39,7 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_number_of_nodes(self, *_args, **_kwargs):
-        """check if enough nodes according to HW requirements"""
+        """check if enough nodes"""
         number_of_nodes = self.api.get_number_of_values('nodes')
 
         result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0
@@ -47,7 +47,7 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_number_of_cores(self, *_args, **_kwargs):
-        """check if enough cores according to HW requirements"""
+        """check if enough cores"""
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
 
         result = number_of_cores >= _kwargs['min_cores']
@@ -55,7 +55,7 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_total_memory(self, *_args, **_kwargs):
-        """check if enough RAM according to HW requirements"""
+        """check if enough RAM"""
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
 
         result = total_memory >= _kwargs['min_memory'] * GB
@@ -63,7 +63,7 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
-        """check if enough ephemeral storage according to HW requirements"""
+        """check if enough ephemeral storage"""
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
 
         result = epehemeral_storage_size >= _kwargs['min_ephemeral_storage'] * GB
@@ -72,7 +72,7 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_persistent_storage(self, *_args, **_kwargs):
-        """check if enough persistent storage according to HW requirements"""
+        """check if enough persistent storage"""
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
 
         result = persistent_storage_size >= _kwargs['min_persistent_storage'] * GB
@@ -80,15 +80,8 @@ class ClusterChecks(BaseCheckSuite):
                   'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage'] )}
         return result, kwargs
 
-    def _check_alert_settings(self, *_args, **_kwargs):
-        """get cluster and node alert settings"""
-        alerts = self.api.get_value('cluster', 'alert_settings')
-
-        kwargs = {'alerts': alerts}
-        return None, kwargs
-
     def check_cpu_usage(self, *_args, **_kwargs):
-        """get CPU usage"""
+        """get max throughput"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
@@ -98,26 +91,26 @@ class ClusterChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """get RAM usage"""
+        """get min available RAM"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
         m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), stats['intervals'])])
-        kwargs['minimum available memory'] = '{} GB'.format(to_gb(m))
+        kwargs['min available memory'] = '{} GB'.format(to_gb(m))
 
         return None, kwargs
 
     def check_storage_usage(self, *_args, **_kwargs):
-        """get storage usage"""
+        """get min available storage"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
         # persistent storage
         m = min([i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
-        kwargs['minimum available peristent storage'] = '{} GB'.format(to_gb(m))
+        kwargs['peristent'] = '{} GB'.format(to_gb(m))
 
         # ephemeral storage
         m = min([i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
-        kwargs['minimum available ephemeral storage'] = '{} GB'.format(to_gb(m))
+        kwargs['ephemeral'] = '{} GB'.format(to_gb(m))
 
         return None, kwargs

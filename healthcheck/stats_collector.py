@@ -8,7 +8,7 @@ class StatsCollector(object):
         self.skipped = 0
 
     def collect(self, _result):
-        if not _result[1]:
+        if _result[0] == '':
             self.skipped += 1
         elif _result[0] is True:
             self.succeeded += 1

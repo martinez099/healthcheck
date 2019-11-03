@@ -14,8 +14,7 @@ def render_result(_result, _func):
         print('[ ] {} [SKIPPED]'.format(doc))
         return
     if _result[0] is True:
-        print(green('[+]'), doc, green('[SUCCEEDED]'))
-        return
+        to_print = [green('[+]'), doc, green('[SUCCEEDED]')]
     elif _result[0] is False:
         to_print = [red('[-]'), doc,  red('[FAILED]')]
     elif _result[0] is None:

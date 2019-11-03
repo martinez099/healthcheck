@@ -45,7 +45,7 @@ class BdbChecks(BaseCheckSuite):
         return not bool(kwargs), kwargs, f"""check configuration of database: {bdb['name']}"""
 
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check CPU usage"""
+        """check if shards have too much throughput"""
         kwargs = {}
         stats = self.api.get('shards/stats')
 
@@ -71,7 +71,7 @@ class BdbChecks(BaseCheckSuite):
         return not any(any(result.values()) for result in kwargs.values()), kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check RAM usage"""
+        """check if shards use too much memory"""
         kwargs = {}
         stats = self.api.get('shards/stats')
 
@@ -81,8 +81,6 @@ class BdbChecks(BaseCheckSuite):
             bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            if bdb_name not in kwargs:
-                kwargs[bdb_name] = {}
 
             max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), stats[stat_idx]['intervals'])])
             if bigstore:
@@ -90,6 +88,8 @@ class BdbChecks(BaseCheckSuite):
             else:
                 result = max_ram_usage > (25 * GB)
             if result:
+                if bdb_name not in kwargs:
+                    kwargs[bdb_name] = {}
                 kwargs[bdb_name][f'shard:{uid}'] = '{} GB'.format(to_gb(max_ram_usage))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs

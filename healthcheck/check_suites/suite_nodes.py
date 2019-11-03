@@ -48,7 +48,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_log_file_path(self, *_args, **_kwargs):
-        """check if LOG file path is NOT on root filesystem"""
+        """check if log file path is not on root filesystem"""
         rsps = self.ssh.exec_on_all_hosts('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
@@ -58,7 +58,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_ephemeral_storage_path(self, *_args, **_kwargs):
-        """check if EPHEMERAL storage path is NOT on root filesystem"""
+        """check if ephemeral storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
         rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
@@ -69,7 +69,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_persistent_storage_path(self, *_args, **_kwargs):
-        """check if PERSISTENT storage path is NOT on root filesystem"""
+        """check if persistent storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
         rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
@@ -89,7 +89,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
-        """check THP are disabled"""
+        """check if THP is disabled"""
         rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
@@ -105,31 +105,31 @@ class NodeChecks(BaseCheckSuite):
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
-        """check 'rlcheck' has errors"""
+        """check if 'rlcheck' has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.ip) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
-        return not errors, {f[1]: len(f[0]) == 0 for f in failed}
+        return not errors, {f[1]: len(f[0]) for f in failed}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
-        """check 'cnm_ctl status' has errors"""
+        """check 'cnm_ctl status'"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
-        running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
-        not_running = sum([len(r[0]) for r in running])
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
+        sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return not_running == 0,  {r[1]: len(r[0]) == 0 for r in running}
+        return sum_not_running == 0,  {r[1]: len(r[0]) for r in not_running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
-        """check 'supervisorctl status' has errors"""
+        """check 'supervisorctl status'"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
-        running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
-        not_running = sum([len(r[0]) for r in running])
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
+        sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return not_running == 1 * len(rsps), {r[1]: len(r[0]) == 1 for r in running}
+        return sum_not_running == 1 * len(rsps), {r[1]: len(r[0]) for r in not_running}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
-        """check errors in install.log"""
+        """check for errors in install.log"""
         rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
@@ -181,66 +181,62 @@ class NodeChecks(BaseCheckSuite):
         return balanced, shards_per_node
 
     def check_cpu_usage(self):
-        """check CPU usage"""
+        """check max CPU usage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
-            kwargs[f'node:{uid}'] = {}
 
             max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
             result = max_cpu_user > 0.8
             if result:
-                kwargs[f'node:{uid}']['max CPU usage'] = '{}%'.format(to_percent(max_cpu_user))
+                kwargs[f'node:{uid}'] = '{}%'.format(to_percent(max_cpu_user))
 
-        return not any(any(result.values()) for result in kwargs.values()), kwargs
+        return not any(kwargs.values()), kwargs
 
     def check_ram_usage(self):
-        """check RAM usage"""
+        """check min free RAM"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
-            kwargs[f'node:{uid}'] = {}
 
             min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
             result = min_free_memory < total_memory * (2/3)
             if result:
-                kwargs[f'node:{uid}']['min free memory'] = '{} GB'.format(to_gb(min_free_memory))
+                kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_free_memory))
 
-        return not any(any(result.values()) for result in kwargs.values()), kwargs
+        return not any(kwargs.values()), kwargs
 
     def check_ephemeral_storage_usage(self):
-        """get ephemeral storage usage"""
+        """get min available ephemeral storage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
-            kwargs[f'node:{uid}'] = {}
 
             min_ephemeral_storage = min(i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
-            kwargs[f'node:{uid}']['min ephemeral storage'] = '{} GB'.format(to_gb(min_ephemeral_storage))
+            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_ephemeral_storage))
 
         return None, kwargs
 
     def check_persistent_storage_usage(self):
-        """get persistent storage usage"""
+        """get min available persistent storage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
-            kwargs[f'node:{uid}'] = {}
 
             min_ephemeral_storage = min(i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
-            kwargs[f'node:{uid}']['min persistent storage'] = '{} GB'.format(to_gb(min_ephemeral_storage))
+            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_ephemeral_storage))
 
         return None, kwargs
