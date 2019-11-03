@@ -42,10 +42,10 @@ class BdbChecks(BaseCheckSuite):
             if not result:
                 kwargs[k] = bdb[k]
 
-        return not bool(kwargs), kwargs, f"""check configuration of database: {bdb['name']}"""
+        return not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""
 
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check if shards have too much throughput"""
+        """check for too high throughput"""
         kwargs = {}
         stats = self.api.get('shards/stats')
 
@@ -71,7 +71,7 @@ class BdbChecks(BaseCheckSuite):
         return not any(any(result.values()) for result in kwargs.values()), kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check if shards use too much memory"""
+        """check for too much memory usage"""
         kwargs = {}
         stats = self.api.get('shards/stats')
 

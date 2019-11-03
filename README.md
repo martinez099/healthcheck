@@ -1,10 +1,10 @@
 # healthcheck
-
-## Intro
 This is a command-line tool to check the health of a Redis Enterprise cluster.
+
+## Description
 - It does read-only operations via SSH and the Redis Enterprise REST-API.
 - You can run single checks or whole check suites.
-- Check suites may or may not have parameter maps, i.e. JSON files.
+- Checks may or may not have parameter maps, i.e. JSON files with parameters.
 
 ## Prerequisites
 - Python 3, no dependencies are required.
@@ -13,13 +13,13 @@ This is a command-line tool to check the health of a Redis Enterprise cluster.
 
 ## Configure
 - Fill in the `config.ini` in the main directory.
-- Alternatively you can pass a different configuration filename with `-cfg CONFIG`.
+- Alternatively you can pass a different configuration filename with `-cfg <CONFIG>`.
 
 ## Run
 - To see all available checks, run `healthcheck.py -l`.
 - Choose a check suite, run `healthcheck.py -s <SUITE>`, e.g.
   - run `healthcheck.py -s node` for node checks.
-- If a suite requires a parameter map, run `healthcheck.py -s <SUITE> -p <PARAMAP>`, e.g.
+- If a suite requires a parameter map, run `healthcheck.py -s <SUITE> -p <PARAMS>`, e.g.
   - run `healthcheck.py -s cluster -p reco` for cluster checks with `recommended` HW requriments.
   - run `healthcheck.py -s cluster -p mini` for cluster checks with `minimum` HW requirements.
   - run `healthcheck.py -s database -p 1` for database checks with parameters given in `config1.json`.
