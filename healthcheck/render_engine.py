@@ -69,27 +69,22 @@ def print_msg(_msg):
     print(_msg)
 
 
-def print_error(_msg):
+def print_error(_msg, _ex=None):
     """
     Print an error message.
 
     :param _msg: The error message.
+    :param _ex: An optional exception.
     :return:
     """
-    print(red(_msg))
-
-
-def print_exception(_ex):
-    """
-    Print an exception
-
-    :param _ex: The exception.
-    :return:
-    """
-    if hasattr(_ex, 'reason'):
-        print_error(_ex.reason.strerror)
-    else:
-        print_error(_ex.strerror)
+    msg = [_msg]
+    if _ex:
+        msg.append(': ')
+        if hasattr(_ex, 'reason'):
+            msg.append(_ex.reason.strerror)
+        else:
+            msg.append(_ex.strerror)
+    print(red(''.join(msg)))
 
 
 def print_success(_msg):

@@ -4,7 +4,7 @@ import json
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.ssh_commander import SshCommander
-from healthcheck.render_engine import print_error, print_success, print_msg, print_exception
+from healthcheck.render_engine import print_error, print_success, print_msg
 
 
 class BaseCheckSuite(object):
@@ -40,8 +40,7 @@ class BaseCheckSuite(object):
                 self.ssh.exec_on_host('sudo -v', ip)
                 print_success(f'successfully connected to {ip}')
             except Exception as e:
-                print_error(f'could not connect to host {ip}:')
-                print_exception(e)
+                print_error(f'could not connect to host {ip}:', e)
                 exit(2)
 
     def _check_api_connectivity(self):
@@ -50,8 +49,7 @@ class BaseCheckSuite(object):
             fqdn = self.api.get_value('cluster', 'name')
             print_success(f'successfully connected to {fqdn}')
         except Exception as e:
-            print_error('could not connect to Redis Enterprise REST-API:')
-            print_exception(e)
+            print_error('could not connect to Redis Enterprise REST-API:', e)
             exit(2)
 
 
