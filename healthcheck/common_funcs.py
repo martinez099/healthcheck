@@ -30,7 +30,7 @@ def to_percent(_value):
     :param _value: The numeric value in decimal.
     :return:
     """
-    return _value * 100
+    return math.ceil(_value * 100)
 
 
 def to_kops(_value):

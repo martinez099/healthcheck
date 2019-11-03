@@ -129,7 +129,7 @@ class NodeChecks(BaseCheckSuite):
         return sum_not_running == 1 * len(rsps), {r[1]: len(r[0]) for r in not_running}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
-        """check for errors in install.log"""
+        """check if install.log has errors"""
         rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
@@ -162,23 +162,6 @@ class NodeChecks(BaseCheckSuite):
 
         kwargs = {key: '{:.3f}/{:.3f}/{:.3f}/{:.3f} ms'.format(_min, avg, _max, mdev)}
         return None, kwargs
-
-    def check_shards_balance(self, *_args, **_kwargs):
-        """check if shards are balanced accross nodes"""
-        nodes = self.api.get('nodes')
-        shards_per_node = {f'node:{node["uid"]}': node['shard_count'] for node in nodes}
-
-        # remove quorum-only nodes
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = {f'node:{node["uid"]}': match.group(1) == 'enabled' for node, match in zip(nodes, matches)}
-        for node, shards in set(shards_per_node.items()):
-            if quorum_onlys[node]:
-                del shards_per_node[node]
-
-        balanced = max(shards_per_node.values()) - min(shards_per_node.values()) <= 1
-        return balanced, shards_per_node
 
     def check_cpu_usage(self):
         """check max CPU usage"""
@@ -238,5 +221,59 @@ class NodeChecks(BaseCheckSuite):
 
             min_ephemeral_storage = min(i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
             kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_ephemeral_storage))
+
+        return None, kwargs
+
+    def check_load_balance(self, *_args, **_kwargs):
+        """get load balance"""
+        stats = self.api.get('nodes/stats')
+
+        # get quorum-only node
+        nodes = self.api.get('nodes')
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                      self.ssh.hostnames[0]) for node in nodes]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+
+        kwargs = {}
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+
+            # calculate average CPU idle
+            cpu_idles = list(filter(lambda x: x.get('cpu_idle'), ints))
+            sum_cpu_idle = sum(i['cpu_idle'] for i in cpu_idles)
+            avg_cpu_idle = sum_cpu_idle/len(cpu_idles)
+
+            kwargs[f'node:{uid}'] = '{}%'.format(to_percent(1 - avg_cpu_idle))
+            if uid in quorum_onlys:
+                kwargs[f'node:{uid}'] += ' (quorum only)'
+
+        return None, kwargs
+
+    def check_memory_balance(self, *_args, **_kwargs):
+        """get memory balance"""
+        stats = self.api.get('nodes/stats')
+
+        # get quorum-only node
+        nodes = self.api.get('nodes')
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                      self.ssh.hostnames[0]) for node in nodes]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+
+        kwargs = {}
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+
+            # calculate average provisioinal memory
+            prov_mems = list(filter(lambda x: x.get('provisional_memory'), ints))
+            sum_prov_mem = sum(i['provisional_memory'] for i in prov_mems)
+            avg_prov_mem = sum_prov_mem/len(prov_mems)
+
+            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(avg_prov_mem))
+            if uid in quorum_onlys:
+                kwargs[f'node:{uid}'] += ' (quorum only)'
 
         return None, kwargs
