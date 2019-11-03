@@ -12,7 +12,7 @@ class NodeChecks(BaseCheckSuite):
         self._check_ssh_connectivity()
 
     def check_private_ip(self, *_args, **_kwargs):
-        """check private IP address"""
+        """check if private IP address is correct"""
         nodes = self.api.get('nodes')
         rsps = self.ssh.exec_on_all_hosts('hostname -I')
         uid_addrs = [(node['uid'], node['addr']) for node in nodes]
@@ -24,7 +24,7 @@ class NodeChecks(BaseCheckSuite):
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
-        found = re.search(r'(node:\d+ master.*)', rsp)
+        found = re.search(r'(^node:\d+\s+master.*$)', rsp, re.MULTILINE)
         hostname = re.split(r'\s+', found.group(1))[4]
         ip_address = re.split(r'\s+', found.group(1))[3]
 
@@ -40,7 +40,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_software_version(self, *_args, **_kwargs):
-        """get software version"""
+        """get RS version"""
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
 
@@ -48,7 +48,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_log_file_path(self, *_args, **_kwargs):
-        """check if log file path is NOT on root filesystem"""
+        """check if LOG file path is NOT on root filesystem"""
         rsps = self.ssh.exec_on_all_hosts('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
@@ -57,18 +57,30 @@ class NodeChecks(BaseCheckSuite):
         kwargs = {rsp.ip: log_file_path for rsp, log_file_path in zip(rsps, log_file_paths)}
         return result, kwargs
 
-    def check_tmp_file_path(self, *_args, **_kwargs):
-        """check if tmp file path is NOT on root filesystem"""
-        rsps = self.ssh.exec_on_all_hosts('sudo df -h /tmp')
+    def check_ephemeral_storage_path(self, *_args, **_kwargs):
+        """check if EPHEMERAL storage path is NOT on root filesystem"""
+        storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
+        rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
-        tmp_file_paths = [match.group(1) for match in matches]
+        file_paths = [match.group(1) for match in matches]
 
-        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in tmp_file_paths])
-        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, tmp_file_paths)}
+        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
+        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
+        return result, kwargs
+
+    def check_persistent_storage_path(self, *_args, **_kwargs):
+        """check if PERSISTENT storage path is NOT on root filesystem"""
+        storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
+        rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
+        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
+        file_paths = [match.group(1) for match in matches]
+
+        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
+        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
-        """check swap setting"""
+        """check if swappiness is disabled"""
         rsps = self.ssh.exec_on_all_hosts('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
 
@@ -77,7 +89,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
-        """check THP setting"""
+        """check THP are disabled"""
         rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
@@ -86,14 +98,14 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_rladmin_status(self, *_args, **_kwargs):
-        """check rladmin status"""
+        """check if 'rladmin status' has errors"""
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node', self.ssh.hostnames[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
-        """check rlcheck status"""
+        """check 'rlcheck' has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.ip) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
@@ -101,7 +113,7 @@ class NodeChecks(BaseCheckSuite):
         return not errors, {f[1]: len(f[0]) == 0 for f in failed}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
-        """check cnm_ctl status"""
+        """check 'cnm_ctl status' has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
         running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
         not_running = sum([len(r[0]) for r in running])
@@ -109,7 +121,7 @@ class NodeChecks(BaseCheckSuite):
         return not_running == 0,  {r[1]: len(r[0]) == 0 for r in running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
-        """check supervisorctl status"""
+        """check 'supervisorctl status' has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
         running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
         not_running = sum([len(r[0]) for r in running])
@@ -132,6 +144,7 @@ class NodeChecks(BaseCheckSuite):
                     continue
                 cmd_ips.append((f'ping -c 4 {target}', source))
 
+        # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
         futures = self.ssh.exec_on_hosts(cmd_ips)
         key = 'rtt min/avg/max/mdev'
@@ -201,3 +214,33 @@ class NodeChecks(BaseCheckSuite):
                 kwargs[f'node:{uid}']['min free memory'] = '{} GB'.format(to_gb(min_free_memory))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs
+
+    def check_ephemeral_storage_usage(self):
+        """get ephemeral storage usage"""
+        kwargs = {}
+        stats = self.api.get('nodes/stats')
+
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+            kwargs[f'node:{uid}'] = {}
+
+            min_ephemeral_storage = min(i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+            kwargs[f'node:{uid}']['min ephemeral storage'] = '{} GB'.format(to_gb(min_ephemeral_storage))
+
+        return None, kwargs
+
+    def check_persistent_storage_usage(self):
+        """get persistent storage usage"""
+        kwargs = {}
+        stats = self.api.get('nodes/stats')
+
+        for i in range(0, len(stats)):
+            ints = stats[i]['intervals']
+            uid = stats[i]['uid']
+            kwargs[f'node:{uid}'] = {}
+
+            min_ephemeral_storage = min(i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
+            kwargs[f'node:{uid}']['min persistent storage'] = '{} GB'.format(to_gb(min_ephemeral_storage))
+
+        return None, kwargs

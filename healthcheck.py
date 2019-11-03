@@ -78,19 +78,19 @@ def main():
 
     # execute single checks
     if args.check != 'all':
-        found = False
+        checks = []
         for suite in suites:
             for check in filter(lambda x: x.startswith('check_'), dir(suite)):
                 check_func = getattr(suite, check)
                 if args.check.lower() in check_func.__doc__.lower():
-                    found = True
-                    print_msg('running single check: {}'.format(check_func.__doc__))
-                    suite.run_connectivity_checks()
-                    executor.execute(check_func)
+                    checks.append(check_func)
 
-        if not found:
+        if not checks:
             print_error('could not find any single check, examine argument of --check')
             exit(1)
+
+        for check in checks:
+            executor.execute(check)
 
         executor.wait()
         executor.shutdown()

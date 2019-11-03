@@ -19,13 +19,7 @@ class BdbChecks(BaseCheckSuite):
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
             kwargs[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
 
-        return all(kwargs.values()), kwargs
-
-    def _check_bdb_alert_settings(self, *_args, **_kwargs):
-        """get database alert settings"""
-        alerts = self.api.get('bdbs/alerts')
-
-        return None, {'alerts': alerts}
+        return all(kwargs.values()) if kwargs.values() else '', kwargs
 
     def check_bdbs(self, *_args, **_kwargs):
         """check database configuration"""
@@ -41,15 +35,14 @@ class BdbChecks(BaseCheckSuite):
         return results
 
     def _check_bdb(self, _uid, _values):
-        f"""check configuration of bdb:{_uid}"""
         bdb = self.api.get(f'bdbs/{_uid}')
-        kwargs = {bdb['name']: {}}
+        kwargs = {}
         for k, v in _values.items():
             result = v == bdb[k]
             if not result:
-                kwargs[bdb['name']][k] = bdb[k]
+                kwargs[k] = bdb[k]
 
-        return not bool(kwargs[bdb['name']]), kwargs
+        return not bool(kwargs), kwargs, f"""check configuration of database: {bdb['name']}"""
 
     def check_cpu_usage(self, *_args, **_kwargs):
         """check CPU usage"""
@@ -62,8 +55,6 @@ class BdbChecks(BaseCheckSuite):
             bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            if bdb_name not in kwargs:
-                kwargs[bdb_name] = {}
 
             max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats[stat_idx]['intervals'])])
             if bigstore:
@@ -73,6 +64,8 @@ class BdbChecks(BaseCheckSuite):
             else:
                 result = max_total_requests > 25000
             if result:
+                if bdb_name not in kwargs:
+                    kwargs[bdb_name] = {}
                 kwargs[bdb_name][f'shard:{uid}'] = '{}K ops/sec'.format(to_kops(max_total_requests))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs

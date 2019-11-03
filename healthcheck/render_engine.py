@@ -5,21 +5,23 @@ def render_result(_result, _func):
     """
     Render result to stdout.
 
-    :param _result:
-    :param _func:
+    :param _result: The result.
+    :param _func: The check function executed.
     :return:
     """
-    if not _result[1]:
-        print('[ ] {} [SKIPPED]'.format(_func.__doc__))
+    doc = _result[2] if len(_result) == 3 else _func.__doc__
+    if _result[0] == '':
+        print('[ ] {} [SKIPPED]'.format(doc))
         return
     if _result[0] is True:
-        to_print = [green('[+]'), _func.__doc__, green('[SUCCEEDED]')]
+        print(green('[+]'), doc, green('[SUCCEEDED]'))
+        return
     elif _result[0] is False:
-        to_print = [red('[-]'), _func.__doc__,  red('[FAILED]')]
+        to_print = [red('[-]'), doc,  red('[FAILED]')]
     elif _result[0] is None:
-        to_print = [yellow('[~]'), _func.__doc__, yellow('[NO RESULT]')]
+        to_print = [yellow('[~]'), doc, yellow('[NO RESULT]')]
     elif _result[0] is Exception:
-        to_print = [magenta('[*]'), _func.__doc__, magenta('[ERROR]')]
+        to_print = [magenta('[*]'), doc, magenta('[ERROR]')]
     else:
         raise NotImplementedError()
 
@@ -32,7 +34,7 @@ def render_stats(_stats):
     """
     Render collected statistics.
 
-    :param _stats:
+    :param _stats: A stats collector.
     :return:
     """
     print("\nchecks TOTAL: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
@@ -47,7 +49,7 @@ def render_list(_list):
     """
     Render check list.
 
-    :param _list:
+    :param _list: The list of check suites.
     :return:
     """
     for suite in _list:
