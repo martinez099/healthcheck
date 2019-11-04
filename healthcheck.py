@@ -31,74 +31,74 @@ def parse_args():
     return parser.parse_args()
 
 
-def parse_config(args):
+def parse_config(_args):
     """
     Parse configuration file.
 
     :return: The parsed configuration.
     """
-    if not os.path.isfile(args.config):
+    if not os.path.isfile(_args.config):
         print_error('could not find configuration file, examine argument of --config')
         exit(1)
 
     config = configparser.ConfigParser()
-    with open(args.config, 'r') as configfile:
+    with open(_args.config, 'r') as configfile:
         config.read_file(configfile)
     return config
 
 
-def load_parameter_map(suite, args):
+def load_parameter_map(_suite, _args):
     """
     Load parameter map.
 
-    :param suite: The check suite.
-    :param args: The parsed arguments.
+    :param _suite: The check suite.
+    :param _args: The parsed arguments.
     :return: A list of tuples.
     """
-    if not args.params:
-        if suite.params:
+    if not _args.params:
+        if _suite.params:
             print_error('missing parameter map, pass argument to --params')
             exit(1)
 
         return None
 
-    if args.params.endswith('.json'):
-        if not os.path.exists(args.params):
+    if _args.params.endswith('.json'):
+        if not os.path.exists(_args.params):
             print_error("could not find parameter map, examine argument of --params")
             exit(1)
 
-        with open(args.params) as file:
-            params = [(args.params, json.loads(file.read()))]
+        with open(_args.params) as file:
+            params = [(_args.params, json.loads(file.read()))]
 
     else:
-        params = list(filter(lambda x: args.params.lower() in get_parameter_map_name(x[0].lower()),
-                             suite.params.items()))
-        if args.params and not params:
+        params = list(filter(lambda x: _args.params.lower() in get_parameter_map_name(x[0].lower()),
+                             _suite.params.items()))
+        if _args.params and not params:
             print_error('could not find paramter map, options are: {}'.format(
-                list(map(get_parameter_map_name, suite.params.keys()))))
+                list(map(get_parameter_map_name, _suite.params.keys()))))
             exit(1)
 
         if len(params) > 1:
             print_error('multiple parameter maps found, options are: {}'.format(
-                list(map(get_parameter_map_name, suite.params.keys()))))
+                list(map(get_parameter_map_name, _suite.params.keys()))))
             exit(1)
 
     return params
 
 
-def exec_singele_check(suites, args, executor):
+def exec_singele_check(_suites, _args, _executor):
     """
     Execute single checks.
 
-    :param suites: The loaded check suites.
-    :param args: The parsed arguments.
-    :param executor: The check executor.
+    :param _suites: The loaded check suites.
+    :param _args: The parsed arguments.
+    :param _executor: The check executor.
     """
     checks = []
-    for suite in suites:
+    for suite in _suites:
         for check in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check)
-            if args.check.lower() in check_func.__doc__.lower():
+            if _args.check.lower() in check_func.__doc__.lower():
                 checks.append((check_func, suite))
 
     if not checks:
@@ -106,43 +106,42 @@ def exec_singele_check(suites, args, executor):
         exit(1)
 
     for check, suite in checks:
-        params = load_parameter_map(suite, args)
-        executor.execute(check, _kwargs=params[0][1] if params else {})
+        params = load_parameter_map(suite, _args)
+        _executor.execute(check, _kwargs=params[0][1] if params else {})
 
-    executor.wait()
-    executor.shutdown()
+    _executor.wait()
 
 
-def exec_check_suite(suites, args, executor):
+def exec_check_suite(_suites, _args, _executor):
     """
     Execute a check suite.
 
-    :param suites: The loaded check suites.
-    :param args: The parsed arguments.
-    :param executor: The check executor.
+    :param _suites: The loaded check suites.
+    :param _args: The parsed arguments.
+    :param _executor: The check executor.
     """
+    if len(_suites) != 1:
+        if _args.suite:
+            print_error('could not find check suite, examine argument of --suite')
+        else:
+            print_error('missing check suite, pass argument to --suite')
+        exit(1)
+
+    to_print = [f'running check suite: {_suites[0].__doc__}']
+    params = load_parameter_map(_suites[0], _args)
+    if params:
+        to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
+    print_msg('\n'.join(to_print))
+
+    _suites[0].run_connectivity_checks()
     stats_collector = StatsCollector()
 
     def collect(_future):
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
-    if len(suites) != 1:
-        if args.suite:
-            print_error('could not find check suite, examine argument of --suite')
-        else:
-            print_error('missing check suite, pass argument to --suite')
-        exit(1)
-
-    to_print = [f'running check suite: {suites[0].__doc__}']
-    params = load_parameter_map(suites[0], args)
-    if params:
-        to_print.append('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
-
-    print_msg('\n'.join(to_print))
-    suites[0].run_connectivity_checks()
-    executor.execute_suite(suites[0], _kwargs=params[0][1] if params else {}, _done_cb=collect)
-    executor.wait()
+    _executor.execute_suite(_suites[0], _kwargs=params[0][1] if params else {}, _done_cb=collect)
+    _executor.wait()
 
     render_stats(stats_collector)
 
