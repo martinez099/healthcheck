@@ -31,7 +31,7 @@ class NodeChecks(BaseCheckSuite):
         return None, {'hostname': hostname, 'IP address': ip_address}
 
     def check_os_version(self, *_args, **_kwargs):
-        """get os version"""
+        """get OS version"""
         rsps = self.ssh.exec_on_all_hosts('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
@@ -224,8 +224,8 @@ class NodeChecks(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_load_balance(self, *_args, **_kwargs):
-        """get load balance"""
+    def check_cpu_balance(self, *_args, **_kwargs):
+        """get CPU balance"""
         stats = self.api.get('nodes/stats')
 
         # get quorum-only node
@@ -251,8 +251,8 @@ class NodeChecks(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_memory_balance(self, *_args, **_kwargs):
-        """get memory balance"""
+    def check_ram_balance(self, *_args, **_kwargs):
+        """get RAM balance"""
         stats = self.api.get('nodes/stats')
 
         # get quorum-only node
@@ -267,12 +267,14 @@ class NodeChecks(BaseCheckSuite):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
 
-            # calculate average provisioinal memory
-            prov_mems = list(filter(lambda x: x.get('provisional_memory'), ints))
-            sum_prov_mem = sum(i['provisional_memory'] for i in prov_mems)
-            avg_prov_mem = sum_prov_mem/len(prov_mems)
+            # calculate average available memory
+            avail_mems = list(filter(lambda x: x.get('available_memory'), ints))
+            sum_avail_mem = sum(i['available_memory'] for i in avail_mems)
+            avg_avail_mem = sum_avail_mem/len(avail_mems)
 
-            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(avg_prov_mem))
+            total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
+
+            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(total_mem - avg_avail_mem))
             if uid in quorum_onlys:
                 kwargs[f'node:{uid}'] += ' (quorum only)'
 

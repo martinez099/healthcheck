@@ -1,4 +1,14 @@
-from healthcheck.common_funcs import green, red, yellow, magenta, get_parameter_map_name
+from healthcheck.common_funcs import get_parameter_map_name
+
+
+black = lambda text: '\033[0;30m' + text + '\033[0m'
+red = lambda text: '\033[0;31m' + text + '\033[0m'
+green = lambda text: '\033[0;32m' + text + '\033[0m'
+yellow = lambda text: '\033[0;33m' + text + '\033[0m'
+blue = lambda text: '\033[0;34m' + text + '\033[0m'
+magenta = lambda text: '\033[0;35m' + text + '\033[0m'
+cyan = lambda text: '\033[0;36m' + text + '\033[0m'
+white = lambda text: '\033[0;37m' + text + '\033[0m'
 
 
 def render_result(_result, _func):
@@ -25,7 +35,6 @@ def render_result(_result, _func):
         raise NotImplementedError()
 
     to_print.append(', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()]))
-
     print('{} {} {} {}'.format(*to_print))
 
 
@@ -70,6 +79,16 @@ def print_msg(_msg):
     print(_msg)
 
 
+def print_success(_msg):
+    """
+    Print a success message.
+
+    :param _msg: The success message.
+    :return:
+    """
+    print(green(_msg))
+
+
 def print_error(_msg, _ex=None):
     """
     Print an error message.
@@ -86,13 +105,3 @@ def print_error(_msg, _ex=None):
         else:
             msg.append(_ex.strerror)
     print(red(''.join(msg)))
-
-
-def print_success(_msg):
-    """
-    Print a success message.
-
-    :param _msg: The success message.
-    :return:
-    """
-    print(green(_msg))
