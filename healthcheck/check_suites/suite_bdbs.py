@@ -82,7 +82,7 @@ class BdbChecks(BaseCheckSuite):
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
 
-            max_ram_usage = max([i['used_memory_peak'] for i in filter(lambda x: x.get('used_memory_peak'), stats[stat_idx]['intervals'])])
+            max_ram_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), stats[stat_idx]['intervals'])])
             if bigstore:
                 result = max_ram_usage > (50 * GB)
             else:
@@ -93,3 +93,49 @@ class BdbChecks(BaseCheckSuite):
                 kwargs[bdb_name][f'shard:{uid}'] = '{} GB'.format(to_gb(max_ram_usage))
 
         return not any(any(result.values()) for result in kwargs.values()), kwargs
+
+    def check_cpu_balance(self, *_args, **_kwargs):
+        """get CPU balance"""
+        results = []
+        bdbs = self.api.get('bdbs')
+
+        for bdb in bdbs:
+
+            kwargs = {}
+            for shard_uid in bdb['shard_list']:
+                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
+                ints = shard_stats['intervals']
+
+                # calculate average througput
+                total_reqs = list(filter(lambda x: x.get('total_req'), ints))
+                sum_total_req = sum([i['total_req'] for i in total_reqs])
+                avg_total_req = sum_total_req/len(total_reqs)
+
+                kwargs = {f'shard:{shard_uid} ({shard_stats["role"]})': '{}K ops/sec'.format(to_kops(avg_total_req))}
+
+            results.append((None, kwargs, f'get CPU balance of \'{bdb["name"]}\''))
+
+        return results
+
+    def check_ram_balance(self, *_args, **_kwargs):
+        """get RAM balance"""
+        results = []
+        bdbs = self.api.get('bdbs')
+
+        for bdb in bdbs:
+
+            kwargs = {}
+            for shard_uid in bdb['shard_list']:
+                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
+                ints = shard_stats['intervals']
+
+                # calculate average memory usage
+                total_reqs = list(filter(lambda x: x.get('used_memory'), ints))
+                sum_total_req = sum([i['used_memory'] for i in total_reqs])
+                avg_total_req = sum_total_req / len(total_reqs)
+
+                kwargs = {f'shard:{shard_uid} ({shard_stats["role"]})': '{} GB'.format(to_gb(avg_total_req))}
+
+            results.append((None, kwargs, f'get RAM balance of \'{bdb["name"]}\''))
+
+        return results
