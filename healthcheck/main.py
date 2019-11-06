@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import configparser
 import json
@@ -182,7 +180,3 @@ def main():
     # shutdown
     executor.shutdown()
     logging.shutdown()
-
-
-if __name__ == '__main__':
-    main()
