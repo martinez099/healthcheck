@@ -29,32 +29,32 @@ class BdbChecks(BaseCheckSuite):
             values = _kwargs['__default__']
             if bdb['name'] in _kwargs:
                 values.update(_kwargs[bdb['name']])
-            result = self._check_bdb(bdb['uid'], values)
-            results.append(result)
+            bdb = self.api.get(f'bdbs/{bdb["uid"]}')
+            kwargs = {}
+            for k, v in values.items():
+                result = v == bdb[k]
+                if not result:
+                    kwargs[k] = bdb[k]
+
+            results.append((not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""))
 
         return results
 
-    def _check_bdb(self, _uid, _values):
-        bdb = self.api.get(f'bdbs/{_uid}')
-        kwargs = {}
-        for k, v in _values.items():
-            result = v == bdb[k]
-            if not result:
-                kwargs[k] = bdb[k]
-
-        return not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""
-
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check for too high throughput"""
-        kwargs = {}
+        """check throughput"""
         stats = self.api.get('shards/stats')
+        bdb_names = self.api.get_values('bdbs', 'name')
+        kwargs = {}
 
         for stat_idx in range(0, len(stats)):
             uid = stats[stat_idx]['uid']
+            role = stats[stat_idx]['role']
             bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
             bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
+            if bdb_name not in kwargs:
+                kwargs[bdb_name] = {}
 
             max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats[stat_idx]['intervals'])])
             if bigstore:
@@ -64,23 +64,25 @@ class BdbChecks(BaseCheckSuite):
             else:
                 result = max_total_requests > 25000
             if result:
-                if bdb_name not in kwargs:
-                    kwargs[bdb_name] = {}
-                kwargs[bdb_name][f'shard:{uid}'] = '{}K ops/sec'.format(to_kops(max_total_requests))
+                kwargs[bdb_name][f'shard:{uid} ({role})'] = '{}K ops/sec'.format(to_kops(max_total_requests))
 
-        return not any(any(result.values()) for result in kwargs.values()), kwargs
+        return [(not any(kwargs[bdb_name].values()), kwargs[bdb_name], f"check throughput for '{bdb_name}'") for bdb_name in bdb_names]
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check for too much memory usage"""
-        kwargs = {}
+        """check memory usage"""
         stats = self.api.get('shards/stats')
+        bdb_names = self.api.get_values('bdbs', 'name')
+        kwargs = {}
 
         for stat_idx in range(0, len(stats)):
             uid = stats[stat_idx]['uid']
+            role = stats[stat_idx]['role']
             bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
             bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
             bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
             crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
+            if bdb_name not in kwargs:
+                kwargs[bdb_name] = {}
 
             max_ram_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), stats[stat_idx]['intervals'])])
             if bigstore:
@@ -88,11 +90,9 @@ class BdbChecks(BaseCheckSuite):
             else:
                 result = max_ram_usage > (25 * GB)
             if result:
-                if bdb_name not in kwargs:
-                    kwargs[bdb_name] = {}
-                kwargs[bdb_name][f'shard:{uid}'] = '{} GB'.format(to_gb(max_ram_usage))
+                kwargs[bdb_name][f'shard:{uid} ({role})'] = '{} GB'.format(to_gb(max_ram_usage))
 
-        return not any(any(result.values()) for result in kwargs.values()), kwargs
+        return [(not any(kwargs[bdb_name].values()), kwargs[bdb_name], f"check memory usage for '{bdb_name}'") for bdb_name in bdb_names]
 
     def check_cpu_balance(self, *_args, **_kwargs):
         """get CPU balance"""
