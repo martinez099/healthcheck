@@ -7,5 +7,8 @@
         "proxy_policy": "single",
         "replication": false,
         "oss_cluster": true
+    },
+    "db1": {
+        "oss_cluster": false
     }
 }

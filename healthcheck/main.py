@@ -84,7 +84,7 @@ def load_parameter_map(_suite, _args):
     return params
 
 
-def exec_singele_check(_suites, _args, _executor):
+def exec_single_checks(_suites, _args, _executor):
     """
     Execute single checks.
 
@@ -173,7 +173,7 @@ def main():
     # execute checks
     executor = CheckExecutor(render)
     if args.check != 'all':
-        exec_singele_check(suites, args, executor)
+        exec_single_checks(suites, args, executor)
     else:
         exec_check_suite(suites, args, executor)
 
