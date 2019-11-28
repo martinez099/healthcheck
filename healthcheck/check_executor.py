@@ -59,6 +59,8 @@ class CheckExecutor(object):
         for future in concurrent.futures.as_completed(self.futures):
             self.result_cb(future.result(), future.func, future.args, future.kwargs)
 
+        self.futures = []
+
     def shutdown(self):
         """
         Shutdown the thread pool executor.

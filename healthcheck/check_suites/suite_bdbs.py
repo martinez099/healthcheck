@@ -22,7 +22,10 @@ class BdbChecks(BaseCheckSuite):
         return all(kwargs.values()) if kwargs.values() else '', kwargs
 
     def check_bdbs(self, *_args, **_kwargs):
-        """check database configuration"""
+        """check database configuration (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         bdbs = self.api.get('bdbs')
         results = []
         for bdb in bdbs:

@@ -31,7 +31,10 @@ class ClusterChecks(BaseCheckSuite):
         return not expired, {'license expired': expired}
 
     def check_number_of_shards(self, *_args, **_kwargs):
-        """check if enough shards"""
+        """check if enough shards (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         number_of_shards = self.api.get_number_of_values('shards')
 
         result = number_of_shards >= _kwargs['min_shards']
@@ -39,7 +42,10 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_number_of_nodes(self, *_args, **_kwargs):
-        """check if enough nodes"""
+        """check if enough nodes (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         number_of_nodes = self.api.get_number_of_values('nodes')
 
         result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0
@@ -47,7 +53,10 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_number_of_cores(self, *_args, **_kwargs):
-        """check if enough cores"""
+        """check if enough cores (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
 
         result = number_of_cores >= _kwargs['min_cores']
@@ -55,7 +64,10 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_total_memory(self, *_args, **_kwargs):
-        """check if enough RAM"""
+        """check if enough RAM (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
 
         result = total_memory >= _kwargs['min_memory'] * GB
@@ -63,7 +75,10 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_ephemeral_storage(self, *_args, **_kwargs):
-        """check if enough ephemeral storage"""
+        """check if enough ephemeral storage (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
 
         result = epehemeral_storage_size >= _kwargs['min_ephemeral_storage'] * GB
@@ -72,7 +87,10 @@ class ClusterChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_persistent_storage(self, *_args, **_kwargs):
-        """check if enough persistent storage"""
+        """check if enough persistent storage (needs parameters)"""
+        if not _kwargs:
+            return '', {}
+
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
 
         result = persistent_storage_size >= _kwargs['min_persistent_storage'] * GB

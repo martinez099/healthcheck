@@ -1,5 +1,4 @@
 import glob
-import importlib
 import json
 
 from healthcheck.api_fetcher import ApiFetcher
@@ -26,15 +25,13 @@ class BaseCheckSuite(object):
 
         :return:
         """
-        print_msg('')
         self._check_connectivity()
-        print_msg('')
 
     def _check_connectivity(self):
         raise NotImplementedError()
 
     def _check_ssh_connectivity(self):
-        print_msg('checking SSH connectivity ...')
+        print_msg('checking SSH connectivity')
         for ip in self.ssh.hostnames:
             try:
                 self.ssh.exec_on_host('sudo -v', ip)
@@ -45,7 +42,7 @@ class BaseCheckSuite(object):
 
     def _check_api_connectivity(self):
         try:
-            print_msg('checking API connectivity ...')
+            print_msg('checking API connectivity')
             fqdn = self.api.get_value('cluster', 'name')
             print_success(f'successfully connected to {fqdn}')
         except Exception as e:
@@ -65,25 +62,3 @@ def load_params(_dir):
         with open(path) as file:
             params[path] = json.loads(file.read())
     return params
-
-
-def load_suites(_args, _config, _base_class=BaseCheckSuite):
-    """
-    Load check suites.
-
-    :param _args: The pasred command line arguments.
-    :param _config: The parsed configuration.
-    :param _base_class: The base class of the check suites.
-    :return: A list with all instantiated check suites.
-    """
-    suites = []
-    for file in glob.glob('healthcheck/check_suites/suite_*.py'):
-        name = file.replace('/', '.').replace('.py', '')
-        module = importlib.import_module(name)
-        for member in dir(module):
-            if member != _base_class.__name__ and not member.startswith('__'):
-                suite = getattr(module, member)
-                if type(suite) == type.__class__ and issubclass(suite, _base_class):
-                    if not _args.suite or _args.suite and _args.suite.lower() in suite.__doc__.lower():
-                        suites.append(suite(_config))
-    return suites

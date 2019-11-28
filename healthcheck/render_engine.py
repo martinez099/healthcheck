@@ -45,7 +45,7 @@ def render_stats(_stats):
     :param _stats: A stats collector.
     :return:
     """
-    print("\nchecks TOTAL: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
+    print("total checks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print(f'- {green("succeeded")}: {_stats.succeeded}')
     print(f'- {yellow("no result")}: {_stats.no_result}')
     print(f'- {red("failed")}: {_stats.failed}')
@@ -61,12 +61,13 @@ def render_list(_list):
     :return:
     """
     for suite in _list:
-        print(f'\n{green("Suite")}: {suite.__doc__}')
+        print(f'{green("Suite")}: {suite.__doc__}')
         if suite.params:
             print('{}: {}'.format(red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
             print(f'{yellow("-")} {check_func.__doc__}')
+        print('')
 
 
 def print_msg(_msg):
@@ -87,6 +88,16 @@ def print_success(_msg):
     :return:
     """
     print(green(_msg))
+
+
+def print_warning(_msg):
+    """
+    Print a warning message.
+
+    :param _msg: The warning message.
+    :return:
+    """
+    print(yellow(_msg))
 
 
 def print_error(_msg, _ex=None):

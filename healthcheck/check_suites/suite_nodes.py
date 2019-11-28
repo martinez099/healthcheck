@@ -245,9 +245,10 @@ class NodeChecks(BaseCheckSuite):
             sum_cpu_idle = sum(i['cpu_idle'] for i in cpu_idles)
             avg_cpu_idle = sum_cpu_idle/len(cpu_idles)
 
-            kwargs[f'node:{uid}'] = '{}%'.format(to_percent(1 - avg_cpu_idle))
+            node_name = f'node:{uid}'
             if uid in quorum_onlys:
-                kwargs[f'node:{uid}'] += ' (quorum only)'
+                node_name += ' (quorum only)'
+            kwargs[node_name] = '{}%'.format(to_percent(1 - avg_cpu_idle))
 
         return None, kwargs
 
@@ -274,8 +275,9 @@ class NodeChecks(BaseCheckSuite):
 
             total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
 
-            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(total_mem - avg_avail_mem))
+            node_name = f'node:{uid}'
             if uid in quorum_onlys:
-                kwargs[f'node:{uid}'] += ' (quorum only)'
+                node_name += ' (quorum only)'
+            kwargs[node_name] = '{} GB'.format(to_gb(total_mem - avg_avail_mem))
 
         return None, kwargs

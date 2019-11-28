@@ -35,13 +35,14 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - Don't forget to make `hc` executable, e.g. `chmod u+x hc`.
 
 ## Run
-- To start, run `./hc -l` to see all available check suites and their associated checks.
-- Choose a check suite, run `./hc -s <SUITE>`, e.g.
-  - run `./hc -s node` for node checks.
-- If a suite requires a parameter map, run `./hc -s <SUITE> -p <PARAMS>`, e.g.
-  - run `./hc -s cluster -p reco` for cluster checks with `recommended` HW requriments.
-  - run `./hc -s database -p 1` for database checks with parameter map `config1`.
-  - run `./hc -s database -p my_config.json` for database checks with parameters given in `my_config.json` from the current directory.
-- Alternatively run a single check with `./hc -c <CHECK>`, e.g.
-  - run `./hc -c link` to get the network link between the nodes.
-- For a quick help, run `./hc -h`.
+- To run all check suites but skipping checks with parameters, execute `./hc`
+- To see all available check suites and their associated checks, execute `./hc -l`.
+- To run one check suite, execute `./hc -s <SUITE>`, e.g.
+  - execute `./hc -s node` for node checks.
+- If a suite requires a parameter map, execute `./hc -s <SUITE> -p <PARAMS>`, e.g.
+  - execute `./hc -s cluster -p reco` for cluster checks with `recommended` HW requriments.
+  - execute `./hc -s database -p 1` for database checks with parameter map `config1`.
+  - execute `./hc -s database -p my_config.json` for database checks with parameters given in `my_config.json` from the current directory.
+- To run a single check, execute `./hc -c <CHECK>`, e.g.
+  - execute `./hc -c link` to get the network link between the nodes.
+- For a quick help, execute `./hc -h`.
