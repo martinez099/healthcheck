@@ -19,7 +19,7 @@ class BdbChecks(BaseCheckSuite):
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
             kwargs[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
 
-        return all(kwargs.values()) if kwargs.values() else '', {'reason': 'not activated'}
+        return all(kwargs.values()) if kwargs.values() else '', {'reason': 'no OSS cluster API enabled database found'}
 
     def check_shards_placement(self, *_args, **_kwargs):
         """check for dense shards placement"""
@@ -27,7 +27,11 @@ class BdbChecks(BaseCheckSuite):
         bdbs = self.api.get('bdbs')
         kwargs = {}
 
-        for bdb in filter(lambda x: x['shards_placement'] == 'dense', bdbs):
+        dense_bdbs = filter(lambda x: x['shards_placement'] == 'dense', bdbs)
+        if not dense_bdbs:
+            return '', {'reason': 'no dense shards placement database found'}
+
+        for bdb in dense_bdbs:
             if bdb['proxy_policy'] != 'single':
                 kwargs[bdb['name']] = "proxy policy set to '{}'".format(bdb['proxy_policy'])
                 continue
