@@ -1,13 +1,15 @@
 # healthcheck
 This is a command-line tool to check the health of a Redis Enterprise cluster.
 
+Click [here](https://docs.google.com/document/d/1C-vlVB8Xcq8GC_cVQNr_K0RGMAVj8cXWg-KOXOj06i4) for more information.
+
 ## Description
 The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
 
-It checks the
-- configuration of nodes and databases.
-- sizing of a cluster and its databases.
-- historical usage data of a cluster, its nodes and databases.
+It checks:
+- Configuration of nodes and databases.
+- Sizing of a cluster and its databases.
+- Historical usage data of a cluster, its nodes and databases.
 
 ### Checks
 Each check has a result which is indicated by:
@@ -32,7 +34,7 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 ## Prerequisites
 - Python 3, no dependencies are required.
 
-## Configure
+## Setup
 - Fill in the `config.ini` file with the following configuration data:
   - SSH access to all nodes of the Redis Enterprise cluster.
   - HTTP access to the REST-API of a Redis Enterprise cluster.
