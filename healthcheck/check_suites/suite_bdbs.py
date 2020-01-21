@@ -21,6 +21,40 @@ class BdbChecks(BaseCheckSuite):
 
         return all(kwargs.values()) if kwargs.values() else '', {'reason': 'not activated'}
 
+    def check_shards_placement(self, *_args, **_kwargs):
+        """check for dense shards placement"""
+        nodes = self.api.get('nodes')
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+
+        for bdb in filter(lambda x: x['shards_placement'] == 'dense', bdbs):
+            if bdb['proxy_policy'] != 'single':
+                kwargs[bdb['name']] = "proxy policy set to '{}'".format(bdb['proxy_policy'])
+                continue
+
+            endpoints = list(filter(lambda e: e['addr_type'] == 'internal', bdb['endpoints']))
+            if len(endpoints) > 1:
+                kwargs[bdb['name']] = "multiple internal endpoints found"
+                continue
+
+            endpoint_addrs = endpoints[0]['addr']
+            if len(endpoint_addrs) > 1:
+                kwargs[bdb['name']] = "multiple addresses for internal endpoint found"
+                continue
+
+            endpoint_nodes = list(filter(lambda n: n['addr'] == endpoint_addrs[0] and n['uid'], nodes))
+            if len(endpoint_nodes) > 1:
+                kwargs[bdb['name']] = "multiple nodes for endpoint found"
+                continue
+
+            master_shards = filter(lambda s: s['bdb_uid'] == bdb['uid'] and s['role'] == 'master', self.api.get('shards'))
+            shards_not_on_endpoint = filter(lambda s: int(s['node_uid']) != endpoint_nodes[0]['uid'], master_shards)
+            result = list(map(lambda r: 'shard:{}'.format(r['uid']), shards_not_on_endpoint))
+            if result:
+                kwargs[bdb['name']] = result
+
+        return not any(kwargs.values()), kwargs
+
     def check_bdbs(self, *_args, **_kwargs):
         """check database configuration"""
         bdbs = self.api.get('bdbs')
@@ -79,7 +113,7 @@ class BdbChecks(BaseCheckSuite):
         return [(not results[bdb_name], kwargs[bdb_name], f"check maximum throughput for '{bdb_name}'") for bdb_name in bdb_names]
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check maximum memory usage"""
+        """check maximum RAM usage"""
         stats = self.api.get('shards/stats')
         bdb_names = self.api.get_values('bdbs', 'name')
         kwargs = {}
