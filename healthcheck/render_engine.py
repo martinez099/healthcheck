@@ -109,9 +109,15 @@ def print_error(_msg, _ex=None):
     """
     msg = [_msg]
     if _ex:
-        msg.append(': ')
+        msg.append(' ')
         if hasattr(_ex, 'reason'):
-            msg.append(_ex.reason.strerror)
-        else:
+            if isinstance(_ex.reason, str):
+                msg.append(_ex.reason)
+            else:
+                msg.append(_ex.reason.strerror)
+        elif hasattr(_ex, 'strerror'):
             msg.append(_ex.strerror)
+        else:
+            msg.append(_ex.args[0])
+
     print(red(''.join(msg)))
