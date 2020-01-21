@@ -126,7 +126,7 @@ def exec_single_checks(_suites, _args, _executor):
     for check, suite in checks:
         params = load_parameter_map(suite, _args)
         if suite.params and not params:
-            print_warning('no parameter map given, skipping checks with parameters')
+            print_warning('no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
 
         _executor.execute(check, _kwargs=params[0][1] if params else {})
 
@@ -153,7 +153,7 @@ def exec_check_suites(_suites, _args, _executor):
         if params:
             print_msg('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
         elif suite.params:
-            print_warning('no parameter map given, skipping checks with parameters')
+            print_warning('no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
 
         suite.run_connectivity_checks()
 

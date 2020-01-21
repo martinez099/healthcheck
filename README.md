@@ -2,7 +2,12 @@
 This is a command-line tool to check the health of a Redis Enterprise cluster.
 
 ## Description
-The tool does read-only operations via SSH and the Redis Enterprise REST-API.
+The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
+
+It checks the
+- configuration of nodes and databases.
+- sizing of a cluster and its databases.
+- historical usage data of a cluster, its nodes and databases.
 
 ### Checks
 Each check has a result which is indicated by:

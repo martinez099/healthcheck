@@ -11,16 +11,6 @@ class NodeChecks(BaseCheckSuite):
         self._check_api_connectivity()
         self._check_ssh_connectivity()
 
-    def check_private_ip(self, *_args, **_kwargs):
-        """check if private IP address is correct"""
-        nodes = self.api.get('nodes')
-        rsps = self.ssh.exec_on_all_hosts('hostname -I')
-        uid_addrs = [(node['uid'], node['addr']) for node in nodes]
-
-        result = all(rsp.result() in map(lambda x: x[1], uid_addrs) for rsp in rsps)
-        kwargs = {'node:{}'.format(uid): address for uid, address in uid_addrs}
-        return result, kwargs
-
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
@@ -136,7 +126,7 @@ class NodeChecks(BaseCheckSuite):
         return not errors, {rsp.ip: len(rsp.result()) for rsp in rsps}
 
     def check_network_link(self, *_args, **_kwargs):
-        """get network link"""
+        """get network link speed"""
         cmd_ips = []
         for source in self.ssh.hostnames:
             for target in self.ssh.hostnames:
@@ -164,24 +154,25 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_cpu_usage(self):
-        """check max CPU usage"""
+        """check maximum CPU usage"""
         kwargs = {}
+        results = []
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
             ints = stats[i]['intervals']
             uid = stats[i]['uid']
 
-            max_cpu_user = max(i['cpu_user'] for i in filter(lambda x: x.get('cpu_user'), ints))
-            result = max_cpu_user > 0.8
-            if result:
-                kwargs[f'node:{uid}'] = '{}%'.format(to_percent(max_cpu_user))
+            min_cpu_idle = min(i['cpu_idle'] for i in filter(lambda x: x.get('cpu_idle'), ints))
+            results.append(min_cpu_idle < 0.2)
+            kwargs[f'node:{uid}'] = '{}%'.format(to_percent(1 - min_cpu_idle))
 
-        return not any(kwargs.values()), kwargs
+        return not any(results), kwargs
 
     def check_ram_usage(self):
-        """check min free RAM"""
+        """check minimum free RAM"""
         kwargs = {}
+        results = []
         stats = self.api.get('nodes/stats')
 
         for i in range(0, len(stats)):
@@ -190,14 +181,13 @@ class NodeChecks(BaseCheckSuite):
 
             min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
             total_memory = self.api.get(f'nodes/{uid}')['total_memory']
-            result = min_free_memory < total_memory * (2/3)
-            if result:
-                kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_free_memory))
+            results.append(min_free_memory < total_memory * (2/3))
+            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_free_memory))
 
-        return not any(kwargs.values()), kwargs
+        return not any(results), kwargs
 
     def check_ephemeral_storage_usage(self):
-        """get min available ephemeral storage"""
+        """get minimum available ephemeral storage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
@@ -211,7 +201,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_persistent_storage_usage(self):
-        """get min available persistent storage"""
+        """get minimum available persistent storage"""
         kwargs = {}
         stats = self.api.get('nodes/stats')
 
@@ -225,7 +215,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_cpu_balance(self, *_args, **_kwargs):
-        """get CPU balance"""
+        """get average CPU usage"""
         stats = self.api.get('nodes/stats')
 
         # get quorum-only node
@@ -253,7 +243,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_ram_balance(self, *_args, **_kwargs):
-        """get RAM balance"""
+        """get average RAM uasge"""
         stats = self.api.get('nodes/stats')
 
         # get quorum-only node

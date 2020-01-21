@@ -21,9 +21,8 @@ def render_result(_result, _func):
     """
     doc = _result[2] if len(_result) == 3 else _func.__doc__
     if _result[0] == '':
-        print('[ ] {} [SKIPPED]'.format(doc))
-        return
-    if _result[0] is True:
+        to_print = ['[ ]', doc, '[SKIPPED]']
+    elif _result[0] is True:
         to_print = [green('[+]'), doc, green('[SUCCEEDED]')]
     elif _result[0] is False:
         to_print = [red('[-]'), doc,  red('[FAILED]')]
