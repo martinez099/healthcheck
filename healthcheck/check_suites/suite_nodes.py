@@ -1,3 +1,5 @@
+import functools
+import math
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
@@ -154,7 +156,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check CPU usage (min/avg/max)"""
+        """check CPU usage (min/avg/max/mdev)"""
         kwargs = {}
         results = {}
 
@@ -170,29 +172,34 @@ class NodeChecks(BaseCheckSuite):
             uid = stat['uid']
 
             # calculate minimum
-            min_cpu_usage = min((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
+            minimum = min((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
 
             # calculate average
             cpu_idles = list(filter(lambda x: x.get('cpu_idle'), ints))
             sum_cpu_usage = sum((1 - i['cpu_idle']) for i in cpu_idles)
-            avg_cpu_usage = sum_cpu_usage/len(cpu_idles)
+            average = sum_cpu_usage/len(cpu_idles)
 
             # calculate maximum
-            max_cpu_usage = max((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
+            maximum = max((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
+
+            # calculate std deviation
+            q_sum = functools.reduce(lambda x, y: x + pow((1 - y['cpu_idle']) - average, 2), cpu_idles, 0)
+            std_dev = math.sqrt(q_sum / len(cpu_idles))
 
             node_name = f'node:{uid}'
-            results[node_name] = max_cpu_usage > .8
-
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
-            kwargs[node_name] = '{}/{}/{} %'.format(to_percent(min_cpu_usage),
-                                                    to_percent(avg_cpu_usage),
-                                                    to_percent(max_cpu_usage))
+
+            results[node_name] = maximum > .8
+            kwargs[node_name] = '{}/{}/{}/{} %'.format(to_percent(minimum),
+                                                       to_percent(average),
+                                                       to_percent(maximum),
+                                                       to_percent(std_dev))
 
         return not any(results.values()), kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check RAM usage (min/avg/max)"""
+        """check RAM usage (min/avg/max/mdev)"""
         kwargs = {}
         results = {}
 
@@ -208,15 +215,19 @@ class NodeChecks(BaseCheckSuite):
             uid = stat['uid']
 
             # calculate minimum
-            min_free_mem = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+            minimum_available = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
 
             # calculate average
             free_mems = list(filter(lambda x: x.get('free_memory'), ints))
             sum_free_mem = sum(i['free_memory'] for i in free_mems)
-            avg_free_mem = sum_free_mem/len(free_mems)
+            average_available = sum_free_mem/len(free_mems)
 
             # calculate maximum
-            max_free_mem = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+            maximum_available = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+
+            # calculate std deviation
+            q_sum = functools.reduce(lambda x, y: x + pow(y['free_memory'] - average_available, 2), free_mems, 0)
+            std_dev = math.sqrt(q_sum / len(free_mems))
 
             total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
 
@@ -224,16 +235,16 @@ class NodeChecks(BaseCheckSuite):
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            results[node_name] = min_free_mem < (total_mem * 2/3)
-
-            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(total_mem - max_free_mem),
-                                                     to_gb(total_mem - avg_free_mem),
-                                                     to_gb(total_mem - min_free_mem))
+            results[node_name] = minimum_available < (total_mem * 2/3)
+            kwargs[node_name] = '{}/{}/{}/{} GB'.format(to_gb(total_mem - maximum_available),
+                                                        to_gb(total_mem - average_available),
+                                                        to_gb(total_mem - minimum_available),
+                                                        to_gb(std_dev))
 
         return not any(results.values()), kwargs
 
     def check_ephemeral_storage_usage(self, *_args, **_kwargs):
-        """get ephemeral storage usage (min/avg/max)"""
+        """get ephemeral storage usage (min/avg/max/mdev)"""
         kwargs = {}
 
         # get quorum-only node
@@ -249,31 +260,39 @@ class NodeChecks(BaseCheckSuite):
             uid = stat['uid']
 
             # calculate minimum
-            min_ephemeral_storage_avail = min(
+            minimum_available = min(
                 i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
 
             # calculate average
             ephemeral_storage_avails = list(filter(lambda x: x.get('ephemeral_storage_avail'), ints))
             sum_ephemeral_storage_avail = sum(i['ephemeral_storage_avail'] for i in ephemeral_storage_avails)
-            avg_ephemeral_storage_avail = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
+            average_available = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
 
             # calculate maximum
-            max_ephemeral_storage_avail = max(
+            maximum_available = max(
                 i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+
+            # calculate std deviation
+            q_sum = functools.reduce(
+                lambda x, y: x + pow(y['ephemeral_storage_avail'] - average_available, 2),
+                ephemeral_storage_avails, 0)
+            std_dev = math.sqrt(q_sum / len(ephemeral_storage_avails))
 
             ephemeral_storage_size = self.api.get_value(f'nodes/{uid}', 'ephemeral_storage_size')
 
             node_name = f'node:{uid}'
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
-            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(ephemeral_storage_size - max_ephemeral_storage_avail),
-                                                     to_gb(ephemeral_storage_size - avg_ephemeral_storage_avail),
-                                                     to_gb(ephemeral_storage_size - min_ephemeral_storage_avail))
+
+            kwargs[node_name] = '{}/{}/{}/{} GB'.format(to_gb(ephemeral_storage_size - maximum_available),
+                                                        to_gb(ephemeral_storage_size - average_available),
+                                                        to_gb(ephemeral_storage_size - minimum_available),
+                                                        to_gb(std_dev))
 
         return None, kwargs
 
     def check_persistent_storage_usage(self, *_args, **_kwargs):
-        """get persistent storage usage (min/avg/max)"""
+        """get persistent storage usage (min/avg/max/mdev)"""
         kwargs = {}
 
         # get quorum-only node
@@ -289,25 +308,33 @@ class NodeChecks(BaseCheckSuite):
             uid = stat['uid']
 
             # calculate minimum
-            min_persistent_storage_avail = min(
+            minimum_available = min(
                 i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
 
             # calculate average
             persistent_storage_avails = list(filter(lambda x: x.get('persistent_storage_avail'), ints))
             sum_persistent_storage_avail = sum(i['persistent_storage_avail'] for i in persistent_storage_avails)
-            avg_persistent_storage_avail = sum_persistent_storage_avail / len(persistent_storage_avails)
+            average_available = sum_persistent_storage_avail / len(persistent_storage_avails)
 
             # calculate maximum
-            max_persistent_storage_avail = max(
+            maximum_available = max(
                 i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
+
+            # calculate std deviation
+            q_sum = functools.reduce(
+                lambda x, y: x + pow(y['persistent_storage_avail'] - average_available, 2),
+                persistent_storage_avails, 0)
+            std_dev = math.sqrt(q_sum / len(persistent_storage_avails))
 
             persistent_storage_size = self.api.get_value(f'nodes/{uid}', 'persistent_storage_size')
 
             node_name = f'node:{uid}'
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
-            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(persistent_storage_size - max_persistent_storage_avail),
-                                                     to_gb(persistent_storage_size - avg_persistent_storage_avail),
-                                                     to_gb(persistent_storage_size - min_persistent_storage_avail))
+
+            kwargs[node_name] = '{}/{}/{}/{} GB'.format(to_gb(persistent_storage_size - maximum_available),
+                                                        to_gb(persistent_storage_size - average_available),
+                                                        to_gb(persistent_storage_size - minimum_available),
+                                                        to_gb(std_dev))
 
         return None, kwargs

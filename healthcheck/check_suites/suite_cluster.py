@@ -1,3 +1,5 @@
+import functools
+import math
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
@@ -104,19 +106,24 @@ class ClusterChecks(BaseCheckSuite):
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
-        min_total_req = min([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
+        minimum = min([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
 
         # calculate average
         total_reqs = list(filter(lambda x: x.get('total_req'), stats['intervals']))
         sum_total_req = sum([i['total_req'] for i in total_reqs])
-        avg_total_req = sum_total_req / len(total_reqs)
+        average = sum_total_req / len(total_reqs)
 
         # calculate maximum
-        max_total_req = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
+        maximum = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
 
-        kwargs['minimum'] = '{} Kops/sec'.format(to_kops(min_total_req))
-        kwargs['average'] = '{} Kops/sec'.format(to_kops(avg_total_req))
-        kwargs['maximum'] = '{} Kops/sec'.format(to_kops(max_total_req))
+        # calculate std deviation
+        q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
+        std_dev = math.sqrt(q_sum / len(total_reqs))
+
+        kwargs['min'] = '{} Kops/sec'.format(to_kops(minimum))
+        kwargs['avg'] = '{} Kops/sec'.format(to_kops(average))
+        kwargs['max'] = '{} Kops/sec'.format(to_kops(maximum))
+        kwargs['mdev'] = '{} Kops/sec'.format(to_kops(std_dev))
 
         return None, kwargs
 
@@ -126,21 +133,26 @@ class ClusterChecks(BaseCheckSuite):
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
-        min_free_mem = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
+        minimum = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
 
         # calculate average
         free_mems = list(filter(lambda x: x.get('free_memory'), stats['intervals']))
         sum_free_mem = sum(i['free_memory'] for i in free_mems)
-        avg_free_mem = sum_free_mem/len(free_mems)
+        average = sum_free_mem/len(free_mems)
 
         # calculate maximum
-        max_free_mem = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
+        maximum = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
+
+        # calculate std deviation
+        q_sum = functools.reduce(lambda x, y: x + pow(y['free_memory'] - average, 2), free_mems, 0)
+        std_dev = math.sqrt(q_sum / len(free_mems))
 
         total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
 
-        kwargs['minimum'] = '{} GB'.format(to_gb(total_mem - max_free_mem))
-        kwargs['average'] = '{} GB'.format(to_gb(total_mem - avg_free_mem))
-        kwargs['maximum'] = '{} GB'.format(to_gb(total_mem - min_free_mem))
+        kwargs['min'] = '{} GB'.format(to_gb(total_mem - maximum))
+        kwargs['avg'] = '{} GB'.format(to_gb(total_mem - average))
+        kwargs['max'] = '{} GB'.format(to_gb(total_mem - minimum))
+        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs
 
@@ -162,11 +174,17 @@ class ClusterChecks(BaseCheckSuite):
         maximum = max([i['ephemeral_storage_avail'] for i in
                        filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
 
+        # calculate std deviation
+        q_sum = functools.reduce(lambda x, y: x + pow(y['ephemeral_storage_avail'] - average, 2),
+                                 ephemeral_storage_avails, 0)
+        std_dev = math.sqrt(q_sum / len(ephemeral_storage_avails))
+
         ephemeral_storage_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
 
-        kwargs['minimum'] = '{} GB'.format(to_gb(ephemeral_storage_size - maximum))
-        kwargs['average'] = '{} GB'.format(to_gb(ephemeral_storage_size - average))
-        kwargs['maximum'] = '{} GB'.format(to_gb(ephemeral_storage_size - minimum))
+        kwargs['min'] = '{} GB'.format(to_gb(ephemeral_storage_size - maximum))
+        kwargs['avg'] = '{} GB'.format(to_gb(ephemeral_storage_size - average))
+        kwargs['max'] = '{} GB'.format(to_gb(ephemeral_storage_size - minimum))
+        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs
 
@@ -188,10 +206,16 @@ class ClusterChecks(BaseCheckSuite):
         maximum = max([i['persistent_storage_avail'] for i in
                        filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
 
+        # calculate std deviation
+        q_sum = functools.reduce(lambda x, y: x + pow(y['persistent_storage_avail'] - average, 2),
+                                 persistent_storage_avails, 0)
+        std_dev = math.sqrt(q_sum / len(persistent_storage_avails))
+
         persistent_storage_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
 
-        kwargs['minimum'] = '{} GB'.format(to_gb(persistent_storage_size - maximum))
-        kwargs['average'] = '{} GB'.format(to_gb(persistent_storage_size - average))
-        kwargs['maximum'] = '{} GB'.format(to_gb(persistent_storage_size - minimum))
+        kwargs['min'] = '{} GB'.format(to_gb(persistent_storage_size - maximum))
+        kwargs['avg'] = '{} GB'.format(to_gb(persistent_storage_size - average))
+        kwargs['max'] = '{} GB'.format(to_gb(persistent_storage_size - minimum))
+        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs
