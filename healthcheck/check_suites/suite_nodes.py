@@ -3,7 +3,7 @@ import math
 import re
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import to_gb, to_percent
+from healthcheck.common_funcs import to_gb, to_percent, to_ms
 
 
 class NodeChecks(BaseCheckSuite):
@@ -90,14 +90,14 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_rladmin_status(self, *_args, **_kwargs):
-        """check if 'rladmin status' has errors"""
+        """check if `rladmin status` has errors"""
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node', self.ssh.hostnames[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
-        """check if 'rlcheck' has errors"""
+        """check if `rlcheck` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.ip) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
@@ -105,7 +105,7 @@ class NodeChecks(BaseCheckSuite):
         return not errors, {f[1]: len(f[0]) for f in failed}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
-        """check 'cnm_ctl status'"""
+        """check if `cnm_ctl status` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
@@ -113,15 +113,15 @@ class NodeChecks(BaseCheckSuite):
         return sum_not_running == 0,  {r[1]: len(r[0]) for r in not_running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
-        """check 'supervisorctl status'"""
+        """check if `supervisorctl status` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return sum_not_running == 1 * len(rsps), {r[1]: len(r[0]) for r in not_running}
+        return sum_not_running == 1 * len(rsps), {r[1]: len(r[0]) - 1 for r in not_running}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
-        """check if install.log has errors"""
+        """check if `cat install.log` has errors"""
         rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
@@ -152,7 +152,7 @@ class NodeChecks(BaseCheckSuite):
         avg /= len(futures)
         mdev /= len(futures)
 
-        kwargs = {key: '{:.3f}/{:.3f}/{:.3f}/{:.3f} ms'.format(_min, avg, _max, mdev)}
+        kwargs = {key: '{}/{}/{}/{} ms'.format(to_ms(_min), to_ms(avg), to_ms(_max), to_ms(mdev))}
         return None, kwargs
 
     def check_cpu_usage(self, *_args, **_kwargs):

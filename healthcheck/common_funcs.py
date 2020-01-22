@@ -26,12 +26,12 @@ def to_percent(_value):
 
 def to_kops(_value):
     """
-    Convert a numeric value from bytes to kilobytes
+    Convert a numeric value from ops to Kops
 
-    :param _value: The numeric value in bytes.
-    :return: The numeric value in kilobytes.
+    :param _value: The numeric value in ops.
+    :return: The rounded numeric value in Kops.
     """
-    return math.ceil(_value / 1000)
+    return '{:.1f}'.format(_value / 1000)
 
 
 def to_gb(_value):
@@ -39,9 +39,19 @@ def to_gb(_value):
     Convert a numeric value from bytes to gigabytes.
 
     :param _value: A numeric value in bytes.
-    :return: The numeric value in gigabytes.
+    :return: The roundd numeric value in gigabytes.
     """
-    return math.floor(_value / GB)
+    return '{:.1f}'.format(_value / GB)
+
+
+def to_ms(_value):
+    """
+    Just round for 3 digits.
+
+    :param _value: A numeric value in milliseconds.
+    :return: The numeric value in milliseconds.
+    """
+    return '{:.3f}'.format(_value)
 
 
 def exec_cmd(_args):

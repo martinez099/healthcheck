@@ -94,6 +94,7 @@ def load_parameter_map(_suite, _args):
         if _args.params and not params:
             print_error('could not find paramter map, available maps: {}'.format(
                 list(map(get_parameter_map_name, _suite.params.keys()))))
+            # exit(1)
 
         elif len(params) > 1:
             print_error('multiple parameter maps found, choose one: {}'.format(
@@ -125,9 +126,6 @@ def exec_single_checks(_suites, _args, _executor):
 
     for check, suite in checks:
         params = load_parameter_map(suite, _args)
-        if suite.params and not params:
-            print_warning('no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
-
         _executor.execute(check, _kwargs=params[0][1] if params else {})
 
     _executor.wait()

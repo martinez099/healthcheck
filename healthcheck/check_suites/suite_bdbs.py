@@ -68,8 +68,7 @@ class BdbChecks(BaseCheckSuite):
         results = []
 
         if not _kwargs:
-            for bdb in bdbs:
-                results.append((None, bdb, f"""get configuration of '{bdb['name']}'"""))
+            results.append(('', {"reason": "no parameters provided"}))
 
         else:
             for bdb in bdbs:
