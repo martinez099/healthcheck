@@ -85,108 +85,79 @@ class BdbChecks(BaseCheckSuite):
 
         return results
 
-    def check_cpu_usage(self, *_args, **_kwargs):
-        """check maximum throughput"""
-        stats = self.api.get('shards/stats')
-        bdb_names = self.api.get_values('bdbs', 'name')
-        kwargs = {}
-        results = {}
-
-        for stat_idx in range(0, len(stats)):
-            uid = stats[stat_idx]['uid']
-            role = stats[stat_idx]['role']
-            bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
-            bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
-            bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
-            crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            if bdb_name not in kwargs:
-                kwargs[bdb_name] = {}
-
-            # calculate maximum throughput
-            max_total_requests = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats[stat_idx]['intervals'])])
-
-            if bigstore:
-                result = max_total_requests > 5000
-            elif crdb:
-                result = max_total_requests > 17500
-            else:
-                result = max_total_requests > 25000
-            results[bdb_name] = result
-            kwargs[bdb_name][f'shard:{uid} ({role})'] = '{}K ops/sec'.format(to_kops(max_total_requests))
-
-        return [(not results[bdb_name], kwargs[bdb_name], f"check maximum throughput for '{bdb_name}'") for bdb_name in bdb_names]
-
-    def check_ram_usage(self, *_args, **_kwargs):
-        """check maximum RAM usage"""
-        stats = self.api.get('shards/stats')
-        bdb_names = self.api.get_values('bdbs', 'name')
-        kwargs = {}
-        results = {}
-
-        for stat_idx in range(0, len(stats)):
-            uid = stats[stat_idx]['uid']
-            role = stats[stat_idx]['role']
-            bdb_uid = self.api.get(f'shards/{uid}')['bdb_uid']
-            bdb_name = self.api.get(f'bdbs/{bdb_uid}')['name']
-            bigstore = self.api.get(f'bdbs/{bdb_uid}')['bigstore']
-            crdb = self.api.get(f'bdbs/{bdb_uid}')['crdt_sync'] != 'disabled'
-            if bdb_name not in kwargs:
-                kwargs[bdb_name] = {}
-
-            # calculate maximum RAM usage
-            max_ram_usage = max([i['used_memory'] for i in filter(lambda x: x.get('used_memory'), stats[stat_idx]['intervals'])])
-
-            if bigstore:
-                result = max_ram_usage > (50 * GB)
-            else:
-                result = max_ram_usage > (25 * GB)
-            results[bdb_name] = result
-            kwargs[bdb_name][f'shard:{uid} ({role})'] = '{} GB'.format(to_gb(max_ram_usage))
-
-        return [(not results[bdb_name], kwargs[bdb_name], f"check maximum memory usage for '{bdb_name}'") for bdb_name in bdb_names]
-
-    def check_cpu_balance(self, *_args, **_kwargs):
-        """get average CPU usage"""
-        results = []
+    def check_throughput(self, *_args, **_kwargs):
+        """check throughput of each shard"""
         bdbs = self.api.get('bdbs')
+        kwargs = {}
+        results = {}
 
         for bdb in bdbs:
-
-            kwargs = {}
             for shard_uid in bdb['shard_list']:
                 shard_stats = self.api.get(f'shards/stats/{shard_uid}')
                 ints = shard_stats['intervals']
 
-                # calculate average througput
-                total_reqs = list(filter(lambda x: x.get('total_req'), ints))
+                # calculate minimum
+                min_total_req = min([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
+
+                # calculate average
+                total_reqs = list(filter(lambda i: i.get('total_req'), ints))
                 sum_total_req = sum([i['total_req'] for i in total_reqs])
-                avg_total_req = sum_total_req/len(total_reqs)
-
-                kwargs = {f'shard:{shard_uid} ({shard_stats["role"]})': '{}K ops/sec'.format(to_kops(avg_total_req))}
-
-            results.append((None, kwargs, f'get average throughput of \'{bdb["name"]}\''))
-
-        return results
-
-    def check_ram_balance(self, *_args, **_kwargs):
-        """get average RAM usage"""
-        results = []
-        bdbs = self.api.get('bdbs')
-
-        for bdb in bdbs:
-
-            kwargs = {}
-            for shard_uid in bdb['shard_list']:
-                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
-                ints = shard_stats['intervals']
-
-                # calculate average memory usage
-                total_reqs = list(filter(lambda x: x.get('used_memory'), ints))
-                sum_total_req = sum([i['used_memory'] for i in total_reqs])
                 avg_total_req = sum_total_req / len(total_reqs)
 
-                kwargs = {f'shard:{shard_uid} ({shard_stats["role"]})': '{} GB'.format(to_gb(avg_total_req))}
+                # calculate maximum
+                max_total_req = max([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
 
-            results.append((None, kwargs, f'get average RAM usage of \'{bdb["name"]}\''))
+                if bdb['bigstore']:
+                    result = max_total_req > 5000
+                elif bdb['crdt_sync'] != 'disabled':
+                    result = max_total_req > 17500
+                else:
+                    result = max_total_req > 25000
+                results[bdb['name']] = result
 
-        return results
+                if bdb['name'] not in kwargs:
+                    kwargs[bdb['name']] = {}
+
+                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{} Kops/sec'.format(
+                    to_kops(min_total_req), to_kops(avg_total_req), to_kops(max_total_req))
+
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max)")
+                for bdb in bdbs]
+
+    def check_memory_usage(self, *_args, **_kwargs):
+        """check memory usage of each shard"""
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+        results = {}
+
+        for bdb in bdbs:
+            for shard_uid in bdb['shard_list']:
+                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
+                ints = shard_stats['intervals']
+
+                # calculate minimum
+                min_ram_usage = min([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
+
+                # calculate average
+                total_ram_usage = list(filter(lambda x: x.get('used_memory'), ints))
+                sum_total_ram_usage = sum([i['used_memory'] for i in total_ram_usage])
+                avg_total_ram_usage = sum_total_ram_usage / len(total_ram_usage)
+
+                # calculate maximum
+                max_ram_usage = max([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
+
+                if bdb['bigstore']:
+                    result = max_ram_usage > (50 * GB)
+                else:
+                    result = max_ram_usage > (25 * GB)
+                results[bdb['name']] = result
+
+                if bdb['name'] not in kwargs:
+                    kwargs[bdb['name']] = {}
+
+                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{} GB'.format(
+                    to_gb(min_ram_usage), to_gb(avg_total_ram_usage), to_gb(max_ram_usage))
+
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"check memory usage for '{bdb['name']}' (min/avg/max)")
+                for bdb in bdbs]
+

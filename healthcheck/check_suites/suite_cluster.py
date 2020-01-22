@@ -98,37 +98,100 @@ class ClusterChecks(BaseCheckSuite):
                   'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage'] )}
         return result, kwargs
 
-    def check_cpu_usage(self, *_args, **_kwargs):
-        """get maximum throughput"""
+    def check_throughput(self, *_args, **_kwargs):
+        """get throughput"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
-        m = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
-        kwargs['maximum throughput'] = '{}K ops/sec'.format(to_kops(m))
+        # calculate minimum
+        min_total_req = min([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
+
+        # calculate average
+        total_reqs = list(filter(lambda x: x.get('total_req'), stats['intervals']))
+        sum_total_req = sum([i['total_req'] for i in total_reqs])
+        avg_total_req = sum_total_req / len(total_reqs)
+
+        # calculate maximum
+        max_total_req = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
+
+        kwargs['minimum'] = '{} Kops/sec'.format(to_kops(min_total_req))
+        kwargs['average'] = '{} Kops/sec'.format(to_kops(avg_total_req))
+        kwargs['maximum'] = '{} Kops/sec'.format(to_kops(max_total_req))
 
         return None, kwargs
 
-    def check_ram_usage(self, *_args, **_kwargs):
-        """get minimum available RAM"""
+    def check_memory_usage(self, *_args, **_kwargs):
+        """get memory usage"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
-        m = min([i['available_memory'] for i in filter(lambda x: x.get('available_memory'), stats['intervals'])])
-        kwargs['min available memory'] = '{} GB'.format(to_gb(m))
+        # calculate minimum
+        min_free_mem = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
+
+        # calculate average
+        free_mems = list(filter(lambda x: x.get('free_memory'), stats['intervals']))
+        sum_free_mem = sum(i['free_memory'] for i in free_mems)
+        avg_free_mem = sum_free_mem/len(free_mems)
+
+        # calculate maximum
+        max_free_mem = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
+
+        total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
+
+        kwargs['minimum'] = '{} GB'.format(to_gb(total_mem - max_free_mem))
+        kwargs['average'] = '{} GB'.format(to_gb(total_mem - avg_free_mem))
+        kwargs['maximum'] = '{} GB'.format(to_gb(total_mem - min_free_mem))
 
         return None, kwargs
 
-    def check_storage_usage(self, *_args, **_kwargs):
-        """get minimum available storage"""
+    def check_ephemeral_storage_usage(self, *_args, **_kwargs):
+        """get ephemeral storage usage"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
-        # persistent storage
-        m = min([i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
-        kwargs['peristent'] = '{} GB'.format(to_gb(m))
+        # calculate minimum
+        minimum = min([i['ephemeral_storage_avail'] for i in
+                       filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
 
-        # ephemeral storage
-        m = min([i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
-        kwargs['ephemeral'] = '{} GB'.format(to_gb(m))
+        # calculate average
+        ephemeral_storage_avails = list(filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals']))
+        sum_ephemeral_storage_avail = sum(i['ephemeral_storage_avail'] for i in ephemeral_storage_avails)
+        average = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
+
+        # calculate maximum
+        maximum = max([i['ephemeral_storage_avail'] for i in
+                       filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
+
+        ephemeral_storage_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
+
+        kwargs['minimum'] = '{} GB'.format(to_gb(ephemeral_storage_size - maximum))
+        kwargs['average'] = '{} GB'.format(to_gb(ephemeral_storage_size - average))
+        kwargs['maximum'] = '{} GB'.format(to_gb(ephemeral_storage_size - minimum))
+
+        return None, kwargs
+
+    def check_persistent_storage_usage(self, *_args, **_kwargs):
+        """get persistent storage usage"""
+        kwargs = {}
+        stats = self.api.get('cluster/stats')
+
+        # calculate minimum
+        minimum = min([i['persistent_storage_avail'] for i in
+                       filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
+
+        # calculate average
+        persistent_storage_avails = list(filter(lambda x: x.get('persistent_storage_avail'), stats['intervals']))
+        sum_persistent_storage_avail = sum(i['persistent_storage_avail'] for i in persistent_storage_avails)
+        average = sum_persistent_storage_avail / len(persistent_storage_avails)
+
+        # calculate maximum
+        maximum = max([i['persistent_storage_avail'] for i in
+                       filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
+
+        persistent_storage_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
+
+        kwargs['minimum'] = '{} GB'.format(to_gb(persistent_storage_size - maximum))
+        kwargs['average'] = '{} GB'.format(to_gb(persistent_storage_size - average))
+        kwargs['maximum'] = '{} GB'.format(to_gb(persistent_storage_size - minimum))
 
         return None, kwargs

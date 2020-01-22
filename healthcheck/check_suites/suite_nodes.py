@@ -153,70 +153,10 @@ class NodeChecks(BaseCheckSuite):
         kwargs = {key: '{:.3f}/{:.3f}/{:.3f}/{:.3f} ms'.format(_min, avg, _max, mdev)}
         return None, kwargs
 
-    def check_cpu_usage(self):
-        """check maximum CPU usage"""
+    def check_cpu_usage(self, *_args, **_kwargs):
+        """check CPU usage (min/avg/max)"""
         kwargs = {}
-        results = []
-        stats = self.api.get('nodes/stats')
-
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
-
-            min_cpu_idle = min(i['cpu_idle'] for i in filter(lambda x: x.get('cpu_idle'), ints))
-            results.append(min_cpu_idle < 0.2)
-            kwargs[f'node:{uid}'] = '{}%'.format(to_percent(1 - min_cpu_idle))
-
-        return not any(results), kwargs
-
-    def check_ram_usage(self):
-        """check minimum free RAM"""
-        kwargs = {}
-        results = []
-        stats = self.api.get('nodes/stats')
-
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
-
-            min_free_memory = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
-            total_memory = self.api.get(f'nodes/{uid}')['total_memory']
-            results.append(min_free_memory < total_memory * (2/3))
-            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_free_memory))
-
-        return not any(results), kwargs
-
-    def check_ephemeral_storage_usage(self):
-        """get minimum available ephemeral storage"""
-        kwargs = {}
-        stats = self.api.get('nodes/stats')
-
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
-
-            min_ephemeral_storage = min(i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
-            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_ephemeral_storage))
-
-        return None, kwargs
-
-    def check_persistent_storage_usage(self):
-        """get minimum available persistent storage"""
-        kwargs = {}
-        stats = self.api.get('nodes/stats')
-
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
-
-            min_ephemeral_storage = min(i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
-            kwargs[f'node:{uid}'] = '{} GB'.format(to_gb(min_ephemeral_storage))
-
-        return None, kwargs
-
-    def check_cpu_balance(self, *_args, **_kwargs):
-        """get average CPU usage"""
-        stats = self.api.get('nodes/stats')
+        results = {}
 
         # get quorum-only node
         nodes = self.api.get('nodes')
@@ -225,26 +165,36 @@ class NodeChecks(BaseCheckSuite):
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        kwargs = {}
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
+        for stat in self.api.get('nodes/stats'):
+            ints = stat['intervals']
+            uid = stat['uid']
 
-            # calculate average CPU idle
+            # calculate minimum
+            min_cpu_usage = min((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
+
+            # calculate average
             cpu_idles = list(filter(lambda x: x.get('cpu_idle'), ints))
-            sum_cpu_idle = sum(i['cpu_idle'] for i in cpu_idles)
-            avg_cpu_idle = sum_cpu_idle/len(cpu_idles)
+            sum_cpu_usage = sum((1 - i['cpu_idle']) for i in cpu_idles)
+            avg_cpu_usage = sum_cpu_usage/len(cpu_idles)
+
+            # calculate maximum
+            max_cpu_usage = max((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
 
             node_name = f'node:{uid}'
+            results[node_name] = max_cpu_usage > .8
+
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
-            kwargs[node_name] = '{}%'.format(to_percent(1 - avg_cpu_idle))
+            kwargs[node_name] = '{}/{}/{} %'.format(to_percent(min_cpu_usage),
+                                                    to_percent(avg_cpu_usage),
+                                                    to_percent(max_cpu_usage))
 
-        return None, kwargs
+        return not any(results.values()), kwargs
 
-    def check_ram_balance(self, *_args, **_kwargs):
-        """get average RAM uasge"""
-        stats = self.api.get('nodes/stats')
+    def check_ram_usage(self, *_args, **_kwargs):
+        """check RAM usage (min/avg/max)"""
+        kwargs = {}
+        results = {}
 
         # get quorum-only node
         nodes = self.api.get('nodes')
@@ -253,21 +203,111 @@ class NodeChecks(BaseCheckSuite):
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        kwargs = {}
-        for i in range(0, len(stats)):
-            ints = stats[i]['intervals']
-            uid = stats[i]['uid']
+        for stat in self.api.get('nodes/stats'):
+            ints = stat['intervals']
+            uid = stat['uid']
 
-            # calculate average available memory
-            avail_mems = list(filter(lambda x: x.get('available_memory'), ints))
-            sum_avail_mem = sum(i['available_memory'] for i in avail_mems)
-            avg_avail_mem = sum_avail_mem/len(avail_mems)
+            # calculate minimum
+            min_free_mem = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+
+            # calculate average
+            free_mems = list(filter(lambda x: x.get('free_memory'), ints))
+            sum_free_mem = sum(i['free_memory'] for i in free_mems)
+            avg_free_mem = sum_free_mem/len(free_mems)
+
+            # calculate maximum
+            max_free_mem = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
 
             total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
 
             node_name = f'node:{uid}'
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
-            kwargs[node_name] = '{} GB'.format(to_gb(total_mem - avg_avail_mem))
+
+            results[node_name] = min_free_mem < (total_mem * 2/3)
+
+            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(total_mem - max_free_mem),
+                                                     to_gb(total_mem - avg_free_mem),
+                                                     to_gb(total_mem - min_free_mem))
+
+        return not any(results.values()), kwargs
+
+    def check_ephemeral_storage_usage(self, *_args, **_kwargs):
+        """get ephemeral storage usage (min/avg/max)"""
+        kwargs = {}
+
+        # get quorum-only node
+        nodes = self.api.get('nodes')
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                      self.ssh.hostnames[0]) for node in nodes]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorum_onlys = list(
+            map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+
+        for stat in self.api.get('nodes/stats'):
+            ints = stat['intervals']
+            uid = stat['uid']
+
+            # calculate minimum
+            min_ephemeral_storage_avail = min(
+                i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+
+            # calculate average
+            ephemeral_storage_avails = list(filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+            sum_ephemeral_storage_avail = sum(i['ephemeral_storage_avail'] for i in ephemeral_storage_avails)
+            avg_ephemeral_storage_avail = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
+
+            # calculate maximum
+            max_ephemeral_storage_avail = max(
+                i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+
+            ephemeral_storage_size = self.api.get_value(f'nodes/{uid}', 'ephemeral_storage_size')
+
+            node_name = f'node:{uid}'
+            if uid in quorum_onlys:
+                node_name += ' (quorum only)'
+            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(ephemeral_storage_size - max_ephemeral_storage_avail),
+                                                     to_gb(ephemeral_storage_size - avg_ephemeral_storage_avail),
+                                                     to_gb(ephemeral_storage_size - min_ephemeral_storage_avail))
+
+        return None, kwargs
+
+    def check_persistent_storage_usage(self, *_args, **_kwargs):
+        """get persistent storage usage (min/avg/max)"""
+        kwargs = {}
+
+        # get quorum-only node
+        nodes = self.api.get('nodes')
+        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                      self.ssh.hostnames[0]) for node in nodes]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+        quorum_onlys = list(
+            map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+
+        for stat in self.api.get('nodes/stats'):
+            ints = stat['intervals']
+            uid = stat['uid']
+
+            # calculate minimum
+            min_persistent_storage_avail = min(
+                i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
+
+            # calculate average
+            persistent_storage_avails = list(filter(lambda x: x.get('persistent_storage_avail'), ints))
+            sum_persistent_storage_avail = sum(i['persistent_storage_avail'] for i in persistent_storage_avails)
+            avg_persistent_storage_avail = sum_persistent_storage_avail / len(persistent_storage_avails)
+
+            # calculate maximum
+            max_persistent_storage_avail = max(
+                i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
+
+            persistent_storage_size = self.api.get_value(f'nodes/{uid}', 'persistent_storage_size')
+
+            node_name = f'node:{uid}'
+            if uid in quorum_onlys:
+                node_name += ' (quorum only)'
+            kwargs[node_name] = '{}/{}/{} GB'.format(to_gb(persistent_storage_size - max_persistent_storage_avail),
+                                                     to_gb(persistent_storage_size - avg_persistent_storage_avail),
+                                                     to_gb(persistent_storage_size - min_persistent_storage_avail))
 
         return None, kwargs
