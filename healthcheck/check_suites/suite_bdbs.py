@@ -6,17 +6,17 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class BdbChecks(BaseCheckSuite):
-    """Databases"""
+    """Databases (configuration, sizing and usage)"""
 
     def __init__(self, _config):
         super().__init__(_config)
         self.params = load_params('databases')
 
-    def _check_connectivity(self):
+    def run_connection_checks(self):
         self._check_api_connectivity()
 
     def check_oss_api(self, *_args, **_kwargs):
-        """check for OSS cluster API"""
+        """check for OSS cluster API of each database"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
@@ -25,7 +25,7 @@ class BdbChecks(BaseCheckSuite):
         return all(kwargs.values()) if kwargs.values() else '', {'reason': 'no OSS cluster API enabled database found'}
 
     def check_shards_placement(self, *_args, **_kwargs):
-        """check for dense shards placement"""
+        """check for dense shards placement of each database"""
         nodes = self.api.get('nodes')
         bdbs = self.api.get('bdbs')
         kwargs = {}

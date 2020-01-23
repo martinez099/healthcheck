@@ -19,15 +19,12 @@ class BaseCheckSuite(object):
         self.ssh = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
         self.params = {}
 
-    def run_connectivity_checks(self):
+    def run_connection_checks(self):
         """
         Run connectivity checks.
 
         :return:
         """
-        self._check_connectivity()
-
-    def _check_connectivity(self):
         raise NotImplementedError()
 
     def _check_ssh_connectivity(self):
@@ -47,7 +44,7 @@ class BaseCheckSuite(object):
             print_success(f'successfully connected to {fqdn}')
         except Exception as e:
             print_error('could not connect to Redis Enterprise REST-API:', e)
-            exit(2)
+            exit(3)
 
 
 def load_params(_dir):

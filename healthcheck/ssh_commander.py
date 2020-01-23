@@ -36,7 +36,7 @@ class SshCommander(object):
         """
         Execute multiple SSH commands.
 
-        :param _cmd_ips: A list of (commands, IP addresses).
+        :param _cmd_ips: A list of (commands, IP addresses, [additional information]).
         :return: The result.
         :raise Exception: If an error occurred.
         """
@@ -94,7 +94,7 @@ class SshCommander(object):
             parts.append('{}@{}'.format(_user, _host))
         else:
             parts.append(_host)
-        parts.append('-C {}'.format(_cmd))
+        parts.append('''-C '{}' '''.format(_cmd))
         cmd = ' '.join(parts)
 
         # create lock

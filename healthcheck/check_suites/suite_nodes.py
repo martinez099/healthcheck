@@ -7,9 +7,18 @@ from healthcheck.common_funcs import to_gb, to_percent, to_ms
 
 
 class NodeChecks(BaseCheckSuite):
-    """Nodes"""
+    """Nodes (configuration and usage)"""
 
-    def _check_connectivity(self):
+    def __init__(self, _config):
+        """
+       :param _config: The configuration.
+       """
+        super().__init__(_config)
+        self.ip_addresses = {}
+        for future in self.ssh.exec_on_all_hosts('hostname -I'):
+            self.ip_addresses[future.ip] = future.result()
+
+    def run_connection_checks(self):
         self._check_api_connectivity()
         self._check_ssh_connectivity()
 
@@ -23,7 +32,7 @@ class NodeChecks(BaseCheckSuite):
         return None, {'hostname': hostname, 'IP address': ip_address}
 
     def check_os_version(self, *_args, **_kwargs):
-        """get OS version"""
+        """get OS version of each node"""
         rsps = self.ssh.exec_on_all_hosts('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
@@ -32,7 +41,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_software_version(self, *_args, **_kwargs):
-        """get RS version"""
+        """get RS version of each node"""
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
 
@@ -72,7 +81,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
-        """check if swappiness is disabled"""
+        """check if swappiness is disabled on each node"""
         rsps = self.ssh.exec_on_all_hosts('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
 
@@ -81,7 +90,7 @@ class NodeChecks(BaseCheckSuite):
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
-        """check if THP is disabled"""
+        """check if THP is disabled on each node"""
         rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
@@ -91,7 +100,8 @@ class NodeChecks(BaseCheckSuite):
 
     def check_rladmin_status(self, *_args, **_kwargs):
         """check if `rladmin status` has errors"""
-        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node', self.ssh.hostnames[0])
+        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
+                                    self.ssh.hostnames[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
@@ -128,13 +138,13 @@ class NodeChecks(BaseCheckSuite):
         return not errors, {rsp.ip: len(rsp.result()) for rsp in rsps}
 
     def check_network_link(self, *_args, **_kwargs):
-        """get network link speed"""
+        """get network link speed between nodes"""
         cmd_ips = []
         for source in self.ssh.hostnames:
-            for target in self.ssh.hostnames:
-                if source == target:
+            for external, internal in self.ip_addresses.items():
+                if source == external:
                     continue
-                cmd_ips.append((f'ping -c 4 {target}', source))
+                cmd_ips.append((f'ping -c 4 {internal}', source))
 
         # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
@@ -155,8 +165,30 @@ class NodeChecks(BaseCheckSuite):
         kwargs = {key: '{}/{}/{}/{} ms'.format(to_ms(_min), to_ms(avg), to_ms(_max), to_ms(mdev))}
         return None, kwargs
 
+    def check_open_ports(self, *_args, **_kwargs):
+        """check open TCP ports of each node"""
+        cmd_ips = []
+        ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
+        cmd_tpl = '''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
+
+        for port in ports:
+            for source in self.ssh.hostnames:
+                for external, internal in self.ip_addresses.items():
+                    if source == external:
+                        continue
+                    cmd_ips.append((cmd_tpl.format(internal, port), source))
+
+        kwargs = {}
+        futures = self.ssh.exec_on_hosts(cmd_ips)
+        for future in futures:
+            failed = future.result()
+            if failed:
+                kwargs[f'{future.ip} -> {failed}'] = 'connection refused'
+
+        return not kwargs, kwargs
+
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check CPU usage (min/avg/max/mdev)"""
+        """check CPU usage (min/avg/max/mdev) of each node"""
         kwargs = {}
         results = {}
 
@@ -199,7 +231,7 @@ class NodeChecks(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check RAM usage (min/avg/max/mdev)"""
+        """check RAM usage (min/avg/max/mdev) of each node"""
         kwargs = {}
         results = {}
 
@@ -244,7 +276,7 @@ class NodeChecks(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_ephemeral_storage_usage(self, *_args, **_kwargs):
-        """get ephemeral storage usage (min/avg/max/mdev)"""
+        """get ephemeral storage usage (min/avg/max/mdev) of each node"""
         kwargs = {}
 
         # get quorum-only node
@@ -292,7 +324,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_persistent_storage_usage(self, *_args, **_kwargs):
-        """get persistent storage usage (min/avg/max/mdev)"""
+        """get persistent storage usage (min/avg/max/mdev) of each node"""
         kwargs = {}
 
         # get quorum-only node
