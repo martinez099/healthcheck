@@ -21,30 +21,30 @@ class SshCommander(object):
         self.locks = {}
         self.cache = {}
 
-    def exec_on_host(self, _cmd, _ip):
+    def exec_on_host(self, _cmd, _hostname):
         """
         Execute a SSH command on a host.
 
         :param _cmd: The command to execute.
-        :param _ip: The IP address of the remote machine.
+        :param _hostname: The hostname of the remote machine.
         :return: The result.
         :raise Exception: If an error occurred.
         """
-        return self._exec(_ip, _cmd, self.username, self.keyfile)
+        return self._exec(_hostname, _cmd, self.username, self.keyfile)
 
-    def exec_on_hosts(self, _cmd_ips):
+    def exec_on_hosts(self, _cmd_hostnames):
         """
         Execute multiple SSH commands.
 
-        :param _cmd_ips: A list of (commands, IP addresses, [additional information]).
+        :param _cmd_hostnames: A list of (command, hostname).
         :return: The result.
         :raise Exception: If an error occurred.
         """
-        with ThreadPoolExecutor(max_workers=len(_cmd_ips)) as e:
+        with ThreadPoolExecutor(max_workers=len(_cmd_hostnames)) as e:
             futures = []
-            for cmd, ip in _cmd_ips:
-                future = e.submit(self._exec, ip, cmd, self.username, self.keyfile)
-                future.ip = ip
+            for cmd, hostname in _cmd_hostnames:
+                future = e.submit(self._exec, hostname, cmd, self.username, self.keyfile)
+                future.hostname = hostname
                 future.cmd = cmd
                 futures.append(future)
             done, undone = wait(futures)
@@ -61,9 +61,9 @@ class SshCommander(object):
         """
         with ThreadPoolExecutor(max_workers=len(self.hostnames)) as e:
             futures = []
-            for ip in self.hostnames:
-                future = e.submit(self.exec_on_host, _cmd, ip)
-                future.ip = ip
+            for hostname in self.hostnames:
+                future = e.submit(self.exec_on_host, _cmd, hostname)
+                future.hostname = hostname
                 future.cmd = _cmd
                 futures.append(future)
             done, undone = wait(futures)

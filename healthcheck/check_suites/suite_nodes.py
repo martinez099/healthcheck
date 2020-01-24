@@ -9,27 +9,13 @@ from healthcheck.common_funcs import to_gb, to_percent, to_ms
 class NodeChecks(BaseCheckSuite):
     """Nodes (configuration and usage)"""
 
-    def __init__(self, _config):
-        """
-       :param _config: The configuration.
-       """
-        super().__init__(_config)
-        self.ip_addresses = {}
-        for future in self.ssh.exec_on_all_hosts('hostname -I'):
-            self.ip_addresses[future.ip] = future.result()
-
-    def run_connection_checks(self):
-        self._check_api_connectivity()
-        self._check_ssh_connectivity()
-
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
         rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
-        found = re.search(r'(^node:\d+\s+master.*$)', rsp, re.MULTILINE)
-        hostname = re.split(r'\s+', found.group(1))[4]
-        ip_address = re.split(r'\s+', found.group(1))[3]
+        found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
+        parts = re.split(r'\s+', found.group(1))
 
-        return None, {'hostname': hostname, 'IP address': ip_address}
+        return None, {'hostname': parts[4], 'address': parts[2], 'external address': parts[3]}
 
     def check_os_version(self, *_args, **_kwargs):
         """get OS version of each node"""
@@ -37,7 +23,7 @@ class NodeChecks(BaseCheckSuite):
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
-        kwargs = {rsp.ip: os_version for rsp, os_version in zip(rsps, os_versions)}
+        kwargs = {rsp.hostname: os_version for rsp, os_version in zip(rsps, os_versions)}
         return None, kwargs
 
     def check_software_version(self, *_args, **_kwargs):
@@ -55,7 +41,7 @@ class NodeChecks(BaseCheckSuite):
         log_file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {rsp.ip: log_file_path for rsp, log_file_path in zip(rsps, log_file_paths)}
+        kwargs = {rsp.hostname: log_file_path for rsp, log_file_path in zip(rsps, log_file_paths)}
         return result, kwargs
 
     def check_ephemeral_storage_path(self, *_args, **_kwargs):
@@ -66,7 +52,7 @@ class NodeChecks(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
+        kwargs = {rsp.hostname: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
     def check_persistent_storage_path(self, *_args, **_kwargs):
@@ -77,7 +63,7 @@ class NodeChecks(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {rsp.ip: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
+        kwargs = {rsp.hostname: tmp_file_path for rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
@@ -86,7 +72,7 @@ class NodeChecks(BaseCheckSuite):
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
-        kwargs = {rsp.ip: swappiness for rsp, swappiness in zip(rsps, swappinesses)}
+        kwargs = {rsp.hostname: swappiness for rsp, swappiness in zip(rsps, swappinesses)}
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
@@ -95,7 +81,7 @@ class NodeChecks(BaseCheckSuite):
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
-        kwargs = {rsp.ip: transparent_hugepage for rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
+        kwargs = {rsp.hostname: transparent_hugepage for rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
         return result, kwargs
 
     def check_rladmin_status(self, *_args, **_kwargs):
@@ -109,7 +95,7 @@ class NodeChecks(BaseCheckSuite):
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check if `rlcheck` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
-        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.ip) for rsp in rsps]
+        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.hostname) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
         return not errors, {f[1]: len(f[0]) for f in failed}
@@ -117,7 +103,7 @@ class NodeChecks(BaseCheckSuite):
     def check_cnm_ctl_status(self, *_args, **_kwargs):
         """check if `cnm_ctl status` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.hostname) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
         return sum_not_running == 0,  {r[1]: len(r[0]) for r in not_running}
@@ -125,7 +111,7 @@ class NodeChecks(BaseCheckSuite):
     def check_supervisorctl_status(self, *_args, **_kwargs):
         """check if `supervisorctl status` has errors"""
         rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.ip) for rsp in rsps]
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.hostname) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
         return sum_not_running == 1 * len(rsps), {r[1]: len(r[0]) - 1 for r in not_running}
@@ -135,20 +121,20 @@ class NodeChecks(BaseCheckSuite):
         rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
-        return not errors, {rsp.ip: len(rsp.result()) for rsp in rsps}
+        return not errors, {rsp.hostname: len(rsp.result()) for rsp in rsps}
 
     def check_network_link(self, *_args, **_kwargs):
         """get network link speed between nodes"""
-        cmd_ips = []
+        cmd_hostnames = []
         for source in self.ssh.hostnames:
-            for external, internal in self.ip_addresses.items():
+            for external, internal in self.nodes.get_internal_addrs().items():
                 if source == external:
                     continue
-                cmd_ips.append((f'ping -c 4 {internal}', source))
+                cmd_hostnames.append((f'ping -c 4 {internal}', source))
 
         # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
-        futures = self.ssh.exec_on_hosts(cmd_ips)
+        futures = self.ssh.exec_on_hosts(cmd_hostnames)
         key = 'rtt min/avg/max/mdev'
         for future in futures:
             lines = future.result().split('\n')
@@ -167,23 +153,23 @@ class NodeChecks(BaseCheckSuite):
 
     def check_open_ports(self, *_args, **_kwargs):
         """check open TCP ports of each node"""
-        cmd_ips = []
+        cmd_hostnames = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
         cmd_tpl = '''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
 
         for port in ports:
             for source in self.ssh.hostnames:
-                for external, internal in self.ip_addresses.items():
+                for external, internal in self.nodes.get_internal_addrs().items():
                     if source == external:
                         continue
-                    cmd_ips.append((cmd_tpl.format(internal, port), source))
+                    cmd_hostnames.append((cmd_tpl.format(internal, port), source))
 
         kwargs = {}
-        futures = self.ssh.exec_on_hosts(cmd_ips)
+        futures = self.ssh.exec_on_hosts(cmd_hostnames)
         for future in futures:
             failed = future.result()
             if failed:
-                kwargs[f'{future.ip} -> {failed}'] = 'connection refused'
+                kwargs[f'{future.hostname} -> {failed}'] = 'connection refused'
 
         return not kwargs, kwargs
 

@@ -12,9 +12,6 @@ class BdbChecks(BaseCheckSuite):
         super().__init__(_config)
         self.params = load_params('databases')
 
-    def run_connection_checks(self):
-        self._check_api_connectivity()
-
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS cluster API of each database"""
         bdbs = self.api.get('bdbs')

@@ -13,9 +13,6 @@ class ClusterChecks(BaseCheckSuite):
         super().__init__(_config)
         self.params = load_params('cluster')
 
-    def run_connection_checks(self):
-        self._check_api_connectivity()
-
     def check_license_shards_limit(self, *_args, **_kwargs):
         """check shards limit in license"""
         number_of_shards = self.api.get_number_of_values('shards')

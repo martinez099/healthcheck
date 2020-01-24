@@ -153,7 +153,7 @@ def exec_check_suites(_suites, _args, _executor):
         elif suite.params:
             print_warning('no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
 
-        suite.run_connection_checks()
+        #suite.run_connection_checks()
 
         def collect(_future):
             result = _future.result()
