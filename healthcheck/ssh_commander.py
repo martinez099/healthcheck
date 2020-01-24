@@ -2,12 +2,14 @@ from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from healthcheck.common_funcs import exec_cmd
+from healthcheck.render_engine import print_msg, print_success, print_error
 
 
 class SshCommander(object):
     """
     SSH-Commander class.
     """
+    _instance = None
 
     def __init__(self, _hostnames,  _username=None, _keyfile=None):
         """
@@ -20,6 +22,51 @@ class SshCommander(object):
         self.keyfile = _keyfile
         self.locks = {}
         self.cache = {}
+        self.internal_addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+        self.check_connectivity()
+
+    @classmethod
+    def instance(cls, _config):
+        """
+        Get singleton instance.
+
+        :param _config: A dict with configuration values.
+        :return: The SshCommander singleton.
+        """
+        if not cls._instance:
+            cls._instance = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
+        return cls._instance
+
+    def check_connectivity(self):
+        """
+        Check connection.
+        """
+        print_msg('checking SSH connection ...')
+        for hostname in self.hostnames:
+            try:
+                self.exec_on_host('sudo -v', hostname)
+                print_success(f'- successfully connected to {hostname}')
+            except Exception as e:
+                print_error(f'could not connect to host {hostname}:', e)
+                exit(3)
+        print('')
+
+    def get_internal_addr(self, _hostname):
+        """
+        Get internal address of node.
+
+        :param _hostname: The hostname of the node.
+        :return: The internal address.
+        """
+        return self.internal_addrs[_hostname]
+
+    def get_internal_addrs(self):
+        """
+        Get internal addresses of all nodes.
+
+        :return: A dict mapping hostname -> internal address.
+        """
+        return self.internal_addrs
 
     def exec_on_host(self, _cmd, _hostname):
         """

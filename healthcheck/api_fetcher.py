@@ -1,10 +1,12 @@
 from healthcheck.common_funcs import http_get
+from healthcheck.render_engine import print_msg, print_success, print_error
 
 
 class ApiFetcher(object):
     """
     API-Fetcher class.
     """
+    _instance = None
 
     def __init__(self, _fqdn, _username, _password):
         """
@@ -16,6 +18,50 @@ class ApiFetcher(object):
         self.username = _username
         self.password = _password
         self.cache = {}
+        self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
+        self.check_connectivity()
+
+    @classmethod
+    def instance(cls, _config):
+        """
+        Get singleton instance.
+
+        :param _config: A dict with configuration values.
+        :return: The ApiFetcher singleton.
+        """
+        if not cls._instance:
+            cls._instance = ApiFetcher(_config['api']['fqdn'], _config['api']['user'], _config['api']['pass'])
+        return cls._instance
+
+    def check_connectivity(self):
+        """
+        Check connection.
+        """
+        try:
+            print_msg('checking API connection ...')
+            fqdn = self.get_value('cluster', 'name')
+            print_success(f'- successfully connected to {fqdn}')
+        except Exception as e:
+            print_error('could not connect to Redis Enterprise REST-API:', e)
+            exit(2)
+        print('')
+
+    def get_uid(self, _internal_addr):
+        """
+        Get UID of node,
+
+        :param _internal_addr: The internal address of the the node.
+        :return: The UID of the node.
+        """
+        return self.uids[_internal_addr]
+
+    def get_uids(self):
+        """
+        Get UIDs of all nodes.
+
+        :return: A dict mapping internal address -> UID.
+        """
+        return self.uids
 
     def get(self, _topic):
         """

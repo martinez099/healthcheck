@@ -1,15 +1,20 @@
 import functools
 import math
 
+from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class BdbChecks(BaseCheckSuite):
-    """Databases (configuration, sizing and usage)"""
+    """Databases: configuration, sizing and usage"""
 
     def __init__(self, _config):
+        """
+        :param _config: The configuration.
+        """
         super().__init__(_config)
+        self.api = ApiFetcher.instance(_config)
         self.params = load_params('databases')
 
     def check_oss_api(self, *_args, **_kwargs):
@@ -123,7 +128,7 @@ class BdbChecks(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} Kops/sec'.format(
                     to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max/mdev)")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max/dev)")
                 for bdb in bdbs]
 
     def check_memory_usage(self, *_args, **_kwargs):
@@ -164,6 +169,6 @@ class BdbChecks(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} GB'.format(
                     to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"check memory usage for '{bdb['name']}' (min/avg/max/mdev)")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"check memory usage for '{bdb['name']}' (min/avg/max/dev)")
                 for bdb in bdbs]
 

@@ -2,15 +2,20 @@ import functools
 import math
 import re
 
+from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Cluster (sizing and usage)"""
+    """Cluster: sizing and usage"""
 
     def __init__(self, _config):
+        """
+        :param _config: The configuration.
+        """
         super().__init__(_config)
+        self.api = ApiFetcher.instance(_config)
         self.params = load_params('cluster')
 
     def check_license_shards_limit(self, *_args, **_kwargs):
@@ -123,7 +128,7 @@ class ClusterChecks(BaseCheckSuite):
         kwargs['min'] = '{} Kops/sec'.format(to_kops(minimum))
         kwargs['avg'] = '{} Kops/sec'.format(to_kops(average))
         kwargs['max'] = '{} Kops/sec'.format(to_kops(maximum))
-        kwargs['mdev'] = '{} Kops/sec'.format(to_kops(std_dev))
+        kwargs['dev'] = '{} Kops/sec'.format(to_kops(std_dev))
 
         return None, kwargs
 
@@ -152,7 +157,7 @@ class ClusterChecks(BaseCheckSuite):
         kwargs['min'] = '{} GB'.format(to_gb(total_mem - maximum))
         kwargs['avg'] = '{} GB'.format(to_gb(total_mem - average))
         kwargs['max'] = '{} GB'.format(to_gb(total_mem - minimum))
-        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs
 
@@ -184,7 +189,7 @@ class ClusterChecks(BaseCheckSuite):
         kwargs['min'] = '{} GB'.format(to_gb(ephemeral_storage_size - maximum))
         kwargs['avg'] = '{} GB'.format(to_gb(ephemeral_storage_size - average))
         kwargs['max'] = '{} GB'.format(to_gb(ephemeral_storage_size - minimum))
-        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs
 
@@ -216,6 +221,6 @@ class ClusterChecks(BaseCheckSuite):
         kwargs['min'] = '{} GB'.format(to_gb(persistent_storage_size - maximum))
         kwargs['avg'] = '{} GB'.format(to_gb(persistent_storage_size - average))
         kwargs['max'] = '{} GB'.format(to_gb(persistent_storage_size - minimum))
-        kwargs['mdev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
 
         return None, kwargs

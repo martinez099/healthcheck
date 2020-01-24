@@ -2,12 +2,22 @@ import functools
 import math
 import re
 
+from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import to_gb, to_percent, to_ms
+from healthcheck.ssh_commander import SshCommander
 
 
 class NodeChecks(BaseCheckSuite):
-    """Nodes (configuration and usage)"""
+    """Nodes: configuration and usage"""
+
+    def __init__(self, _config):
+        """
+        :param _config: The configuration.
+        """
+        super().__init__(_config)
+        self.api = ApiFetcher.instance(_config)
+        self.ssh = SshCommander.instance(_config)
 
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
@@ -127,7 +137,7 @@ class NodeChecks(BaseCheckSuite):
         """get network link speed between nodes"""
         cmd_hostnames = []
         for source in self.ssh.hostnames:
-            for external, internal in self.nodes.get_internal_addrs().items():
+            for external, internal in self.ssh.get_internal_addrs().items():
                 if source == external:
                     continue
                 cmd_hostnames.append((f'ping -c 4 {internal}', source))
@@ -159,7 +169,7 @@ class NodeChecks(BaseCheckSuite):
 
         for port in ports:
             for source in self.ssh.hostnames:
-                for external, internal in self.nodes.get_internal_addrs().items():
+                for external, internal in self.ssh.get_internal_addrs().items():
                     if source == external:
                         continue
                     cmd_hostnames.append((cmd_tpl.format(internal, port), source))
@@ -174,7 +184,7 @@ class NodeChecks(BaseCheckSuite):
         return not kwargs, kwargs
 
     def check_cpu_usage(self, *_args, **_kwargs):
-        """check CPU usage (min/avg/max/mdev) of each node"""
+        """check CPU usage (min/avg/max/dev) of each node"""
         kwargs = {}
         results = {}
 
@@ -217,7 +227,7 @@ class NodeChecks(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_ram_usage(self, *_args, **_kwargs):
-        """check RAM usage (min/avg/max/mdev) of each node"""
+        """check RAM usage (min/avg/max/dev) of each node"""
         kwargs = {}
         results = {}
 
@@ -262,7 +272,7 @@ class NodeChecks(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_ephemeral_storage_usage(self, *_args, **_kwargs):
-        """get ephemeral storage usage (min/avg/max/mdev) of each node"""
+        """get ephemeral storage usage (min/avg/max/dev) of each node"""
         kwargs = {}
 
         # get quorum-only node
@@ -310,7 +320,7 @@ class NodeChecks(BaseCheckSuite):
         return None, kwargs
 
     def check_persistent_storage_usage(self, *_args, **_kwargs):
-        """get persistent storage usage (min/avg/max/mdev) of each node"""
+        """get persistent storage usage (min/avg/max/dev) of each node"""
         kwargs = {}
 
         # get quorum-only node
