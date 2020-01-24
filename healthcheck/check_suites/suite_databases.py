@@ -6,8 +6,8 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
-class BdbChecks(BaseCheckSuite):
-    """Databases: configuration, sizing and usage"""
+class DatabaseChecks(BaseCheckSuite):
+    """Databases - configuration, sizing and usage"""
 
     def __init__(self, _config):
         """

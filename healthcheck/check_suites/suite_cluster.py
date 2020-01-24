@@ -8,7 +8,7 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 
 
 class ClusterChecks(BaseCheckSuite):
-    """Cluster: sizing and usage"""
+    """Cluster - sizing and usage"""
 
     def __init__(self, _config):
         """
