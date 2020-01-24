@@ -19,10 +19,10 @@ class NodeManager(object):
             self.check_api_connectivity()
             self.check_ssh_connectivity()
 
-        self.internal_addrs = {self.internal_addrs[future.hostname]: future.result() for future in
+        self.internal_addrs = {future.hostname: future.result() for future in
                                self.ssh.exec_on_all_hosts('hostname -I')}
 
-        self.uids = {self.uids[node['addr']]: node['uid'] for node in self.api.get('nodes')}
+        self.uids = {node['addr']: node['uid'] for node in self.api.get('nodes')}
 
     @classmethod
     def instance(cls, _api, _ssh):
