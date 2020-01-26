@@ -70,7 +70,7 @@ def exec_cmd(_args):
         return rsp.strip()
     else:
         rsp = proc.stderr.read().decode('utf-8')
-        raise Exception(f'error during ssh remote execution (return code {proc.returncode}): {rsp.strip()}')
+        raise Exception(f'error during subprocess execution (return code {proc.returncode}): {rsp.strip()}')
 
 
 def http_get(_url, _user, _pass):

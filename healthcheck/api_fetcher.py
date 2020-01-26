@@ -18,8 +18,8 @@ class ApiFetcher(object):
         self.username = _username
         self.password = _password
         self.cache = {}
-        self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
         self.check_connectivity()
+        self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
 
     @classmethod
     def instance(cls, _config):
@@ -35,7 +35,7 @@ class ApiFetcher(object):
 
     def check_connectivity(self):
         """
-        Check connection.
+        Check API connection.
         """
         try:
             print_msg('checking API connection ...')

@@ -22,8 +22,8 @@ class SshCommander(object):
         self.keyfile = _keyfile
         self.locks = {}
         self.cache = {}
-        self.internal_addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
         self.check_connectivity()
+        self.internal_addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
 
     @classmethod
     def instance(cls, _config):
@@ -39,7 +39,7 @@ class SshCommander(object):
 
     def check_connectivity(self):
         """
-        Check connection.
+        Check SSH connection.
         """
         print_msg('checking SSH connection ...')
         for hostname in self.hostnames:
