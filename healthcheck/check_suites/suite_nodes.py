@@ -182,7 +182,7 @@ class NodeChecks(BaseCheckSuite):
                     kwargs[node_name] = []
                 kwargs[node_name].append(failed)
 
-        return not kwargs, kwargs
+        return not kwargs, kwargs if kwargs else {'open': 'all'}
 
     def check_cpu_usage(self, *_args, **_kwargs):
         """check CPU usage (min/avg/max/dev) of each node"""
