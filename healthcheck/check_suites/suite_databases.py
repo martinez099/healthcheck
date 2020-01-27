@@ -73,7 +73,10 @@ class DatabaseChecks(BaseCheckSuite):
         results = []
 
         if not _kwargs:
-            results.append(('', {"reason": "no parameters provided"}))
+            for bdb in bdbs:
+                results.append((None, {'uid': bdb['uid'], 'memory limit': f'{to_gb(bdb["memory_size"])} GB',
+                                       'master shards': bdb['shards_count'], 'replication': bdb['replication']},
+                                f"""get configuration of '{bdb['name']}'"""))
 
         else:
             for bdb in bdbs:
