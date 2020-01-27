@@ -66,7 +66,7 @@ def load_check_suites(_args, _config, _check_connection=True):
                 suite = getattr(module, member)
                 if type(suite) == type.__class__ and issubclass(suite, BaseCheckSuite):
                     if not _args.suite or _args.suite and _args.suite.lower() in suite.__doc__.lower():
-                        suites.append(suite(_config, _check_connection))
+                        suites.append(suite(_config))
     return suites
 
 
@@ -81,13 +81,17 @@ def load_parameter_map(_suite, _args):
     if not _args.params:
         return None
 
+    if not _args.check and not _args.suite:
+        print_error('sole argument --params not allowed, try using in combination with --suite or --check')
+        exit(1)
+
     if not _suite.params:
-        print_warning('- suite does not support parameters')
+        print_warning('- suite does not support parameters\n')
         return None
 
     if _args.params.endswith('.json'):
         if not os.path.exists(_args.params):
-            print_error("could not find parameter map, examine argument of --params")
+            print_error('could not find parameter map, examine argument of --params')
             exit(1)
 
         with open(_args.params) as file:
@@ -97,7 +101,7 @@ def load_parameter_map(_suite, _args):
         params = list(filter(lambda x: _args.params.lower() in get_parameter_map_name(x[0].lower()),
                              _suite.params.items()))
         if _args.params and not params:
-            print_error('could not find paramter map, available maps: {}'.format(
+            print_error('could not find paramter map, choose one: {}'.format(
                 list(map(get_parameter_map_name, _suite.params.keys()))))
             exit(1)
 
@@ -154,9 +158,11 @@ def exec_check_suites(_suites, _args, _executor):
         print_msg(f'executing check suite: {suite.__doc__}')
         params = load_parameter_map(suite, _args)
         if params:
-            print_success('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
+            print_success('- using paramter map: {}\n'.format(get_parameter_map_name(params[0][0])))
         elif suite.params:
-            print_warning('- no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
+            print_warning('- no parameter map given, options are: {}\n'.format(list(map(get_parameter_map_name, suite.params.keys()))))
+
+        suite.run_connection_checks()
 
         def collect(_future):
             result = _future.result()
@@ -181,9 +187,11 @@ def main():
     # parse configuration file
     config = parse_config(args)
 
+    # load suites
+    suites = load_check_suites(args, config)
+
     # list suites
     if args.list:
-        suites = load_check_suites(args, config, False)
         render_list(suites)
         return
 
@@ -197,10 +205,8 @@ def main():
     # execute checks
     executor = CheckExecutor(render)
     if args.check:
-        suites = load_check_suites(args, config, False)
         exec_single_checks(suites, args, executor)
     else:
-        suites = load_check_suites(args, config, True)
         exec_check_suites(suites, args, executor)
 
     # shutdown

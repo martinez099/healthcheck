@@ -7,12 +7,19 @@ class BaseCheckSuite(object):
     Base Check Suite class.
     """
 
-    def __init__(self, _config, _check_connections):
+    def __init__(self, _config):
         """
         :param _config: The configuration.
-        :param _check_connections: Run connection checks.
         """
         self.params = {}
+
+    def run_connection_checks(self):
+        """
+        Run connection checks.
+
+        :raise Exception: If connection cannot be established.
+        """
+        raise NotImplementedError()
 
 
 def load_params(_dir):

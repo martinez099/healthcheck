@@ -6,10 +6,13 @@ Click [here](https://docs.google.com/document/d/1C-vlVB8Xcq8GC_cVQNr_K0RGMAVj8cX
 ## Description
 The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
 
-It checks:
-- Configuration of nodes and databases.
-- Sizing of a cluster and its databases.
-- Historical usage data of a cluster, its nodes and databases.
+It checks
+
+- configuration
+- sizing
+- historical usage data
+
+of a cluster, its nodes and databases.
 
 ### Checks
 Each check has a result which is indicated by:
@@ -21,8 +24,8 @@ Each check has a result which is indicated by:
 
 ### Check Suites
 Checks are grouped into check suites, there are 3 check suites available:
-- Cluster: Checks cluster sizing and usage.
-- Nodes: Checks nodes configuration and usage.
+- Cluster: Checks cluster status, sizing and usage.
+- Nodes: Checks nodes setup, configuration and usage.
 - Databases: Checks databases sizing, and configuration and usage.
   
 ### Parameter Maps

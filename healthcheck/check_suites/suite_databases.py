@@ -9,14 +9,16 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 class DatabaseChecks(BaseCheckSuite):
     """Databases - configuration, sizing and usage"""
 
-    def __init__(self, _config, _check_connections):
+    def __init__(self, _config):
         """
         :param _config: The configuration.
-        :param _check_connections: Run connection checks.
         """
-        super().__init__(_config, _check_connections)
-        self.api = ApiFetcher.instance(_config, _check_connections)
+        super().__init__(_config)
+        self.api = ApiFetcher.instance(_config)
         self.params = load_params('databases')
+
+    def run_connection_checks(self):
+        self.api.check_connection()
 
     def check_oss_api(self, *_args, **_kwargs):
         """check for OSS cluster API of each database"""

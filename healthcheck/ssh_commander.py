@@ -11,51 +11,48 @@ class SshCommander(object):
     """
     _instance = None
 
-    def __init__(self, _hostnames,  _username=None, _keyfile=None, _check_connection=True):
+    def __init__(self, _hostnames,  _username=None, _keyfile=None):
         """
         :param _hostnames: A string containing CSV with hostnames to log in.
         :param _username: The ssh username to log in.
         :param _keyfile: The path to the ssh identity file.
-        :param _check_connection: Run connection check, defaultsa to True.
         """
         self.hostnames = list(map(lambda x: x.strip(), _hostnames.split(',')))
         self.username = _username
         self.keyfile = _keyfile
         self.locks = {}
         self.cache = {}
-        if _check_connection:
-            self.check_connectivity()
         self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+        self.connected = False
 
     @classmethod
-    def instance(cls, _config, _check_connection):
+    def instance(cls, _config):
         """
         Get singleton instance.
 
         :param _config: A dict with configuration values.
-        :param _check_connection: Run connection check.
         :return: The SshCommander singleton.
         """
         if not cls._instance:
             cls._instance = SshCommander(_config['ssh']['hosts'],
                                          _config['ssh']['user'],
-                                         _config['ssh']['key'],
-                                         _check_connection)
+                                         _config['ssh']['key'])
         return cls._instance
 
-    def check_connectivity(self):
+    def check_connection(self):
         """
         Check SSH connection.
         """
-        print_msg('checking SSH connection ...')
-        for hostname in self.hostnames:
-            try:
-                self.exec_on_host('sudo -v', hostname)
-                print_success(f'- successfully connected to {hostname}')
-            except Exception as e:
-                print_error(f'could not connect to host {hostname}:', e)
-                exit(3)
-        print('')
+        if not self.connected:
+            print_msg('checking SSH connection ...')
+            for hostname in self.hostnames:
+                try:
+                    self.exec_on_host('sudo -v', hostname)
+                    print_success(f'- successfully connected to {hostname}')
+                    self.connected = True
+                except Exception as e:
+                    print_error(f'could not connect to host {hostname}:', e)
+            print_msg('')
 
     def get_addr(self, _hostname):
         """
