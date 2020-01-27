@@ -25,7 +25,7 @@ class NodeChecks(BaseCheckSuite):
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': os_version for rsp, os_version
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': os_version for rsp, os_version
                   in zip(rsps, os_versions)}
         return None, kwargs
 
@@ -44,7 +44,7 @@ class NodeChecks(BaseCheckSuite):
         log_file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': log_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': log_file_path for
                   rsp, log_file_path in zip(rsps, log_file_paths)}
         return result, kwargs
 
@@ -56,7 +56,7 @@ class NodeChecks(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': tmp_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
@@ -68,7 +68,7 @@ class NodeChecks(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': tmp_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
@@ -78,7 +78,7 @@ class NodeChecks(BaseCheckSuite):
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': swappiness for rsp, swappiness
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': swappiness for rsp, swappiness
                   in zip(rsps, swappinesses)}
         return result, kwargs
 
@@ -88,7 +88,7 @@ class NodeChecks(BaseCheckSuite):
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': transparent_hugepage for
+        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': transparent_hugepage for
                   rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
         return result, kwargs
 
@@ -98,7 +98,7 @@ class NodeChecks(BaseCheckSuite):
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.hostname) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
-        return not errors, {f'node:{self.api.get_uid(self.ssh.get_internal_addr(f[1]))}': len(f[0]) for f in failed}
+        return not errors, {f'node:{self.api.get_uid(self.ssh.get_addr(f[1]))}': len(f[0]) for f in failed}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
         """check if `cnm_ctl status` has errors"""
@@ -106,7 +106,7 @@ class NodeChecks(BaseCheckSuite):
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.hostname) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return sum_not_running == 0, {f'node:{self.api.get_uid(self.ssh.get_internal_addr(n_r[1]))}': len(n_r[0]) for
+        return sum_not_running == 0, {f'node:{self.api.get_uid(self.ssh.get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
@@ -116,24 +116,24 @@ class NodeChecks(BaseCheckSuite):
         sum_not_running = sum([len(r[0]) for r in not_running])
 
         return sum_not_running == 1 * len(rsps), {
-            f'node:{self.api.get_uid(self.ssh.get_internal_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
+            f'node:{self.api.get_uid(self.ssh.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
         """check if `cat install.log` has errors"""
         rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
-        return not errors, {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': len(rsp.result()) for
+        return not errors, {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': len(rsp.result()) for
                             rsp in rsps}
 
     def check_network_link(self, *_args, **_kwargs):
         """get network link speed between nodes"""
         cmd_hostnames = []
         for source in self.ssh.hostnames:
-            for external, internal in self.ssh.get_internal_addrs().items():
-                if source == external:
+            for hostname, address in self.ssh.addrs.items():
+                if source == hostname:
                     continue
-                cmd_hostnames.append((f'ping -c 4 {internal}', source))
+                cmd_hostnames.append((f'ping -c 4 {address}', source))
 
         # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
@@ -163,7 +163,7 @@ class NodeChecks(BaseCheckSuite):
 
         for port in ports:
             for source in self.ssh.hostnames:
-                for external, internal in self.ssh.get_internal_addrs().items():
+                for external, internal in self.ssh.addrs.items():
                     if source == external:
                         continue
                     cmd_hostnames.append((cmd.format(internal, port), source))
@@ -173,7 +173,7 @@ class NodeChecks(BaseCheckSuite):
         for future in futures:
             failed = future.result()
             if failed:
-                node_name = f'node:{self.api.get_uid(self.ssh.get_internal_addr(future.hostname))}'
+                node_name = f'node:{self.api.get_uid(self.ssh.get_addr(future.hostname))}'
                 if node_name not in kwargs:
                     kwargs[node_name] = []
                 kwargs[node_name].append(failed)

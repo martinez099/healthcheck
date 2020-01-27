@@ -23,7 +23,7 @@ class SshCommander(object):
         self.locks = {}
         self.cache = {}
         self.check_connectivity()
-        self.internal_addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+        self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
 
     @classmethod
     def instance(cls, _config):
@@ -51,22 +51,14 @@ class SshCommander(object):
                 exit(3)
         print('')
 
-    def get_internal_addr(self, _hostname):
+    def get_addr(self, _hostname):
         """
         Get internal address of node.
 
         :param _hostname: The hostname of the node.
         :return: The internal address.
         """
-        return self.internal_addrs[_hostname]
-
-    def get_internal_addrs(self):
-        """
-        Get internal addresses of all nodes.
-
-        :return: A dict mapping hostname -> internal address.
-        """
-        return self.internal_addrs
+        return self.addrs[_hostname]
 
     def exec_on_host(self, _cmd, _hostname):
         """
