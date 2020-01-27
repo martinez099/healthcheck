@@ -11,13 +11,14 @@ from healthcheck.ssh_commander import SshCommander
 class NodeChecks(BaseCheckSuite):
     """Nodes - configuration and usage"""
 
-    def __init__(self, _config):
+    def __init__(self, _config, _check_connections):
         """
         :param _config: The configuration.
+        :param _check_connections: Run connection checks.
         """
-        super().__init__(_config)
-        self.api = ApiFetcher.instance(_config)
-        self.ssh = SshCommander.instance(_config)
+        super().__init__(_config, _check_connections)
+        self.api = ApiFetcher.instance(_config, _check_connections)
+        self.ssh = SshCommander.instance(_config, _check_connections)
 
     def check_os_version(self, *_args, **_kwargs):
         """get OS version of each node"""

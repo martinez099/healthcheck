@@ -11,30 +11,36 @@ class SshCommander(object):
     """
     _instance = None
 
-    def __init__(self, _hostnames,  _username=None, _keyfile=None):
+    def __init__(self, _hostnames,  _username=None, _keyfile=None, _check_connection=True):
         """
         :param _hostnames: A string containing CSV with hostnames to log in.
         :param _username: The ssh username to log in.
         :param _keyfile: The path to the ssh identity file.
+        :param _check_connection: Run connection check, defaultsa to True.
         """
         self.hostnames = list(map(lambda x: x.strip(), _hostnames.split(',')))
         self.username = _username
         self.keyfile = _keyfile
         self.locks = {}
         self.cache = {}
-        self.check_connectivity()
+        if _check_connection:
+            self.check_connectivity()
         self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
 
     @classmethod
-    def instance(cls, _config):
+    def instance(cls, _config, _check_connection):
         """
         Get singleton instance.
 
         :param _config: A dict with configuration values.
+        :param _check_connection: Run connection check.
         :return: The SshCommander singleton.
         """
         if not cls._instance:
-            cls._instance = SshCommander(_config['ssh']['hosts'], _config['ssh']['user'], _config['ssh']['key'])
+            cls._instance = SshCommander(_config['ssh']['hosts'],
+                                         _config['ssh']['user'],
+                                         _config['ssh']['key'],
+                                         _check_connection)
         return cls._instance
 
     def check_connectivity(self):

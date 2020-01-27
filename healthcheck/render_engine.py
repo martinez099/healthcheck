@@ -5,7 +5,9 @@ from healthcheck.common_funcs import get_parameter_map_name
 
 class Color(object):
     """
-    Color class, uses ASSCII escape codes.
+    Color class.
+
+    Uses ASSCII escape codes to colorize terminal output.
     """
 
     @staticmethod
@@ -47,7 +49,6 @@ def render_result(_result, _func):
 
     :param _result: The result.
     :param _func: The check function executed.
-    :return:
     """
     doc = _result[2] if len(_result) == 3 else _func.__doc__
     if _result[0] == '':
@@ -72,7 +73,6 @@ def render_stats(_stats):
     Render collected statistics.
 
     :param _stats: A stats collector.
-    :return:
     """
     print("total checks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print(f'- {Color.green("succeeded")}: {_stats.succeeded}')
@@ -82,14 +82,13 @@ def render_stats(_stats):
     print(f'- skipped: {_stats.skipped}')
 
 
-def render_list(_list):
+def render_list(_suites):
     """
     Render check list.
 
-    :param _list: The list of check suites.
-    :return:
+    :param _suites: The list of check suites.
     """
-    for suite in _list:
+    for suite in _suites:
         print(f'{Color.green("Suite")}: {suite.__doc__}')
         if suite.params:
             print('{}: {}'.format(Color.red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
@@ -104,7 +103,6 @@ def print_msg(_msg):
     Print neutral message.
 
     :param _msg: The neutral message.
-    :return:
     """
     print(_msg)
 
@@ -114,7 +112,6 @@ def print_success(_msg):
     Print a success message.
 
     :param _msg: The success message.
-    :return:
     """
     print(Color.green(_msg))
 
@@ -124,7 +121,6 @@ def print_warning(_msg):
     Print a warning message.
 
     :param _msg: The warning message.
-    :return:
     """
     print(Color.yellow(_msg))
 
@@ -135,7 +131,6 @@ def print_error(_msg, _ex=None):
 
     :param _msg: The error message.
     :param _ex: An optional exception.
-    :return:
     """
     parts = [_msg]
     if _ex:

@@ -48,13 +48,13 @@ def parse_config(_args):
     return config
 
 
-def load_check_suites(_args, _config, _base_class=BaseCheckSuite):
+def load_check_suites(_args, _config, _check_connection=True):
     """
     Load check suites.
 
     :param _args: The pasred command line arguments.
     :param _config: The parsed configuration.
-    :param _base_class: The base class of the check suites.
+    :param _check_connection: Run connection checks, defaults to True.
     :return: A list with all instantiated check suites.
     """
     suites = []
@@ -62,11 +62,11 @@ def load_check_suites(_args, _config, _base_class=BaseCheckSuite):
         name = file.replace('/', '.').replace('.py', '')
         module = importlib.import_module(name)
         for member in dir(module):
-            if member != _base_class.__name__ and not member.startswith('__'):
+            if member != BaseCheckSuite.__name__ and not member.startswith('__'):
                 suite = getattr(module, member)
-                if type(suite) == type.__class__ and issubclass(suite, _base_class):
+                if type(suite) == type.__class__ and issubclass(suite, BaseCheckSuite):
                     if not _args.suite or _args.suite and _args.suite.lower() in suite.__doc__.lower():
-                        suites.append(suite(_config))
+                        suites.append(suite(_config, _check_connection))
     return suites
 
 
@@ -181,11 +181,9 @@ def main():
     # parse configuration file
     config = parse_config(args)
 
-    # load check suites
-    suites = load_check_suites(args, config)
-
     # list suites
     if args.list:
+        suites = load_check_suites(args, config, False)
         render_list(suites)
         return
 
@@ -199,8 +197,10 @@ def main():
     # execute checks
     executor = CheckExecutor(render)
     if args.check:
+        suites = load_check_suites(args, config, False)
         exec_single_checks(suites, args, executor)
     else:
+        suites = load_check_suites(args, config, True)
         exec_check_suites(suites, args, executor)
 
     # shutdown

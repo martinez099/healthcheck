@@ -7,9 +7,10 @@ class BaseCheckSuite(object):
     Base Check Suite class.
     """
 
-    def __init__(self, _config):
+    def __init__(self, _config, _check_connections):
         """
         :param _config: The configuration.
+        :param _check_connections: Run connection checks.
         """
         self.params = {}
 

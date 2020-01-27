@@ -8,29 +8,35 @@ class ApiFetcher(object):
     """
     _instance = None
 
-    def __init__(self, _fqdn, _username, _password):
+    def __init__(self, _fqdn, _username, _password, _check_connection=True):
         """
         :param _fqdn: The FQDN of the cluster.
         :param _username: The username of the cluster.
         :param _password: The password of the cluster.
+        :param _check_connection: Run connection check, defaults to True.
         """
         self.fqdn = _fqdn
         self.username = _username
         self.password = _password
         self.cache = {}
-        self.check_connectivity()
+        if _check_connection:
+            self.check_connectivity()
         self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
 
     @classmethod
-    def instance(cls, _config):
+    def instance(cls, _config, _check_connection):
         """
         Get singleton instance.
 
         :param _config: A dict with configuration values.
+        :param _check_connection: Run connection check.
         :return: The ApiFetcher singleton.
         """
         if not cls._instance:
-            cls._instance = ApiFetcher(_config['api']['fqdn'], _config['api']['user'], _config['api']['pass'])
+            cls._instance = ApiFetcher(_config['api']['fqdn'],
+                                       _config['api']['user'],
+                                       _config['api']['pass'],
+                                       _check_connection)
         return cls._instance
 
     def check_connectivity(self):
