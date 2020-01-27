@@ -3,14 +3,42 @@ import sys
 from healthcheck.common_funcs import get_parameter_map_name
 
 
-black = lambda text: '\033[0;30m' + text + '\033[0m'
-red = lambda text: '\033[0;31m' + text + '\033[0m'
-green = lambda text: '\033[0;32m' + text + '\033[0m'
-yellow = lambda text: '\033[0;33m' + text + '\033[0m'
-blue = lambda text: '\033[0;34m' + text + '\033[0m'
-magenta = lambda text: '\033[0;35m' + text + '\033[0m'
-cyan = lambda text: '\033[0;36m' + text + '\033[0m'
-white = lambda text: '\033[0;37m' + text + '\033[0m'
+class Color(object):
+    """
+    Color class, uses ASSCII escape codes.
+    """
+
+    @staticmethod
+    def black(_text):
+        return '\033[0;30m' + _text + '\033[0m'
+
+    @staticmethod
+    def red(_text):
+        return '\033[0;31m' + _text + '\033[0m'
+
+    @staticmethod
+    def green(_text):
+        return '\033[0;32m' + _text + '\033[0m'
+
+    @staticmethod
+    def yellow(_text):
+        return '\033[0;33m' + _text + '\033[0m'
+
+    @staticmethod
+    def blue(_text):
+        return '\033[0;34m' + _text + '\033[0m'
+
+    @staticmethod
+    def magenta(_text):
+        return '\033[0;35m' + _text + '\033[0m'
+
+    @staticmethod
+    def cyan(_text):
+        return '\033[0;36m' + _text + '\033[0m'
+
+    @staticmethod
+    def white(_text):
+        return '\033[0;37m' + _text + '\033[0m'
 
 
 def render_result(_result, _func):
@@ -25,13 +53,13 @@ def render_result(_result, _func):
     if _result[0] == '':
         to_print = ['[ ]', doc, '[SKIPPED]']
     elif _result[0] is True:
-        to_print = [green('[+]'), doc, green('[SUCCEEDED]')]
+        to_print = [Color.green('[+]'), doc, Color.green('[SUCCEEDED]')]
     elif _result[0] is False:
-        to_print = [red('[-]'), doc,  red('[FAILED]')]
+        to_print = [Color.red('[-]'), doc,  Color.red('[FAILED]')]
     elif _result[0] is None:
-        to_print = [yellow('[~]'), doc, yellow('[NO RESULT]')]
+        to_print = [Color.yellow('[~]'), doc, Color.yellow('[NO RESULT]')]
     elif _result[0] is Exception:
-        to_print = [magenta('[*]'), doc, magenta('[ERROR]')]
+        to_print = [Color.magenta('[*]'), doc, Color.magenta('[ERROR]')]
     else:
         raise NotImplementedError()
 
@@ -47,10 +75,10 @@ def render_stats(_stats):
     :return:
     """
     print("total checks run: {}".format(sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
-    print(f'- {green("succeeded")}: {_stats.succeeded}')
-    print(f'- {yellow("no result")}: {_stats.no_result}')
-    print(f'- {red("failed")}: {_stats.failed}')
-    print(f'- {magenta("errors")}: {_stats.errors}')
+    print(f'- {Color.green("succeeded")}: {_stats.succeeded}')
+    print(f'- {Color.yellow("no result")}: {_stats.no_result}')
+    print(f'- {Color.red("failed")}: {_stats.failed}')
+    print(f'- {Color.magenta("errors")}: {_stats.errors}')
     print(f'- skipped: {_stats.skipped}')
 
 
@@ -62,12 +90,12 @@ def render_list(_list):
     :return:
     """
     for suite in _list:
-        print(f'{green("Suite")}: {suite.__doc__}')
+        print(f'{Color.green("Suite")}: {suite.__doc__}')
         if suite.params:
-            print('{}: {}'.format(red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
+            print('{}: {}'.format(Color.red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
-            print(f'{yellow("-")} {check_func.__doc__}')
+            print(f'{Color.yellow("-")} {check_func.__doc__}')
         print('')
 
 
@@ -88,7 +116,7 @@ def print_success(_msg):
     :param _msg: The success message.
     :return:
     """
-    print(green(_msg))
+    print(Color.green(_msg))
 
 
 def print_warning(_msg):
@@ -98,7 +126,7 @@ def print_warning(_msg):
     :param _msg: The warning message.
     :return:
     """
-    print(yellow(_msg), file=sys.stderr)
+    print(Color.yellow(_msg), file=sys.stderr)
 
 
 def print_error(_msg, _ex=None):
@@ -109,17 +137,16 @@ def print_error(_msg, _ex=None):
     :param _ex: An optional exception.
     :return:
     """
-    msg = [_msg]
+    parts = [_msg]
     if _ex:
-        msg.append(' ')
         if hasattr(_ex, 'reason'):
             if isinstance(_ex.reason, str):
-                msg.append(_ex.reason)
+                parts.append(_ex.reason)
             else:
-                msg.append(_ex.reason.strerror)
+                parts.append(_ex.reason.strerror)
         elif hasattr(_ex, 'strerror'):
-            msg.append(_ex.strerror)
+            parts.append(_ex.strerror)
         else:
-            msg.append(_ex.args[0])
+            parts.append(_ex.args[0])
 
-    print(red(''.join(msg)), file=sys.stderr)
+    print(Color.red(' '.join(parts)), file=sys.stderr)
