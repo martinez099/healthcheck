@@ -19,14 +19,6 @@ class NodeChecks(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.ssh = SshCommander.instance(_config)
 
-    def check_master_node(self, *_args, **_kwargs):
-        """get master node"""
-        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
-        found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
-        parts = re.split(r'\s+', found.group(1))
-
-        return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
-
     def check_os_version(self, *_args, **_kwargs):
         """get OS version of each node"""
         rsps = self.ssh.exec_on_all_hosts('cat /etc/os-release | grep PRETTY_NAME')
@@ -99,14 +91,6 @@ class NodeChecks(BaseCheckSuite):
         kwargs = {f'node:{self.api.get_uid(self.ssh.get_internal_addr(rsp.hostname))}': transparent_hugepage for
                   rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
         return result, kwargs
-
-    def check_rladmin_status(self, *_args, **_kwargs):
-        """check if `rladmin status` has errors"""
-        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
-                                    self.ssh.hostnames[0])
-        not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
-
-        return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check if `rlcheck` has errors"""

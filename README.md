@@ -21,9 +21,9 @@ Each check has a result which is indicated by:
 
 ### Check Suites
 Checks are grouped into check suites, there are 3 check suites available:
-- Cluster: Checks cluster sizing (via REST-API).
-- Nodes: Checks node configurations (mostly via SSH).
-- Databases: Checks sizing and configuration of databases (via REST-API).
+- Cluster: Checks cluster sizing and usage.
+- Nodes: Checks nodes configuration and usage.
+- Databases: Checks databases sizing, and configuration and usage.
   
 ### Parameter Maps
 Checks may or may not have parameter maps, i.e. JSON files with parameters.

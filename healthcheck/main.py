@@ -9,7 +9,8 @@ import os
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.stats_collector import StatsCollector
-from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_warning, print_msg
+from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_warning, print_msg, \
+    print_success
 from healthcheck.common_funcs import get_parameter_map_name
 
 
@@ -77,7 +78,11 @@ def load_parameter_map(_suite, _args):
     :param _args: The parsed arguments.
     :return: A list of tuples.
     """
-    if not _args.params or not _suite.params:
+    if not _args.params:
+        return None
+
+    if not _suite.params:
+        print_warning('- suite does not support parameters')
         return None
 
     if _args.params.endswith('.json'):
@@ -94,7 +99,7 @@ def load_parameter_map(_suite, _args):
         if _args.params and not params:
             print_error('could not find paramter map, available maps: {}'.format(
                 list(map(get_parameter_map_name, _suite.params.keys()))))
-            # exit(1)
+            exit(1)
 
         elif len(params) > 1:
             print_error('multiple parameter maps found, choose one: {}'.format(
@@ -149,11 +154,9 @@ def exec_check_suites(_suites, _args, _executor):
         print_msg(f'executing check suite: {suite.__doc__}')
         params = load_parameter_map(suite, _args)
         if params:
-            print_msg('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
+            print_success('- using paramter map: {}'.format(get_parameter_map_name(params[0][0])))
         elif suite.params:
-            print_warning('no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
-
-        #suite.run_connection_checks()
+            print_warning('- no parameter map given, options are: {}'.format(list(map(get_parameter_map_name, suite.params.keys()))))
 
         def collect(_future):
             result = _future.result()

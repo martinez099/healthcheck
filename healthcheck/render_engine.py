@@ -126,7 +126,7 @@ def print_warning(_msg):
     :param _msg: The warning message.
     :return:
     """
-    print(Color.yellow(_msg), file=sys.stderr)
+    print(Color.yellow(_msg))
 
 
 def print_error(_msg, _ex=None):
