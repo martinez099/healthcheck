@@ -7,7 +7,7 @@ class Color(object):
     """
     Color class.
 
-    Uses ASSCII escape codes to colorize terminal output.
+    Uses ASCII escape codes to colorize terminal output.
     """
 
     @staticmethod

@@ -22,7 +22,7 @@ class SshCommander(object):
         self.keyfile = _keyfile
         self.locks = {}
         self.cache = {}
-        self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+        self.addrs = {}
         self.connected = False
 
     @classmethod
@@ -61,7 +61,20 @@ class SshCommander(object):
         :param _hostname: The hostname of the node.
         :return: The internal address.
         """
-        return self.addrs[_hostname]
+        addrs = self.get_addrs()
+
+        return addrs[_hostname]
+
+    def get_addrs(self):
+        """
+        Get internal addresses of each node.
+
+        :return: The internal addresses.
+        """
+        if not self.addrs:
+            self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+
+        return self.addrs
 
     def exec_on_host(self, _cmd, _hostname):
         """

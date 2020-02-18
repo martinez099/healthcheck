@@ -18,7 +18,7 @@ class ApiFetcher(object):
         self.username = _username
         self.password = _password
         self.cache = {}
-        self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
+        self.uids = {}
         self.connected = False
 
     @classmethod
@@ -51,20 +51,15 @@ class ApiFetcher(object):
 
     def get_uid(self, _internal_addr):
         """
-        Get UID of node,
+        Get UID of node.
 
         :param _internal_addr: The internal address of the the node.
         :return: The UID of the node.
         """
+        if not self.uids:
+            self.uids = {node['addr']: node['uid'] for node in self.get('nodes')}
+
         return self.uids[_internal_addr]
-
-    def get_uids(self):
-        """
-        Get UIDs of all nodes.
-
-        :return: A dict mapping internal address -> UID.
-        """
-        return self.uids
 
     def get(self, _topic):
         """

@@ -134,7 +134,7 @@ class NodeChecks(BaseCheckSuite):
         """get network link speed between nodes"""
         cmd_hostnames = []
         for source in self.ssh.hostnames:
-            for hostname, address in self.ssh.addrs.items():
+            for hostname, address in self.ssh.get_addrs().items():
                 if source == hostname:
                     continue
                 cmd_hostnames.append((f'ping -c 4 {address}', source))
@@ -167,7 +167,7 @@ class NodeChecks(BaseCheckSuite):
 
         for port in ports:
             for source in self.ssh.hostnames:
-                for external, internal in self.ssh.addrs.items():
+                for external, internal in self.ssh.get_addrs().items():
                     if source == external:
                         continue
                     cmd_hostnames.append((cmd.format(internal, port), source))
