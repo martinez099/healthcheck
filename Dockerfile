@@ -2,13 +2,12 @@ FROM python:3
 
 RUN mkdir -p /app
 
-RUN git clone https://github.com/Redislabs-Solution-Architects/healthcheck.git /app/healthcheck
+COPY healthcheck /app/healthcheck
+COPY hc /app/hc
 
-WORKDIR /app/healthcheck
+# modify content or change name of the configuration file
+COPY config.ini /app/config.ini
 
-RUN chmod u+x hc
+WORKDIR /app
 
-# replace config.ini with your own configuration
-COPY config.ini my_config.ini
-
-CMD [ "./hc", "-cfg", "my_config.ini" ]
+ENTRYPOINT [ "./hc" ]

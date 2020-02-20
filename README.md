@@ -56,3 +56,7 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - To run a single check, execute `./hc -c <CHECK>`, e.g.
   - execute `./hc -c link` to get the network link between the nodes.
 - For a quick help, execute `./hc -h`.
+
+## Run with Docker
+- Build Docker image and give it a name, e.g. `docker build . --tag hc:latest`
+- Run Docker image and with optional arguments, e.g. `docker run hc -s nodes`
