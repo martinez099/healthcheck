@@ -1,5 +1,3 @@
-import sys
-
 from healthcheck.common_funcs import get_parameter_map_name
 
 
@@ -144,4 +142,4 @@ def print_error(_msg, _ex=None):
         else:
             parts.append(_ex.args[0])
 
-    print(Color.red(' '.join(parts)), file=sys.stderr)
+    print(Color.red(' '.join(parts)))
