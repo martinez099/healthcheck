@@ -43,7 +43,12 @@ class ClusterChecks(BaseCheckSuite):
     def check_license_shards_limit(self, *_args, **_kwargs):
         """check shards limit in license"""
         number_of_shards = self.api.get_number_of_values('shards')
-        shards_limit = int(self.api.get('license')['shards_limit'])
+        _license = self.api.get('license')
+        if 'shards_limit' in _license:
+            shards_limit = int(_license['shards_limit'])
+        else:
+            match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
+            shards_limit = int(match.group(1))
 
         result = shards_limit >= number_of_shards
         kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards}
