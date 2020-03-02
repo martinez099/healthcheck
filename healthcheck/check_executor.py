@@ -25,13 +25,13 @@ class CheckExecutor(object):
         :param _kwargs: A dict of keyword arguments, optional.
         :param _done_cb: A callback executed when the execution is done, optional.
         """
-        def wrapper(_check, _args, _kwargs):
+        def error_handler(_check, _args, _kwargs):
             try:
                 return _check(*_args, **_kwargs)
             except Exception as e:
                 return Exception, {e.__class__.__name__: str(e)}
 
-        future = self.executor.submit(functools.partial(wrapper, _func), _args, _kwargs)
+        future = self.executor.submit(functools.partial(error_handler, _func), _args, _kwargs)
         future.func = _func
         future.args = _args
         future.kwargs = _kwargs
