@@ -47,7 +47,7 @@ class SshCommander(object):
             print_msg('checking SSH connection ...')
             for hostname in self.hostnames:
                 try:
-                    self.exec_on_host('sudo -v', hostname)
+                    self.exec_on_host('sudo pwd', hostname)
                     print_success(f'- successfully connected to {hostname}')
                     self.connected = True
                 except Exception as e:
