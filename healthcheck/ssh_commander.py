@@ -72,7 +72,7 @@ class SshCommander(object):
         :return: The internal addresses.
         """
         if not self.addrs:
-            self.addrs = {future.hostname: future.result() for future in self.exec_on_all_hosts('hostname -I')}
+            self.addrs = {future.hostname: future.result().split()[0] for future in self.exec_on_all_hosts('hostname -i')}
 
         return self.addrs
 
