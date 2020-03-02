@@ -1,4 +1,7 @@
 class StatsCollector(object):
+    """
+    Statistics Collector class.
+    """
 
     def __init__(self):
         self.succeeded = 0
@@ -8,6 +11,11 @@ class StatsCollector(object):
         self.skipped = 0
 
     def collect(self, _result):
+        """
+        Collect statistic for a result.
+
+        :param _result: The result of a check.
+        """
         if _result[0] == '':
             self.skipped += 1
         elif _result[0] is True:
