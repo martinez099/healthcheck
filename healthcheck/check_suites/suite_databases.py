@@ -3,7 +3,7 @@ import math
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
-from healthcheck.common_funcs import GB, to_gb, to_kops
+from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
 class DatabaseChecks(BaseCheckSuite):
@@ -67,7 +67,24 @@ class DatabaseChecks(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
-    def check_bdbs(self, *_args, **_kwargs):
+    def check_endpoints(self, *_args, **_kwargs):
+        """check database endpoints"""
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+
+        for bdb in bdbs:
+            endpoints = bdb['endpoints']
+            if len(endpoints) > 1:
+                endpoint = list(filter(lambda x: x['addr_type'] == 'external', endpoints))[0]
+            else:
+                endpoint = endpoints[0]
+
+            result = redis_ping(endpoint['addr'][0], endpoint['port'])
+            kwargs[endpoint['dns_name']] = result
+
+        return all(kwargs.values()), kwargs
+
+    def check_configs(self, *_args, **_kwargs):
         """check database configuration"""
         bdbs = self.api.get('bdbs')
         results = []

@@ -1,11 +1,11 @@
 import base64
 import json
-import math
 import logging
+import socket
 import ssl
 
-from urllib import request
 from subprocess import Popen, PIPE
+from urllib import request
 
 SSL_CONTEXT = ssl.create_default_context()
 SSL_CONTEXT.check_hostname = False
@@ -107,3 +107,40 @@ def get_parameter_map_name(_path):
     """
     fname = _path.split('/')[-1:]
     return fname[0].split('.')[0]
+
+
+def redis_ping(host, port, auth=None):
+    """
+    Send a database PING.
+
+    :param host: Database host.
+    :param port: Database port.
+    :param auth: Optional database password.
+    :return: True on success, False otherwise.
+    """
+    conn = None
+    try:
+        conn = socket.create_connection((host, port))
+        if auth:
+            sent = conn.send(b'AUTH ' + auth.encode() + b'\r\n')
+            if not sent:
+                raise Exception('could not sent AUTH to Redis server')
+
+            recv = conn.recv(3)
+            if not recv == b'+OK':
+                raise Exception('invalid AUTH value sent to Redis server')
+
+        sent = conn.send(b'PING\r\n')
+        if not sent:
+            raise Exception('could not send PING message to Redis server')
+
+        recv = conn.recv(5)
+
+        return recv == b'+PONG'
+
+    except Exception as e:
+        return str(e)
+
+    finally:
+        if conn:
+            conn.close()
