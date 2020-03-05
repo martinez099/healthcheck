@@ -4,7 +4,7 @@ import logging
 import socket
 import ssl
 
-from subprocess import Popen, PIPE
+from subprocess import run
 from urllib import request
 
 SSL_CONTEXT = ssl.create_default_context()
@@ -54,23 +54,19 @@ def to_ms(_value):
     return '{:.3f}'.format(_value)
 
 
-def exec_cmd(_args):
+def exec_cmd(_args, _shell=True):
     """
     Execute a command in a subprocess.
 
     :param _args: The command string.
+    :param _shell: If a shell is used.
     :return: The response.
     :raise Exception: If an error occurred.
     """
     logging.debug('executing comand {}'.format(_args))
-    proc = Popen(_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
-    proc.wait()
-    if proc.returncode == 0:
-        rsp = proc.stdout.read().decode('utf-8')
-        return rsp.strip()
-    else:
-        rsp = proc.stderr.read().decode('utf-8')
-        raise Exception(f"error during subprocess execution of '{_args}' with return code '{proc.returncode}': {rsp.strip()}")
+    completed_process = run(_args, shell=_shell, check=True, capture_output=True, encoding='utf-8')
+
+    return completed_process.stdout.strip()
 
 
 def http_get(_url, _user, _pass):
