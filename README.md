@@ -31,7 +31,7 @@ Checks are grouped into check suites, there are 3 check suites available:
 ### Parameter Maps
 Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - There are parameter maps given, but you can provide your own.
-- To provide your own parameters, clone or edit a paramter map in `healthcheck/parameter_maps/*/`.
+- To provide your own parameters, clone or edit a paramter map in `parameter_maps/*/`.
 - Alternatively you can pass the full filename (i.e. with `.json` at the end) and it will look it up in the current directory.
 
 ## Prerequisites

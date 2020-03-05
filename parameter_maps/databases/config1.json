@@ -5,10 +5,10 @@
         "replica_sync": "disabled",
         "shards_placement": "dense",
         "proxy_policy": "single",
-        "replication": false,
+        "replication": true,
         "oss_cluster": false
     },
     "db1": {
-        "data_persistence": "enabled"
+        "data_persistence": "disabled"
     }
 }
