@@ -1,5 +1,5 @@
 from healthcheck.common_funcs import http_get
-from healthcheck.render_engine import print_msg, print_success, print_error
+from healthcheck.printer_funcs import print_msg, print_success, print_error
 
 
 class ApiFetcher(object):

@@ -2,7 +2,7 @@ from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from healthcheck.common_funcs import exec_cmd
-from healthcheck.render_engine import print_msg, print_success, print_error
+from healthcheck.printer_funcs import print_msg, print_success, print_error
 
 
 class SshCommander(object):

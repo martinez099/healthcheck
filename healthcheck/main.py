@@ -8,10 +8,10 @@ import os
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
-from healthcheck.stats_collector import StatsCollector
-from healthcheck.render_engine import render_result, render_stats, render_list, print_error, print_warning, print_msg, \
-    print_success
 from healthcheck.common_funcs import get_parameter_map_name
+from healthcheck.printer_funcs import print_list, print_error, print_warning, print_msg, print_success
+from healthcheck.result_renderer.console_renderer import ConsoleRenderer
+from healthcheck.stats_collector import StatsCollector
 
 
 def parse_args():
@@ -173,7 +173,7 @@ def exec_check_suites(_suites, _args, _executor):
         _executor.wait()
         print('')
 
-    render_stats(stats_collector)
+    ConsoleRenderer.render_stats(stats_collector)
 
 
 def main():
@@ -192,7 +192,7 @@ def main():
 
     # list suites
     if args.list:
-        render_list(suites)
+        print_list(suites)
         return
 
     # render result
@@ -200,7 +200,7 @@ def main():
         if type(_result) == list:
             return [render(r, _func, _args, _kwargs) for r in _result]
         else:
-            return render_result(_result, _func)
+            return ConsoleRenderer.render_result(_result, _func)
 
     # execute checks
     executor = CheckExecutor(render)
