@@ -35,7 +35,7 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - Alternatively you can pass the full filename (i.e. with `.json` at the end) and it will look it up in the current directory.
 
 ## Prerequisites
-- Python 3, no dependencies are required.
+- Python v3.7, no dependencies are required.
 
 ## Setup
 - Fill in the `config.ini` file with the following configuration data:
