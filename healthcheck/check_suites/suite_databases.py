@@ -194,4 +194,3 @@ class DatabaseChecks(BaseCheckSuite):
 
         return [(not results[bdb['name']], kwargs[bdb['name']], f"check memory usage for '{bdb['name']}' (min/avg/max/dev)")
                 for bdb in bdbs]
-

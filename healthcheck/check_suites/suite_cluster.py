@@ -5,7 +5,7 @@ import re
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 from healthcheck.common_funcs import GB, to_gb, to_kops
-from healthcheck.ssh_commander import SshCommander
+from healthcheck.remote_executors.remote_executor import RemoteExecutor
 
 
 class ClusterChecks(BaseCheckSuite):
@@ -17,24 +17,24 @@ class ClusterChecks(BaseCheckSuite):
         """
         super().__init__(_config)
         self.api = ApiFetcher.instance(_config)
-        self.ssh = SshCommander.instance(_config)
+        self.rex = RemoteExecutor.instance(_config)
         self.params = load_params('cluster')
 
     def run_connection_checks(self):
         self.api.check_connection()
-        self.ssh.check_connection()
+        self.rex.check_connection()
 
     def check_rladmin_status(self, *_args, **_kwargs):
         """check if `rladmin status` has errors"""
-        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
-                                    self.ssh.hostnames[0])
+        rsp = self.rex.exec_on_one('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
+                                   self.rex.get_targets()[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
-        rsp = self.ssh.exec_on_host('sudo /opt/redislabs/bin/rladmin status', self.ssh.hostnames[0])
+        rsp = self.rex.exec_on_one('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
         found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
         parts = re.split(r'\s+', found.group(1))
 

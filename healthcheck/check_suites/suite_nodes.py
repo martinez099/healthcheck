@@ -5,7 +5,7 @@ import re
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import to_gb, to_percent, to_ms
-from healthcheck.ssh_commander import SshCommander
+from healthcheck.remote_executors.remote_executor import RemoteExecutor
 
 
 class NodeChecks(BaseCheckSuite):
@@ -17,19 +17,19 @@ class NodeChecks(BaseCheckSuite):
         """
         super().__init__(_config)
         self.api = ApiFetcher.instance(_config)
-        self.ssh = SshCommander.instance(_config)
+        self.rex = RemoteExecutor.instance(_config)
 
     def run_connection_checks(self):
         self.api.check_connection()
-        self.ssh.check_connection()
+        self.rex.check_connection()
 
     def check_os_version(self, *_args, **_kwargs):
         """get OS version of each node"""
-        rsps = self.ssh.exec_on_all_hosts('cat /etc/os-release | grep PRETTY_NAME')
+        rsps = self.rex.exec_on_all('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': os_version for rsp, os_version
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version
                   in zip(rsps, os_versions)}
         return None, kwargs
 
@@ -43,105 +43,105 @@ class NodeChecks(BaseCheckSuite):
 
     def check_log_file_path(self, *_args, **_kwargs):
         """check if log file path is not on root filesystem"""
-        rsps = self.ssh.exec_on_all_hosts('sudo df -h /var/opt/redislabs/log')
+        rsps = self.rex.exec_on_all('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': log_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': log_file_path for
                   rsp, log_file_path in zip(rsps, log_file_paths)}
         return result, kwargs
 
     def check_ephemeral_storage_path(self, *_args, **_kwargs):
         """check if ephemeral storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
-        rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
+        rsps = self.rex.exec_on_all(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': tmp_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
     def check_persistent_storage_path(self, *_args, **_kwargs):
         """check if persistent storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
-        rsps = self.ssh.exec_on_all_hosts(f'sudo df -h {storage_paths[0]}')
+        rsps = self.rex.exec_on_all(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': tmp_file_path for
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
         return result, kwargs
 
     def check_swappiness(self, *_args, **_kwargs):
         """check if swappiness is disabled on each node"""
-        rsps = self.ssh.exec_on_all_hosts('grep swap /etc/sysctl.conf || echo inactive')
+        rsps = self.rex.exec_on_all('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': swappiness for rsp, swappiness
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
                   in zip(rsps, swappinesses)}
         return result, kwargs
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
         """check if THP is disabled on each node"""
-        rsps = self.ssh.exec_on_all_hosts('cat /sys/kernel/mm/transparent_hugepage/enabled')
+        rsps = self.rex.exec_on_all('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
-        kwargs = {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': transparent_hugepage for
+        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
                   rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
         return result, kwargs
 
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check if `rlcheck` has errors"""
-        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/rlcheck')
-        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.hostname) for rsp in rsps]
+        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/rlcheck')
+        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
-        return not errors, {f'node:{self.api.get_uid(self.ssh.get_addr(f[1]))}': len(f[0]) for f in failed}
+        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
         """check if `cnm_ctl status` has errors"""
-        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/cnm_ctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.hostname) for rsp in rsps]
+        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/cnm_ctl status')
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return sum_not_running == 0, {f'node:{self.api.get_uid(self.ssh.get_addr(n_r[1]))}': len(n_r[0]) for
+        return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
         """check if `supervisorctl status` has errors"""
-        rsps = self.ssh.exec_on_all_hosts('sudo /opt/redislabs/bin/supervisorctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.hostname) for rsp in rsps]
+        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/supervisorctl status')
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
         return sum_not_running == 1 * len(rsps), {
-            f'node:{self.api.get_uid(self.ssh.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
+            f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
         """check if `cat install.log` has errors"""
-        rsps = self.ssh.exec_on_all_hosts('grep error /var/opt/redislabs/log/install.log || echo ""')
+        rsps = self.rex.exec_on_all('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
-        return not errors, {f'node:{self.api.get_uid(self.ssh.get_addr(rsp.hostname))}': len(rsp.result()) for
+        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
     def check_network_link(self, *_args, **_kwargs):
         """get network link speed between nodes"""
-        cmd_hostnames = []
-        for source in self.ssh.hostnames:
-            for hostname, address in self.ssh.get_addrs().items():
-                if source == hostname:
+        cmd_targets = []
+        for source in self.rex.get_targets():
+            for target, address in self.rex.get_addrs().items():
+                if source == target:
                     continue
-                cmd_hostnames.append((f'ping -c 4 {address}', source))
+                cmd_targets.append((f'ping -c 4 {address}', source))
 
         # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
-        futures = self.ssh.exec_on_hosts(cmd_hostnames)
+        futures = self.rex.exec_on_all(cmd_targets)
         key = 'rtt min/avg/max/mdev'
         for future in futures:
             lines = future.result().split('\n')
@@ -160,24 +160,24 @@ class NodeChecks(BaseCheckSuite):
 
     def check_open_ports(self, *_args, **_kwargs):
         """check open TCP ports of each node"""
-        cmd_hostnames = []
+        cmd_targets = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
         cmd = \
 '''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
 
         for port in ports:
-            for source in self.ssh.hostnames:
-                for external, internal in self.ssh.get_addrs().items():
+            for source in self.rex.get_targets():
+                for external, internal in self.rex.get_addrs().items():
                     if source == external:
                         continue
-                    cmd_hostnames.append((cmd.format(internal, port), source))
+                    cmd_targets.append((cmd.format(internal, port), source))
 
         kwargs = {}
-        futures = self.ssh.exec_on_hosts(cmd_hostnames)
+        futures = self.rex.exec_on_all(cmd_targets)
         for future in futures:
             failed = future.result()
             if failed:
-                node_name = f'node:{self.api.get_uid(self.ssh.get_addr(future.hostname))}'
+                node_name = f'node:{self.api.get_uid(self.rex.get_addr(future.target))}'
                 if node_name not in kwargs:
                     kwargs[node_name] = []
                 kwargs[node_name].append(failed)
@@ -191,8 +191,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
+        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                     self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
@@ -234,8 +234,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
+        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                     self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
@@ -278,8 +278,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
+        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                     self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
@@ -326,8 +326,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.ssh.exec_on_host(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                      self.ssh.hostnames[0]) for node in nodes]
+        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                     self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))

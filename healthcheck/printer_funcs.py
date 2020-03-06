@@ -100,6 +100,8 @@ def print_error(_msg, _ex=None):
                 parts.append(_ex.reason.strerror)
         elif hasattr(_ex, 'strerror'):
             parts.append(_ex.strerror)
+        elif hasattr(_ex, 'stderr'):
+            parts.append(_ex.stderr)
         else:
             parts.append(_ex.args[0])
 
