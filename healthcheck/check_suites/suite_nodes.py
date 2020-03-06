@@ -25,7 +25,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_os_version(self, *_args, **_kwargs):
         """get OS version of each node"""
-        rsps = self.rex.exec_on_all('cat /etc/os-release | grep PRETTY_NAME')
+        rsps = self.rex.exec_broad('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
@@ -43,7 +43,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_log_file_path(self, *_args, **_kwargs):
         """check if log file path is not on root filesystem"""
-        rsps = self.rex.exec_on_all('sudo df -h /var/opt/redislabs/log')
+        rsps = self.rex.exec_broad('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
 
@@ -55,7 +55,7 @@ class NodeChecks(BaseCheckSuite):
     def check_ephemeral_storage_path(self, *_args, **_kwargs):
         """check if ephemeral storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
-        rsps = self.rex.exec_on_all(f'sudo df -h {storage_paths[0]}')
+        rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         file_paths = [match.group(1) for match in matches]
 
@@ -67,7 +67,7 @@ class NodeChecks(BaseCheckSuite):
     def check_persistent_storage_path(self, *_args, **_kwargs):
         """check if persistent storage path is not on root filesystem"""
         storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
-        rsps = self.rex.exec_on_all(f'sudo df -h {storage_paths[0]}')
+        rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         file_paths = [match.group(1) for match in matches]
 
@@ -78,7 +78,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_swappiness(self, *_args, **_kwargs):
         """check if swappiness is disabled on each node"""
-        rsps = self.rex.exec_on_all('grep swap /etc/sysctl.conf || echo inactive')
+        rsps = self.rex.exec_broad('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
@@ -88,7 +88,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_transparent_hugepages(self, *_args, **_kwargs):
         """check if THP is disabled on each node"""
-        rsps = self.rex.exec_on_all('cat /sys/kernel/mm/transparent_hugepage/enabled')
+        rsps = self.rex.exec_broad('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
@@ -98,7 +98,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_rlcheck_result(self, *_args, **_kwargs):
         """check if `rlcheck` has errors"""
-        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/rlcheck')
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
@@ -106,7 +106,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_cnm_ctl_status(self, *_args, **_kwargs):
         """check if `cnm_ctl status` has errors"""
-        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/cnm_ctl status')
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
@@ -115,7 +115,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_supervisorctl_status(self, *_args, **_kwargs):
         """check if `supervisorctl status` has errors"""
-        rsps = self.rex.exec_on_all('sudo /opt/redislabs/bin/supervisorctl status')
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
@@ -124,7 +124,7 @@ class NodeChecks(BaseCheckSuite):
 
     def check_errors_in_install_log(self, *_args, **_kwargs):
         """check if `cat install.log` has errors"""
-        rsps = self.rex.exec_on_all('grep error /var/opt/redislabs/log/install.log || echo ""')
+        rsps = self.rex.exec_broad('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
@@ -141,7 +141,7 @@ class NodeChecks(BaseCheckSuite):
 
         # calculate averages
         _min, avg, _max, mdev = .0, .0, .0, .0
-        futures = self.rex.exec_on_all(cmd_targets)
+        futures = self.rex.exec_multi(cmd_targets)
         key = 'rtt min/avg/max/mdev'
         for future in futures:
             lines = future.result().split('\n')
@@ -173,7 +173,7 @@ class NodeChecks(BaseCheckSuite):
                     cmd_targets.append((cmd.format(internal, port), source))
 
         kwargs = {}
-        futures = self.rex.exec_on_all(cmd_targets)
+        futures = self.rex.exec_multi(cmd_targets)
         for future in futures:
             failed = future.result()
             if failed:
@@ -191,8 +191,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                     self.rex.get_targets()[0]) for node in nodes]
+        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
@@ -234,8 +234,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                     self.rex.get_targets()[0]) for node in nodes]
+        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
@@ -278,8 +278,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                     self.rex.get_targets()[0]) for node in nodes]
+        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
@@ -326,8 +326,8 @@ class NodeChecks(BaseCheckSuite):
 
         # get quorum-only node
         nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_on_one(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                     self.rex.get_targets()[0]) for node in nodes]
+        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex.get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))

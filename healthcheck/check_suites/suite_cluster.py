@@ -26,15 +26,15 @@ class ClusterChecks(BaseCheckSuite):
 
     def check_rladmin_status(self, *_args, **_kwargs):
         """check if `rladmin status` has errors"""
-        rsp = self.rex.exec_on_one('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
-                                   self.rex.get_targets()[0])
+        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
+                                self.rex.get_targets()[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_master_node(self, *_args, **_kwargs):
         """get master node"""
-        rsp = self.rex.exec_on_one('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
+        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
         found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
         parts = re.split(r'\s+', found.group(1))
 
