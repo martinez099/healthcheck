@@ -82,7 +82,7 @@ class DatabaseChecks(BaseCheckSuite):
             result = redis_ping(endpoint['addr'][0], endpoint['port'])
             kwargs[endpoint['dns_name']] = result
 
-        return all(kwargs.values()), kwargs
+        return all(v is True for v in kwargs.values()), kwargs
 
     def check_configs(self, *_args, **_kwargs):
         """check database configuration"""

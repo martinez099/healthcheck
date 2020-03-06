@@ -107,12 +107,12 @@ def get_parameter_map_name(_path):
 
 def redis_ping(host, port, auth=None):
     """
-    Send a database PING.
+    PING a Redis database.
 
-    :param host: Database host.
-    :param port: Database port.
-    :param auth: Optional database password.
-    :return: True on success, False otherwise.
+    :param host: A Redis database host.
+    :param port: A Redis database port.
+    :param auth: An optional Redis database password.
+    :return: True on success, False otherwise, error message on error.
     """
     conn = None
     try:
@@ -120,7 +120,7 @@ def redis_ping(host, port, auth=None):
         if auth:
             sent = conn.send(b'AUTH ' + auth.encode() + b'\r\n')
             if not sent:
-                raise Exception('could not sent AUTH to Redis server')
+                raise Exception('could not send AUTH to Redis server')
 
             recv = conn.recv(3)
             if not recv == b'+OK':
@@ -130,9 +130,7 @@ def redis_ping(host, port, auth=None):
         if not sent:
             raise Exception('could not send PING message to Redis server')
 
-        recv = conn.recv(5)
-
-        return recv == b'+PONG'
+        return conn.recv(5) == b'+PONG'
 
     except Exception as e:
         return str(e)
