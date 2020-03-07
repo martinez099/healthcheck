@@ -39,24 +39,25 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 
 ## Setup
 - Fill in the `config.ini` file with the following configuration data:
-  - SSH access to all nodes of the Redis Enterprise cluster.
   - HTTP access to the REST-API of a Redis Enterprise cluster.
-- Alternatively you can pass a different configuration filename with `-cfg <CONFIG>`.
+  - SSH access to all nodes of the Redis Enterprise cluster.
+  - Alternatively to SSH, Docker container names/IDs can be specified.
+- Alternatively to `config.ini` you can pass a different configuration filename with `-cfg <CONFIG>`.
 - Don't forget to make `hc` executable, e.g. `chmod u+x hc`.
 
 ## Run
-- To run all check suites but skipping checks with parameters, execute `./hc`
-- To see all available check suites and their associated checks, execute `./hc -l`.
+- To run all check suites, execute `./hc`.
+- To see all list of all checks, execute `./hc -l`.
 - To run one check suite, execute `./hc -s <SUITE>`, e.g.
   - execute `./hc -s node` for node checks.
 - If a suite requires a parameter map, execute `./hc -s <SUITE> -p <PARAMS>`, e.g.
   - execute `./hc -s cluster -p reco` for cluster checks with `recommended` HW requriments.
-  - execute `./hc -s database -p 1` for database checks with parameter map `config1`.
+  - execute `./hc -s database -p config1` for database checks with parameter map `config1`.
   - execute `./hc -s database -p my_config.json` for database checks with parameters given in `my_config.json` from the current directory.
 - To run a single check, execute `./hc -c <CHECK>`, e.g.
-  - execute `./hc -c link` to get the network link between the nodes.
+  - execute `./hc -c "network link"` to get the network link speed between all nodes.
 - For a quick help, execute `./hc -h`.
 
 ## Run with Docker
-- Build Docker image and give it a name, e.g. `docker build . --tag hc:latest`
-- Run Docker image with optional arguments, e.g. `docker run hc -s nodes`
+- Build Docker image and give it a name, e.g. `docker build . --tag hc:latest`.
+- Run Docker image with optional arguments, e.g. `docker run hc -s nodes`.
