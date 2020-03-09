@@ -10,7 +10,6 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.common_funcs import get_parameter_map_name
 from healthcheck.printer_funcs import print_list, print_error, print_warning, print_msg, print_success
-from healthcheck.result_renderers.console_renderer import render_result, render_stats
 from healthcheck.stats_collector import StatsCollector
 
 
@@ -45,7 +44,22 @@ def parse_config(_args):
     config = configparser.ConfigParser()
     with open(_args.config, 'r') as configfile:
         config.read_file(configfile)
+
     return config
+
+
+def import_renderer(config):
+    """
+    Load configured renderer module, falls back to 'basic'.
+
+    :param config: A parsed configuration file.
+    """
+    if 'renderer' in config and 'module' in config['renderer']:
+        renderer = config['renderer']['module']
+    else:
+        renderer = 'basic'
+
+    return importlib.import_module('healthcheck.result_renderers.{}_renderer'.format(renderer))
 
 
 def load_check_suites(_args, _config, _check_connection=True):
@@ -67,6 +81,7 @@ def load_check_suites(_args, _config, _check_connection=True):
                 if type(suite) == type.__class__ and issubclass(suite, BaseCheckSuite):
                     if not _args.suite or _args.suite and _args.suite.lower() in suite.__doc__.lower():
                         suites.append(suite(_config))
+
     return suites
 
 
@@ -147,6 +162,7 @@ def exec_check_suites(_suites, _args, _executor):
     :param _suites: The loaded check suites.
     :param _args: The parsed arguments.
     :param _executor: The check executor.
+    :return: Collected statistics.
     """
     if not _suites:
         print_error('could not find check suite, examine argument of --suite')
@@ -173,7 +189,7 @@ def exec_check_suites(_suites, _args, _executor):
         _executor.wait()
         print('')
 
-    render_stats(stats_collector)
+    return stats_collector
 
 
 def main():
@@ -186,6 +202,9 @@ def main():
 
     # parse configuration file
     config = parse_config(args)
+
+    # load configured renderer
+    renderer = import_renderer(config)
 
     # load suites
     suites = load_check_suites(args, config)
@@ -200,14 +219,15 @@ def main():
         if type(_result) == list:
             return [render(r, _func, _args, _kwargs) for r in _result]
         else:
-            return render_result(_result, _func)
+            return renderer.render_result(_result, _func)
 
     # execute checks
     executor = CheckExecutor(render)
     if args.check:
         exec_single_checks(suites, args, executor)
     else:
-        exec_check_suites(suites, args, executor)
+        stats = exec_check_suites(suites, args, executor)
+        renderer.render_stats(stats)
 
     # shutdown
     executor.shutdown()
