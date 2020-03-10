@@ -39,10 +39,16 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 
 ## Setup
 - Fill in the `config.ini` file with the following configuration data:
-  - Under a section call `http`, HTTP access to the REST-API of a Redis Enterprise cluster.
-  - Under a scetion calls `ssh`, SSH access to all nodes of the Redis Enterprise cluster.
-  - Alternatively to SSH, under a section called `docker` container names/IDs can be specified.
-  - Under a section called `renderer`, a renderer module name can be specified. Options are: `basic` and `json`.
+  - Under a section call `http`, HTTP access to the REST-API of a Redis Enterprise cluster:
+    - FQDN of the cluster
+    - Username of the cluster
+    - Password of the cluster
+  - Under a scetion calls `ssh`, SSH access to all nodes of the Redis Enterprise cluster:
+    - SSH username
+    - CSV list of hostnames
+    - Path to SSH private key file
+  - Alternatively to SSH, under a section called `docker`, Docker container names/IDs can be specified.
+  - Under a section called `renderer`, a renderer module name can be specified. Options are: `basic`, `json` and `syslog`.
 - Alternatively to `config.ini` you can pass a different configuration filename with `-cfg <CONFIG>`.
 - Don't forget to make `hc` executable, e.g. `chmod u+x hc`.
 
