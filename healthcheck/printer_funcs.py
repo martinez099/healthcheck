@@ -1,3 +1,5 @@
+import sys
+
 from healthcheck.common_funcs import get_parameter_map_name
 
 
@@ -63,7 +65,7 @@ def print_msg(_msg):
 
     :param _msg: The neutral message.
     """
-    print(_msg)
+    print(Color.white(_msg), file=sys.stderr)
 
 
 def print_success(_msg):
@@ -72,7 +74,7 @@ def print_success(_msg):
 
     :param _msg: The success message.
     """
-    print(Color.green(_msg))
+    print(Color.green(_msg), file=sys.stderr)
 
 
 def print_warning(_msg):
@@ -81,7 +83,7 @@ def print_warning(_msg):
 
     :param _msg: The warning message.
     """
-    print(Color.yellow(_msg))
+    print(Color.yellow(_msg), file=sys.stderr)
 
 
 def print_error(_msg, _ex=None):
@@ -105,4 +107,4 @@ def print_error(_msg, _ex=None):
         else:
             parts.append(_ex.args[0])
 
-    print(Color.red(' '.join(parts)))
+    print(Color.red(' '.join(parts)), file=sys.stderr)

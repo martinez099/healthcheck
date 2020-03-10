@@ -187,7 +187,7 @@ def exec_check_suites(_suites, _args, _executor):
         _executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
 
         _executor.wait()
-        print('')
+        print_msg('')
 
     return stats_collector
 
