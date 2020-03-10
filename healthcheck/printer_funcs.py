@@ -65,7 +65,7 @@ def print_msg(_msg):
 
     :param _msg: The neutral message.
     """
-    print(Color.white(_msg), file=sys.stderr)
+    print(Color.white(_msg), file=sys.stderr, flush=True)
 
 
 def print_success(_msg):
@@ -74,7 +74,7 @@ def print_success(_msg):
 
     :param _msg: The success message.
     """
-    print(Color.green(_msg), file=sys.stderr)
+    print(Color.green(_msg), file=sys.stderr, flush=True)
 
 
 def print_warning(_msg):
@@ -83,7 +83,7 @@ def print_warning(_msg):
 
     :param _msg: The warning message.
     """
-    print(Color.yellow(_msg), file=sys.stderr)
+    print(Color.yellow(_msg), file=sys.stderr, flush=True)
 
 
 def print_error(_msg, _ex=None):
@@ -107,4 +107,4 @@ def print_error(_msg, _ex=None):
         else:
             parts.append(_ex.args[0])
 
-    print(Color.red(' '.join(parts)), file=sys.stderr)
+    print(Color.red(' '.join(parts)), file=sys.stderr, flush=True)
