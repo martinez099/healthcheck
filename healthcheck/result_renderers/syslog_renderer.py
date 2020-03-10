@@ -3,9 +3,24 @@ import os
 import socket
 
 
+def render_sd(_name, _kwargs):
+    """
+    Render a structered data element, details see https://tools.ietf.org/html/rfc5424.
+
+    :param _name: A name for the SD element.
+    :param _kwargs: KW args for the SD element.
+    :return:
+    """
+    parts = [_name]
+    for k, v in _kwargs.items():
+        parts.append(f'{k}="{v}"')
+
+    return '[' + ' '.join(parts) + ']'
+
+
 def render_result(_result, _func):
     """
-    Render result.
+    Render result, tries to comply with https://tools.ietf.org/html/rfc5424.
 
     :param _result: The result.
     :param _func: The check function executed.
@@ -17,7 +32,7 @@ def render_result(_result, _func):
     app = 'healthcheck'
     proc_id = os.getpid()
     msg_id = '-'
-    sd = _result[1]
+    sd = '-'
 
     if _result[0] == '':
         status = 'SKIPPED'
@@ -37,15 +52,14 @@ def render_result(_result, _func):
     else:
         raise NotImplementedError()
 
-    sd['status'] = status
-    msg = _result[2] if len(_result) == 3 else _func.__doc__
+    msg = _result[2] if len(_result) == 3 else _func.__doc__ + f' [{status}] ' + str(_result[1])
 
     print('<{}>{} {} {} {} {} {} {} {}'.format(pri, ver, ts, host, app, proc_id, msg_id, sd, msg))
 
 
 def render_stats(_stats):
     """
-    Render collected statistics.
+    Render collected statistics, tries to comply with https://tools.ietf.org/html/rfc5424.
 
     :param _stats: A stats collector.
     """
@@ -57,7 +71,8 @@ def render_stats(_stats):
     app = 'healthcheck'
     proc_id = os.getpid()
     msg_id = '-'
-    sd = {
+    sd = '-'
+    msg = {
         'total checks run': sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped]),
         'succeeded': _stats.succeeded,
         'no result': _stats.no_result,
@@ -65,6 +80,5 @@ def render_stats(_stats):
         'errors': _stats.errors,
         'skipped': _stats.skipped
     }
-    msg = '-'
 
     print('<{}>{} {} {} {} {} {} {} {}'.format(pri, ver, ts, host, app, proc_id, msg_id, sd, msg))
