@@ -24,6 +24,12 @@ class ClusterChecks(BaseCheckSuite):
         self.api.check_connection()
         self.rex.check_connection()
 
+    def check_health(self, *_args, **_kwargs):
+        """check cluster health"""
+        result = self.api.get('cluster/check')
+
+        return result['cluster_test_result'], result
+
     def check_rladmin_status(self, *_args, **_kwargs):
         """check if `rladmin status` has errors"""
         rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
