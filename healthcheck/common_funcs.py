@@ -88,10 +88,10 @@ def http_get(_url, _user, _pass):
 
     logging.debug('calling urlopen {} ...'.format(_url))
     rsp = request.urlopen(req, context=SSL_CONTEXT)
-    if rsp.code == 200:
-        return json.loads(rsp.read())
-    else:
+    if rsp.code != 200:
         raise Exception(f'error during http request (return code {rsp.code}): ' + rsp.read())
+
+    return json.loads(rsp.read())
 
 
 def get_parameter_map_name(_path):
@@ -102,6 +102,7 @@ def get_parameter_map_name(_path):
     :return: The name of the parameter map.
     """
     fname = _path.split('/')[-1:]
+
     return fname[0].split('.')[0]
 
 
