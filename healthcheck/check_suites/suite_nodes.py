@@ -5,7 +5,7 @@ import re
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import to_gb, to_percent, to_ms
-from healthcheck.remote_executors.remote_executor import RemoteExecutor
+from healthcheck.remote_executor import RemoteExecutor
 
 
 class NodeChecks(BaseCheckSuite):

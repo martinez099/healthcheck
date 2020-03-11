@@ -5,7 +5,7 @@ import re
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
 from healthcheck.common_funcs import GB, to_gb, to_kops
-from healthcheck.remote_executors.remote_executor import RemoteExecutor
+from healthcheck.remote_executor import RemoteExecutor
 
 
 class ClusterChecks(BaseCheckSuite):

@@ -2,8 +2,6 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from threading import Lock
 
 from healthcheck.common_funcs import exec_cmd
-from healthcheck.remote_executors.ssh_commander import SshCommander
-from healthcheck.remote_executors.docker_commander import DockerCommander
 from healthcheck.printer_funcs import print_msg, print_success, print_error
 
 
@@ -13,13 +11,25 @@ class RemoteExecutor(object):
     """
     _instance = None
 
-    def __init__(self, _commander, _targets):
+    def __init__(self, _config):
         """
-        :param _commander: A command executor.
-        :param _targets: A string containing CSV with targets.
+        :param _config: A parsed configuration.
         """
-        self.com = _commander
-        self.targets = list(map(lambda x: x.strip(), _targets.split(',')))
+        self.targets = []
+        self.ssh_user = None
+        self.ssh_key = None
+        self.is_docker = False
+
+        if 'ssh' in _config:
+            self.targets = list(map(lambda x: x.strip(), _config['ssh']['hosts'].split(',')))
+            self.ssh_user = _config['ssh']['user']
+            self.ssh_key = _config['ssh']['key']
+        elif 'docker' in _config:
+            self.targets = list(map(lambda x: x.strip(), _config['docker']['containers'].split(',')))
+            self.is_docker = True
+        else:
+            raise Exception('could not find a valid remote executor configuration')
+
         self.addrs = {}
         self.locks = {}
         self.cache = {}
@@ -30,18 +40,11 @@ class RemoteExecutor(object):
         """
         Get singleton instance.
 
-        :param _config: A dict with configuration values.
+        :param _config: A parsed configuration.
         :return: The RemoteExecutor singleton.
         """
         if not cls._instance:
-            if 'ssh' in _config:
-                commander = SshCommander(_config['ssh']['user'], _config['ssh']['key'])
-                cls._instance = RemoteExecutor(commander, _config['ssh']['hosts'])
-            elif 'docker' in _config:
-                commander = DockerCommander()
-                cls._instance = RemoteExecutor(commander, _config['docker']['containers'])
-            else:
-                raise Exception('could not find a valid commander configuration')
+            cls._instance = RemoteExecutor(_config)
 
         return cls._instance
 
@@ -118,6 +121,7 @@ class RemoteExecutor(object):
                 futures.append(future)
             done, undone = wait(futures)
             assert not undone
+
             return done
 
     def exec_broad(self, _cmd):
@@ -137,6 +141,7 @@ class RemoteExecutor(object):
                 futures.append(future)
             done, undone = wait(futures)
             assert not undone
+
             return done
 
     def _exec(self, _cmd, _target):
@@ -154,7 +159,7 @@ class RemoteExecutor(object):
             return self.cache[_target][_cmd]
 
         # build command
-        cmd = self.com.build_cmd(_target, _cmd)
+        cmd = self._build_cmd(_target, _cmd)
 
         # create lock if not existent
         if _target not in self.locks:
@@ -170,3 +175,26 @@ class RemoteExecutor(object):
         self.cache[_target][_cmd] = rsp
 
         return rsp
+
+    def _build_cmd(self, _target, _cmd):
+        """
+        Build a remote command.
+
+        :param _target: The target machine.
+        :param _cmd: The command to execute.
+        :return: The response.
+        :raise Exception: If an error occurred.
+        """
+        if self.is_docker:
+            parts = ['docker', 'exec', '--user', 'root', _target, _cmd]
+        else:
+            parts = ['ssh']
+            if self.ssh_key:
+                parts.append('-i {}'.format(self.ssh_key))
+            if self.ssh_user:
+                parts.append('{}@{}'.format(self.ssh_user, _target))
+            else:
+                parts.append(_target)
+            parts.append('''-C '{}' '''.format(_cmd))
+
+        return ' '.join(parts)
