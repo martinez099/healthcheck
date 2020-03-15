@@ -47,8 +47,11 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
     - SSH username
     - CSV list of hostnames
     - Path to SSH private key file
-  - Alternatively to SSH, under a section called `docker`, Docker container names/IDs can be specified.
-  - Under a section called `renderer`, a renderer module name can be specified. Options are: `basic`, `json` and `syslog`.
+  - Alternatively to SSH, under a section called `docker`, a CSV list of Docker `containers` (name or ID) can be specified.
+  - Under a section called `renderer`, a renderer module name can be specified. Options are: 
+    - `basic` The default renderer.
+    - `json` Renders results in JSON format.
+    - `syslog` Renders results according to [RFC5425](https://tools.ietf.org/html/rfc5424) w/o structured data elements.
 - Alternatively to `config.ini` you can pass a different configuration filename with `-cfg <CONFIG>`.
 - Don't forget to make `hc` executable, e.g. `chmod u+x hc`.
 
