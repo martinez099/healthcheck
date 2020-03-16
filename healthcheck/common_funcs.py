@@ -106,18 +106,18 @@ def get_parameter_map_name(_path):
     return fname[0].split('.')[0]
 
 
-def redis_ping(host, port, auth=None):
+def redis_ping(_host, _port, auth=None):
     """
     PING a Redis database.
 
-    :param host: A Redis database host.
-    :param port: A Redis database port.
+    :param _host: A Redis database host.
+    :param _port: A Redis database port.
     :param auth: An optional Redis database password.
     :return: True on success, False otherwise, error message on error.
     """
     conn = None
     try:
-        conn = socket.create_connection((host, port))
+        conn = socket.create_connection((_host, _port))
         if auth:
             sent = conn.send(b'AUTH ' + auth.encode() + b'\r\n')
             if not sent:

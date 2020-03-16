@@ -68,6 +68,12 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
   - execute `./hc -c "network link"` to get the network link speed between all nodes.
 - For a quick help, execute `./hc -h`.
 
-## Run with Docker
+### Run with Docker
 - Build Docker image and give it a name, e.g. `docker build . --tag hc:latest`.
 - Run Docker image with optional arguments, e.g. `docker run hc -s nodes`.
+
+### Return code
+- The script exits with the following return code:
+  - 0 - if no errors or failures occured.
+  - 1 - if preconditions were not met, e.g. wrong parameters passed.
+  - 2 - if checks result in errors or failures.

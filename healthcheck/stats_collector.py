@@ -28,3 +28,11 @@ class StatsCollector(object):
             self.errors += 1
         else:
             raise NotImplementedError()
+
+    def return_code(self):
+        """
+        Calculate return code.
+
+        :return: The return code.
+        """
+        return 2 if self.failed or self.errors else 0

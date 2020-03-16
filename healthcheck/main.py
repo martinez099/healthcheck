@@ -128,13 +128,14 @@ def load_parameter_map(_suite, _args):
     return params
 
 
-def exec_single_checks(_suites, _args, _executor):
+def exec_single_checks(_suites, _args, _executor, _done_cb=None):
     """
     Execute single checks.
 
     :param _suites: The loaded check suites.
     :param _args: The parsed arguments.
     :param _executor: The check executor.
+    :param _done_cb: An optional callback, executed after each check execution.
     """
     checks = []
     for suite in _suites:
@@ -150,25 +151,24 @@ def exec_single_checks(_suites, _args, _executor):
 
     for check, suite in checks:
         params = load_parameter_map(suite, _args)
-        _executor.execute(check, _kwargs=params[0][1] if params else {})
+        _executor.execute(check, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
 
     _executor.wait()
 
 
-def exec_check_suites(_suites, _args, _executor):
+def exec_check_suites(_suites, _args, _executor, _done_cb=None):
     """
     Execute check suites.
 
     :param _suites: The loaded check suites.
     :param _args: The parsed arguments.
     :param _executor: The check executor.
+    :param _done_cb: An optional callback, executed after each check execution.
     :return: Collected statistics.
     """
     if not _suites:
         print_error('could not find check suite, examine argument of --suite')
         exit(1)
-
-    stats_collector = StatsCollector()
 
     for suite in _suites:
         print_msg(f'executing check suite: {suite.__doc__}')
@@ -179,17 +179,10 @@ def exec_check_suites(_suites, _args, _executor):
             print_warning('- no parameter map given, options are: {}\n'.format(list(map(get_parameter_map_name, suite.params.keys()))))
 
         suite.run_connection_checks()
-
-        def collect(_future):
-            result = _future.result()
-            [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
-
-        _executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=collect)
-
+        _executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
         _executor.wait()
-        print_msg('')
 
-    return stats_collector
+        print_msg('')
 
 
 def main():
@@ -221,14 +214,25 @@ def main():
         else:
             return renderer.render_result(_result, _func)
 
+    # collect statistics
+    stats_collector = StatsCollector()
+
+    def collect_stats(_future):
+        result = _future.result()
+        [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
+
     # execute checks
     executor = CheckExecutor(render)
     if args.check:
-        exec_single_checks(suites, args, executor)
+        exec_single_checks(suites, args, executor, collect_stats)
     else:
-        stats = exec_check_suites(suites, args, executor)
-        renderer.render_stats(stats)
+        exec_check_suites(suites, args, executor, collect_stats)
+
+    # render statistics
+    renderer.render_stats(stats_collector)
 
     # shutdown
     executor.shutdown()
     logging.shutdown()
+
+    exit(stats_collector.return_code())
