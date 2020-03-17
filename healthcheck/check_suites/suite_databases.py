@@ -67,6 +67,25 @@ class DatabaseChecks(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
+    def check_sync_sources(self, *_args, **_kwargs):
+        """check replications"""
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+
+        for bdb in bdbs:
+            sync_sources = bdb['sync_sources']
+            if sync_sources:
+                kwargs[bdb['name']] = {}
+            for sync_source in sync_sources:
+                address = sync_source['uri'].split('@')[1]
+                kwargs[bdb['name']][address] = {
+                    'status': sync_source['status'],
+                    'lag': sync_source['lag'],
+                    'compression': sync_source['compression']
+                }
+
+        return all(filter(lambda x: x[0] == 'in-sync', map(lambda x: list(x.values()), kwargs.values()))), kwargs
+
     def check_endpoints(self, *_args, **_kwargs):
         """check database endpoints"""
         bdbs = self.api.get('bdbs')
@@ -84,7 +103,7 @@ class DatabaseChecks(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
-    def check_configs(self, *_args, **_kwargs):
+    def check_config(self, *_args, **_kwargs):
         """check database configuration"""
         bdbs = self.api.get('bdbs')
         results = []
