@@ -7,7 +7,7 @@ WORKDIR /app
 COPY healthcheck healthcheck
 COPY hc hc
 COPY parameter_maps parameter_maps
+COPY tests tests
 COPY *.ini ./
-COPY *.json ./
 
 ENTRYPOINT [ "./hc" ]

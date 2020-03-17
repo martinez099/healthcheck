@@ -131,7 +131,7 @@ def redis_ping(_host, _port, auth=None):
         if not sent:
             raise Exception('could not send PING message to Redis server')
 
-        return conn.recv(5) == b'+PONG'
+        return conn.recv(7) == b'+PONG\r\n'
 
     except Exception as e:
         return str(e)

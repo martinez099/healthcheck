@@ -44,14 +44,14 @@ class DatabaseChecks(BaseCheckSuite):
                 kwargs[bdb['name']] = "proxy policy set to '{}' instead of 'single'".format(bdb['proxy_policy'])
                 continue
 
-            endpoints = list(filter(lambda e: e['addr_type'] == 'internal', bdb['endpoints']))
-            if len(endpoints) > 1:
-                kwargs[bdb['name']] = "multiple endpoints found"
+            internal_endpoints = list(filter(lambda e: e['addr_type'] == 'internal', bdb['endpoints']))
+            if len(internal_endpoints) > 1:
+                kwargs[bdb['name']] = "multiple internal endpoints found"
                 continue
 
-            endpoint_addrs = endpoints[0]['addr']
+            endpoint_addrs = internal_endpoints[0]['addr']
             if len(endpoint_addrs) > 1:
-                kwargs[bdb['name']] = "multiple addresses for endpoint found"
+                kwargs[bdb['name']] = "multiple addresses for internal endpoint found"
                 continue
 
             endpoint_nodes = list(filter(lambda n: n['addr'] == endpoint_addrs[0] and n['uid'], nodes))
@@ -84,7 +84,8 @@ class DatabaseChecks(BaseCheckSuite):
                     'compression': sync_source['compression']
                 }
 
-        return all(filter(lambda x: x[0] == 'in-sync', map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
+        return all(filter(lambda x: x[0] == 'in-sync',
+                          map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
     def check_endpoints(self, *_args, **_kwargs):
         """check database endpoints"""
