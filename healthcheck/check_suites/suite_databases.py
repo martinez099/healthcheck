@@ -84,7 +84,7 @@ class DatabaseChecks(BaseCheckSuite):
                     'compression': sync_source['compression']
                 }
 
-        return all(filter(lambda x: x[0] == 'in-sync', map(lambda x: list(x.values()), kwargs.values()))), kwargs
+        return all(filter(lambda x: x[0] == 'in-sync', map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
     def check_endpoints(self, *_args, **_kwargs):
         """check database endpoints"""
