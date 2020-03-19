@@ -123,8 +123,8 @@ def redis_ping(_host, _port, auth=None):
             if not sent:
                 raise Exception('could not send AUTH to Redis server')
 
-            recv = conn.recv(3)
-            if not recv == b'+OK':
+            recv = conn.recv(5)
+            if not recv == b'+OK\r\n':
                 raise Exception('invalid AUTH value sent to Redis server')
 
         sent = conn.send(b'PING\r\n')
