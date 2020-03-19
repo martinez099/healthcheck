@@ -112,7 +112,8 @@ class DatabaseChecks(BaseCheckSuite):
         if not _kwargs:
             for bdb in bdbs:
                 results.append((None, {'uid': bdb['uid'], 'memory limit': f'{to_gb(bdb["memory_size"])} GB',
-                                       'master shards': bdb['shards_count'], 'replication': bdb['replication']},
+                                       'master shards': bdb['shards_count'], 'HA': bdb['replication'],
+                                       'OSS cluster': bdb['oss_cluster'], 'CRDB': bdb['crdt']},
                                 f"""get configuration of '{bdb['name']}'"""))
 
         else:
