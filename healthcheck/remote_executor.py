@@ -27,8 +27,6 @@ class RemoteExecutor(object):
         elif 'docker' in _config:
             self.targets = list(map(lambda x: x.strip(), _config['docker']['containers'].split(',')))
             self.is_docker = True
-        else:
-            raise Exception('could not find a valid remote executor configuration')
 
         self.addrs = {}
         self.locks = {}
