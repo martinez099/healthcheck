@@ -85,11 +85,11 @@ def load_check_suites(_args, _config, _check_connection=True):
     return suites
 
 
-def load_parameter_map(_suite, _args):
+def load_parameter_map(_check_func_name, _args):
     """
     Load parameter map.
 
-    :param _suite: The check suite.
+    :param _check_func_name: The check function name.
     :param _args: The parsed arguments.
     :return: A list of tuples.
     """
@@ -100,10 +100,6 @@ def load_parameter_map(_suite, _args):
         print_error('sole argument --params not allowed, try using in combination with --suite or --check')
         exit(1)
 
-    if not _suite.params:
-        print_warning('- suite does not support parameters\n')
-        return None
-
     if _args.params.endswith('.json'):
         if not os.path.exists(_args.params):
             print_error('could not find parameter map, examine argument of --params')
@@ -113,76 +109,96 @@ def load_parameter_map(_suite, _args):
             params = [(_args.params, json.loads(file.read()))]
 
     else:
-        params = list(filter(lambda x: _args.params.lower() in get_parameter_map_name(x[0].lower()),
-                             _suite.params.items()))
+        loaded_params = {}
+        for path in glob.glob(f'parameter_maps/{_check_func_name}/*.json'):
+            with open(path) as file:
+                loaded_params[path] = json.loads(file.read())
+
+        if not loaded_params:
+            print_warning('- check does not support parameters\n')
+            return None
+
+        params = list(
+            filter(lambda x: _args.params.lower() in get_parameter_map_name(x[0].lower()), loaded_params.items()))
         if _args.params and not params:
             print_error('could not find paramter map, choose one: {}'.format(
-                list(map(get_parameter_map_name, _suite.params.keys()))))
+                list(map(get_parameter_map_name, loaded_params.keys()))))
             exit(1)
 
         elif len(params) > 1:
             print_error('multiple parameter maps found, choose one: {}'.format(
-                list(map(get_parameter_map_name, _suite.params.keys()))))
+                list(map(get_parameter_map_name, loaded_params.keys()))))
             exit(1)
 
     return params
 
 
-def exec_single_checks(_suites, _args, _executor, _done_cb=None):
+def find_checks(_suites, _args, _config):
     """
-    Execute single checks.
+    Collect all checks to be executed.
 
-    :param _suites: The loaded check suites.
-    :param _args: The parsed arguments.
-    :param _executor: The check executor.
-    :param _done_cb: An optional callback, executed after each check execution.
+    :param _suites: A list of loaded check suites.
+    :param _args: The parsed cmdline arguments.
+    :param _config: The parsed configuration.
+    :return: A list with found checks to execute.
     """
     checks = []
     for suite in _suites:
+        print_msg(f'found check suite: {suite.__doc__}')
         for check in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check)
+            params = None
             if _args.check and _args.check.lower() not in check_func.__doc__.lower():
                 continue
-            checks.append((check_func, suite))
 
-    if not checks:
-        print_error('could not find a single check, examine argument of --check')
-        exit(1)
+            if 'api' not in _config and 'api' in check_func.__code__.co_names:
+                continue
 
-    for check, suite in checks:
-        params = load_parameter_map(suite, _args)
-        _executor.execute(check, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
+            if ('ssh' not in _config and 'docker' not in _config) and 'rex' in check_func.__code__.co_names:
+                continue
 
-    _executor.wait()
+            if '_kwargs' in check_func.__code__.co_varnames:
+                params = load_parameter_map(check_func.__name__, _args)
+                if not params:
+                    print_warning('no parameter map specified, running check without parameters')
+            checks.append((check_func, suite, params))
+
+    return checks
 
 
-def exec_check_suites(_suites, _args, _executor, _done_cb=None):
+def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
     """
-    Execute check suites.
+    Execute checks.
 
     :param _suites: The loaded check suites.
     :param _args: The parsed arguments.
     :param _executor: The check executor.
+    :param _config: The parsed configuration.
     :param _done_cb: An optional callback, executed after each check execution.
-    :return: Collected statistics.
     """
-    if not _suites:
-        print_error('could not find check suite, examine argument of --suite')
-        exit(1)
+    if _args.check:
+        checks = find_checks(_suites, _args, _config)
 
-    for suite in _suites:
-        print_msg(f'executing check suite: {suite.__doc__}')
-        params = load_parameter_map(suite, _args)
-        if params:
-            print_success('- using paramter map: {}\n'.format(get_parameter_map_name(params[0][0])))
-        elif suite.params:
-            print_warning('- no parameter map given, options are: {}\n'.format(list(map(get_parameter_map_name, suite.params.keys()))))
+        if not checks:
+            print_error('could not find a single check, examine argument of --check')
+            exit(1)
 
-        suite.run_connection_checks()
-        _executor.execute_suite(suite, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
-        _executor.wait()
+        for check_func, suite, params in checks:
+            _executor.execute(check_func, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
+
+    else:
+        if not _suites:
+            print_error('could not find check suite, examine argument of --suite')
+            exit(1)
+
+        checks = find_checks(_suites, _args, _config)
+        for check_func, suite, params in checks:
+            suite.run_connection_checks()
+            _executor.execute(check_func, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
 
         print_msg('')
+
+    _executor.wait()
 
 
 def main():
@@ -223,10 +239,7 @@ def main():
 
     # execute checks
     executor = CheckExecutor(render)
-    if args.check:
-        exec_single_checks(suites, args, executor, collect_stats)
-    else:
-        exec_check_suites(suites, args, executor, collect_stats)
+    exec_checks(suites, args, executor, config, collect_stats)
 
     # render statistics
     renderer.render_stats(stats_collector)

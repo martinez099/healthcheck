@@ -39,26 +39,12 @@ class CheckExecutor(object):
             future.add_done_callback(_done_cb)
         self.futures.append(future)
 
-    def execute_suite(self, _check_suite, _args=[], _kwargs={}, _done_cb=None):
-        """
-        Execute a check suite.
-
-        :param _check_suite: The check suite.
-        :param _args: A list of arguments, optional.
-        :param _kwargs: A dict of keyword arguments, optional.
-        :param _done_cb: A callback executed when the execution is done, optional.
-        """
-        for check_name in filter(lambda x: x.startswith('check_'), dir(_check_suite)):
-            check_func = getattr(_check_suite, check_name)
-            self.execute(check_func, _args=_args, _kwargs=_kwargs, _done_cb=_done_cb)
-
     def wait(self):
         """
         Wait for completition of all futures.
         """
         for future in concurrent.futures.as_completed(self.futures):
             self.result_cb(future.result(), future.func, future.args, future.kwargs)
-
         self.futures = []
 
     def shutdown(self):

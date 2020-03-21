@@ -2,7 +2,7 @@ import functools
 import math
 
 from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
+from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
@@ -15,7 +15,6 @@ class DatabaseChecks(BaseCheckSuite):
         """
         super().__init__(_config)
         self.api = ApiFetcher.instance(_config)
-        self.params = load_params('databases')
 
     def run_connection_checks(self):
         self.api.check_connection()
@@ -67,21 +66,45 @@ class DatabaseChecks(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
-    def check_sync_sources(self, *_args, **_kwargs):
-        """check replications"""
+    def check_replica_sources(self, *_args, **_kwargs):
+        """check replicaOf sources"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
 
         for bdb in bdbs:
-            sync_sources = bdb['sync_sources']
-            if sync_sources:
-                kwargs[bdb['name']] = {}
-            for sync_source in sync_sources:
-                address = sync_source['uri'].split('@')[1]
+            replica_sources = bdb['replica_sources']
+            if replica_sources:
+                kwargs[bdb['name']] = {
+                    'replica_sync': bdb['replica_sync']
+                }
+            for replica_source in replica_sources:
+                address = replica_source['uri'].split('@')[1]
                 kwargs[bdb['name']][address] = {
-                    'status': sync_source['status'],
-                    'lag': sync_source['lag'],
-                    'compression': sync_source['compression']
+                    'status': replica_source['status'],
+                    'lag': replica_source['lag'],
+                    'compression': replica_source['compression']
+                }
+
+        return all(filter(lambda x: x[0] == 'in-sync',
+                          map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
+
+    def check_crdt_sources(self, *_args, **_kwargs):
+        """check CRDB sources"""
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+
+        for bdb in bdbs:
+            crdt_sources = bdb['crdt_sources']
+            if crdt_sources:
+                kwargs[bdb['name']] = {
+                    'crdt_sync': bdb['crdt_sync']
+                }
+            for crdt_source in crdt_sources:
+                address = crdt_source['uri'].split('@')[1]
+                kwargs[bdb['name']][address] = {
+                    'status': crdt_source['status'],
+                    'lag': crdt_source['lag'],
+                    'compression': crdt_source['compression']
                 }
 
         return all(filter(lambda x: x[0] == 'in-sync',

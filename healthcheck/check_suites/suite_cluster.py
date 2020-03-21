@@ -3,7 +3,7 @@ import math
 import re
 
 from healthcheck.api_fetcher import ApiFetcher
-from healthcheck.check_suites.base_suite import BaseCheckSuite, load_params
+from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import GB, to_gb, to_kops
 from healthcheck.remote_executor import RemoteExecutor
 
@@ -18,7 +18,6 @@ class ClusterChecks(BaseCheckSuite):
         super().__init__(_config)
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
-        self.params = load_params('cluster')
 
     def run_connection_checks(self):
         self.api.check_connection()
@@ -58,6 +57,7 @@ class ClusterChecks(BaseCheckSuite):
 
         result = shards_limit >= number_of_shards
         kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards}
+
         return result, kwargs
 
     def check_license_expired(self, *_args, **_kwargs):
@@ -66,75 +66,39 @@ class ClusterChecks(BaseCheckSuite):
 
         return not expired, {'license expired': expired}
 
-    def check_number_of_shards(self, *_args, **_kwargs):
-        """check if shards count meets provided parameter 'min_shards'"""
-        number_of_shards = self.api.get_number_of_values('shards')
-
-        if not _kwargs:
-            return None, {'number of shards': number_of_shards}, "get number of shards of cluster"
-
-        result = number_of_shards >= _kwargs['min_shards']
-        kwargs = {'number of shards': number_of_shards, 'min shards': _kwargs['min_shards']}
-        return result, kwargs
-
-    def check_number_of_nodes(self, *_args, **_kwargs):
-        """check if nodes count meets provided parameter 'min_nodes'"""
+    def check_sizing(self, *_args, **_kwargs):
+        """check cluster sizing"""
         number_of_nodes = self.api.get_number_of_values('nodes')
-
-        if not _kwargs:
-            return None, {'number of nodes': number_of_nodes}, "get number of nodes of cluster"
-
-        result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0
-        kwargs = {'number of nodes': number_of_nodes, 'min nodes': _kwargs['min_nodes']}
-        return result, kwargs
-
-    def check_number_of_cores(self, *_args, **_kwargs):
-        """check if cores count meets provided parameter 'min_cores'"""
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
-
-        if not _kwargs:
-            return None, {'number of cores': number_of_cores}, "get number of cores of cluster"
-
-        result = number_of_cores >= _kwargs['min_cores']
-        kwargs = {'number of cores': number_of_cores, 'min cores': _kwargs['min_cores']}
-        return result, kwargs
-
-    def check_total_memory(self, *_args, **_kwargs):
-        """check if RAM size meets provided parameter 'min_memory_GB'"""
+        number_of_shards = self.api.get_number_of_values('shards')
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
-
-        if not _kwargs:
-            return None, {'total memory': '{} GB'.format(to_gb(total_memory))}, "get total memory of cluster"
-
-        result = total_memory >= _kwargs['min_memory_GB'] * GB
-        kwargs = {'total memory': '{} GB'.format(to_gb(total_memory)),
-                  'min memory': '{} GB'.format(_kwargs['min_memory_GB'])}
-        return result, kwargs
-
-    def check_ephemeral_storage(self, *_args, **_kwargs):
-        """check if ephemeral storage size meets provided parameter 'min_ephemeral_storage_GB'"""
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
-
-        if not _kwargs:
-            return None, {'ephemeral storage size': '{} GB'.format(
-                to_gb(epehemeral_storage_size))}, "get ephemeral storage size of cluster"
-
-        result = epehemeral_storage_size >= _kwargs['min_ephemeral_storage_GB'] * GB
-        kwargs = {'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
-                  'min ephemeral size': '{} GB'.format(_kwargs['min_ephemeral_storage_GB'])}
-        return result, kwargs
-
-    def check_persistent_storage(self, *_args, **_kwargs):
-        """check if persistent storage size meets provided parameter 'min_persistent_storage_GB'"""
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
 
-        if not _kwargs:
-            return None, {'persistent storage size': '{} GB'.format(
-                to_gb(persistent_storage_size))}, "get persistent storage size of cluster"
+        kwargs = {'number of nodes': str(number_of_nodes),
+                  'number of cores': str(number_of_cores),
+                  'total memory': '{} GB'.format(to_gb(total_memory)),
+                  'number of shards': str(number_of_shards),
+                  'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
+                  'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
 
-        result = persistent_storage_size >= _kwargs['min_persistent_storage_GB'] * GB
-        kwargs = {'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size)),
-                  'min persistent size': '{} GB'.format(_kwargs['min_persistent_storage_GB'])}
+        if not _kwargs:
+            return None, kwargs, "get cluster sizing"
+
+        result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0 and \
+            number_of_cores >= _kwargs['min_cores'] and \
+            total_memory >= _kwargs['min_memory_GB'] * GB and \
+            number_of_shards >= _kwargs['min_shards'] and \
+            epehemeral_storage_size >= _kwargs['min_ephemeral_storage_GB'] * GB and \
+            persistent_storage_size >= _kwargs['min_persistent_storage_GB'] * GB
+
+        kwargs['number of nodes'] += ' (min: {})'.format(_kwargs['min_nodes'])
+        kwargs['number of cores'] += ' (min: {})'.format(_kwargs['min_cores'])
+        kwargs['total memory'] += ' (min: {} GB)'.format(_kwargs['min_memory_GB'])
+        kwargs['number of shards'] += ' (min: {})'.format(_kwargs['min_shards'])
+        kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_kwargs['min_ephemeral_storage_GB'])
+        kwargs['persistent storage size'] += ' (min: {} GB)'.format(_kwargs['min_persistent_storage_GB'])
+
         return result, kwargs
 
     def check_throughput(self, *_args, **_kwargs):

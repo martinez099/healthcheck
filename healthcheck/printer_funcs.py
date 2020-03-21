@@ -51,8 +51,6 @@ def print_list(_suites):
     """
     for suite in _suites:
         print(f'{Color.green("Suite")}: {suite.__doc__}')
-        if suite.params:
-            print('{}: {}'.format(Color.red("Parameter maps"), list(map(get_parameter_map_name, suite.params.keys()))))
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
             print(f'{Color.yellow("-")} {check_func.__doc__}')
