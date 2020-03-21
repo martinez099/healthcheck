@@ -13,7 +13,7 @@ class RemoteExecutor(object):
 
     def __init__(self, _config):
         """
-        :param _config: A parsed configuration.
+        :param _config: The parsed configuration.
         """
         self.targets = []
         self.ssh_user = None

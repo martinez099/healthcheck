@@ -85,10 +85,11 @@ def load_check_suites(_args, _config, _check_connection=True):
     return suites
 
 
-def load_parameter_map(_check_func_name, _args):
+def load_parameter_map(_suite, _check_func_name, _args):
     """
     Load parameter map.
 
+    :param _suite: The check suite.
     :param _check_func_name: The check function name.
     :param _args: The parsed arguments.
     :return: A list of tuples.
@@ -110,7 +111,7 @@ def load_parameter_map(_check_func_name, _args):
 
     else:
         loaded_params = {}
-        for path in glob.glob(f'parameter_maps/{_check_func_name}/*.json'):
+        for path in glob.glob(f'parameter_maps/{_suite.__class__.__name__.lower()}/{_check_func_name}/*.json'):
             with open(path) as file:
                 loaded_params[path] = json.loads(file.read())
 
@@ -144,7 +145,7 @@ def find_checks(_suites, _args, _config):
     """
     checks = []
     for suite in _suites:
-        print_msg(f'found check suite: {suite.__doc__}')
+        print_msg(f'running check suite: {suite.__doc__}')
         for check in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check)
             params = None
@@ -157,10 +158,10 @@ def find_checks(_suites, _args, _config):
             if ('ssh' not in _config and 'docker' not in _config) and 'rex' in check_func.__code__.co_names:
                 continue
 
-            if '_kwargs' in check_func.__code__.co_varnames:
-                params = load_parameter_map(check_func.__name__, _args)
+            if '_params' in check_func.__code__.co_varnames:
+                params = load_parameter_map(suite, check_func.__name__, _args)
                 if not params:
-                    print_warning('no parameter map specified, running check without parameters')
+                    print_warning(f'no parameter map specified, running \'{check_func.__name__}\' without parameters')
             checks.append((check_func, suite, params))
 
     return checks
@@ -184,7 +185,7 @@ def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
             exit(1)
 
         for check_func, suite, params in checks:
-            _executor.execute(check_func, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
+            _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
     else:
         if not _suites:
@@ -194,9 +195,7 @@ def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
         checks = find_checks(_suites, _args, _config)
         for check_func, suite, params in checks:
             suite.run_connection_checks()
-            _executor.execute(check_func, _kwargs=params[0][1] if params else {}, _done_cb=_done_cb)
-
-        print_msg('')
+            _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
     _executor.wait()
 
@@ -224,9 +223,9 @@ def main():
         return
 
     # render result
-    def render(_result, _func, _args, _kwargs):
+    def render(_result, _func, _params):
         if type(_result) == list:
-            return [render(r, _func, _args, _kwargs) for r in _result]
+            return [render(r, _func, _params) for r in _result]
         else:
             return renderer.render_result(_result, _func)
 

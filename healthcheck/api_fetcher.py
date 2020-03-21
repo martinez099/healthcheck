@@ -8,15 +8,15 @@ class ApiFetcher(object):
     """
     _instance = None
 
-    def __init__(self, _fqdn, _username, _password):
+    def __init__(self, _config):
         """
-        :param _fqdn: The FQDN of the cluster.
-        :param _username: The username of the cluster.
-        :param _password: The password of the cluster.
+        :param _config: The parsed configuration.
         """
-        self.fqdn = _fqdn
-        self.username = _username
-        self.password = _password
+        if 'api' in _config:
+            self.fqdn = _config['api']['fqdn']
+            self.username = _config['api']['user']
+            self.password = _config['api']['pass']
+
         self.cache = {}
         self.uids = {}
         self.connected = False
@@ -30,9 +30,8 @@ class ApiFetcher(object):
         :return: The ApiFetcher singleton.
         """
         if not cls._instance:
-            cls._instance = ApiFetcher(_config['api']['fqdn'],
-                                       _config['api']['user'],
-                                       _config['api']['pass'])
+            cls._instance = ApiFetcher(_config)
+
         return cls._instance
 
     def check_connection(self):

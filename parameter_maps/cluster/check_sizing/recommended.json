@@ -1,5 +1,4 @@
 {
-  "min_shards": 2,
   "min_nodes": 3,
   "min_cores": 24,
   "min_memory_GB": 90,

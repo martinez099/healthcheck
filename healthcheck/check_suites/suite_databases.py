@@ -6,20 +6,17 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
-class DatabaseChecks(BaseCheckSuite):
+class Database(BaseCheckSuite):
     """Databases - configuration, sizing and usage"""
 
     def __init__(self, _config):
         """
         :param _config: The configuration.
         """
-        super().__init__(_config)
+        super().__init__()
         self.api = ApiFetcher.instance(_config)
 
-    def run_connection_checks(self):
-        self.api.check_connection()
-
-    def check_oss_api(self, *_args, **_kwargs):
+    def check_oss_api(self):
         """check for OSS cluster API of each database"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -28,7 +25,7 @@ class DatabaseChecks(BaseCheckSuite):
 
         return all(kwargs.values()) if kwargs.values() else '', {'reason': 'no OSS cluster API enabled database found'}
 
-    def check_shards_placement(self, *_args, **_kwargs):
+    def check_shards_placement(self):
         """check for dense shards placement of each database"""
         nodes = self.api.get('nodes')
         bdbs = self.api.get('bdbs')
@@ -66,7 +63,7 @@ class DatabaseChecks(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
-    def check_replica_sources(self, *_args, **_kwargs):
+    def check_replica_sources(self):
         """check replicaOf sources"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -88,7 +85,7 @@ class DatabaseChecks(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_crdt_sources(self, *_args, **_kwargs):
+    def check_crdt_sources(self):
         """check CRDB sources"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -110,7 +107,7 @@ class DatabaseChecks(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_endpoints(self, *_args, **_kwargs):
+    def check_endpoints(self):
         """check database endpoints"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -127,12 +124,12 @@ class DatabaseChecks(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
-    def check_config(self, *_args, **_kwargs):
+    def check_config(self, **_params):
         """check database configuration"""
         bdbs = self.api.get('bdbs')
         results = []
 
-        if not _kwargs:
+        if not _params:
             for bdb in bdbs:
                 results.append((None, {'uid': bdb['uid'], 'memory limit': f'{to_gb(bdb["memory_size"])} GB',
                                        'master shards': bdb['shards_count'], 'HA': bdb['replication'],
@@ -141,9 +138,9 @@ class DatabaseChecks(BaseCheckSuite):
 
         else:
             for bdb in bdbs:
-                values = dict(_kwargs['__default__'])
-                if bdb['name'] in _kwargs:
-                    values.update(_kwargs[bdb['name']])
+                values = dict(_params['__default__'])
+                if bdb['name'] in _params:
+                    values.update(_params[bdb['name']])
 
                 kwargs = {}
                 for k, v in values.items():
@@ -155,7 +152,7 @@ class DatabaseChecks(BaseCheckSuite):
 
         return results
 
-    def check_throughput(self, *_args, **_kwargs):
+    def check_throughput(self):
         """check throughput of each shard"""
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -198,7 +195,7 @@ class DatabaseChecks(BaseCheckSuite):
         return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max/dev)")
                 for bdb in bdbs]
 
-    def check_memory_usage(self, *_args, **_kwargs):
+    def check_memory_usage(self):
         """check memory usage of each shard"""
         bdbs = self.api.get('bdbs')
         kwargs = {}

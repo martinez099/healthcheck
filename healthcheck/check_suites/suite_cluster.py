@@ -8,28 +8,24 @@ from healthcheck.common_funcs import GB, to_gb, to_kops
 from healthcheck.remote_executor import RemoteExecutor
 
 
-class ClusterChecks(BaseCheckSuite):
+class Cluster(BaseCheckSuite):
     """Cluster - status, sizing and usage"""
 
     def __init__(self, _config):
         """
         :param _config: The configuration.
         """
-        super().__init__(_config)
+        super().__init__()
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
-    def run_connection_checks(self):
-        self.api.check_connection()
-        self.rex.check_connection()
-
-    def check_health(self, *_args, **_kwargs):
+    def check_health(self):
         """check cluster health"""
         result = self.api.get('cluster/check')
 
         return result['cluster_test_result'], result
 
-    def check_rladmin_status(self, *_args, **_kwargs):
+    def check_rladmin_status(self):
         """check if `rladmin status` has errors"""
         rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
                                 self.rex.get_targets()[0])
@@ -37,7 +33,7 @@ class ClusterChecks(BaseCheckSuite):
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
-    def check_master_node(self, *_args, **_kwargs):
+    def check_master_node(self):
         """get master node"""
         rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
         found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
@@ -45,7 +41,7 @@ class ClusterChecks(BaseCheckSuite):
 
         return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
 
-    def check_license_shards_limit(self, *_args, **_kwargs):
+    def check_license_shards_limit(self):
         """check shards limit in license"""
         number_of_shards = self.api.get_number_of_values('shards')
         _license = self.api.get('license')
@@ -60,17 +56,16 @@ class ClusterChecks(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_license_expired(self, *_args, **_kwargs):
+    def check_license_expired(self):
         """check if license is expired"""
         expired = self.api.get('license')['expired']
 
         return not expired, {'license expired': expired}
 
-    def check_sizing(self, *_args, **_kwargs):
+    def check_sizing(self, **_params):
         """check cluster sizing"""
         number_of_nodes = self.api.get_number_of_values('nodes')
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
-        number_of_shards = self.api.get_number_of_values('shards')
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
@@ -78,30 +73,27 @@ class ClusterChecks(BaseCheckSuite):
         kwargs = {'number of nodes': str(number_of_nodes),
                   'number of cores': str(number_of_cores),
                   'total memory': '{} GB'.format(to_gb(total_memory)),
-                  'number of shards': str(number_of_shards),
                   'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
                   'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
 
-        if not _kwargs:
+        if not _params:
             return None, kwargs, "get cluster sizing"
 
-        result = number_of_nodes >= _kwargs['min_nodes'] and number_of_nodes % 2 != 0 and \
-            number_of_cores >= _kwargs['min_cores'] and \
-            total_memory >= _kwargs['min_memory_GB'] * GB and \
-            number_of_shards >= _kwargs['min_shards'] and \
-            epehemeral_storage_size >= _kwargs['min_ephemeral_storage_GB'] * GB and \
-            persistent_storage_size >= _kwargs['min_persistent_storage_GB'] * GB
+        result = number_of_nodes >= _params['min_nodes'] and number_of_nodes % 2 != 0 and \
+            number_of_cores >= _params['min_cores'] and \
+            total_memory >= _params['min_memory_GB'] * GB and \
+            epehemeral_storage_size >= _params['min_ephemeral_storage_GB'] * GB and \
+            persistent_storage_size >= _params['min_persistent_storage_GB'] * GB
 
-        kwargs['number of nodes'] += ' (min: {})'.format(_kwargs['min_nodes'])
-        kwargs['number of cores'] += ' (min: {})'.format(_kwargs['min_cores'])
-        kwargs['total memory'] += ' (min: {} GB)'.format(_kwargs['min_memory_GB'])
-        kwargs['number of shards'] += ' (min: {})'.format(_kwargs['min_shards'])
-        kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_kwargs['min_ephemeral_storage_GB'])
-        kwargs['persistent storage size'] += ' (min: {} GB)'.format(_kwargs['min_persistent_storage_GB'])
+        kwargs['number of nodes'] += ' (min: {})'.format(_params['min_nodes'])
+        kwargs['number of cores'] += ' (min: {})'.format(_params['min_cores'])
+        kwargs['total memory'] += ' (min: {} GB)'.format(_params['min_memory_GB'])
+        kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_params['min_ephemeral_storage_GB'])
+        kwargs['persistent storage size'] += ' (min: {} GB)'.format(_params['min_persistent_storage_GB'])
 
         return result, kwargs
 
-    def check_throughput(self, *_args, **_kwargs):
+    def check_throughput(self):
         """get throughput of cluster"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
@@ -128,7 +120,7 @@ class ClusterChecks(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_memory_usage(self, *_args, **_kwargs):
+    def check_memory_usage(self):
         """get memory usage of cluster"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
@@ -157,7 +149,7 @@ class ClusterChecks(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_ephemeral_storage_usage(self, *_args, **_kwargs):
+    def check_ephemeral_storage_usage(self):
         """get ephemeral storage usage of cluster"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
@@ -189,7 +181,7 @@ class ClusterChecks(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_persistent_storage_usage(self, *_args, **_kwargs):
+    def check_persistent_storage_usage(self):
         """get persistent storage usage of cluster"""
         kwargs = {}
         stats = self.api.get('cluster/stats')
