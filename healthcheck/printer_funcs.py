@@ -53,7 +53,10 @@ def print_list(_suites):
         print(f'{Color.green("Suite")}: {suite.__doc__}')
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
-            print(f'{Color.yellow("-")} {check_func.__doc__}')
+            parts = [f'{Color.yellow("-")}', check_func.__doc__]
+            if '_params' in check_func.__code__.co_varnames:
+                parts.append(Color.red("[params]"))
+            print(' '.join(parts))
         print('')
 
 

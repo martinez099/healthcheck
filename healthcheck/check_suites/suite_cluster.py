@@ -26,11 +26,11 @@ class Cluster(BaseCheckSuite):
 
     def check_shards(self):
         """check cluster shards"""
-        rsps = {'shard:{}'.format(shard['uid']):
-                self.rex.exec_uni('/opt/redislabs/bin/shard-cli {} PING'.format(shard['uid']),
-                                  self.rex.get_targets()[0]) for shard in self.api.get('shards')}
+        rsps = {f'shard:{shard["uid"]}': self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING',
+                                                           self.rex.get_targets()[0]) for shard in self.api.get('shards')}
+        kwargs = dict(filter(lambda x: x[1] != 'PONG', rsps.items()))
 
-        return all(map(lambda x: x == 'PONG', rsps.values())), rsps
+        return not kwargs, kwargs
 
     def check_rladmin_status(self):
         """check if `rladmin status` has errors"""

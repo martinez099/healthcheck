@@ -6,7 +6,7 @@ from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
-class Database(BaseCheckSuite):
+class Databases(BaseCheckSuite):
     """Databases - configuration, sizing and usage"""
 
     def __init__(self, _config):

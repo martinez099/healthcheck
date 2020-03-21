@@ -64,7 +64,7 @@ def import_renderer(config):
 
 def load_check_suites(_args, _config, _check_connection=True):
     """
-    Load check suites.
+    Load all check suites.
 
     :param _args: The pasred command line arguments.
     :param _config: The parsed configuration.
@@ -87,7 +87,7 @@ def load_check_suites(_args, _config, _check_connection=True):
 
 def load_parameter_map(_suite, _check_func_name, _args):
     """
-    Load parameter map.
+    Load a parameter map.
 
     :param _suite: The check suite.
     :param _check_func_name: The check function name.
@@ -95,6 +95,7 @@ def load_parameter_map(_suite, _check_func_name, _args):
     :return: A list of tuples.
     """
     if not _args.params:
+        print_warning(f'- no parameter map specified, running \'{_check_func_name}\' without parameters')
         return None
 
     if not _args.check and not _args.suite:
@@ -110,13 +111,14 @@ def load_parameter_map(_suite, _check_func_name, _args):
             params = [(_args.params, json.loads(file.read()))]
 
     else:
+        path = f'parameter_maps/{_suite.__class__.__name__.lower()}/{_check_func_name}/'
         loaded_params = {}
-        for path in glob.glob(f'parameter_maps/{_suite.__class__.__name__.lower()}/{_check_func_name}/*.json'):
+        for path in glob.glob(f'{path}*.json'):
             with open(path) as file:
                 loaded_params[path] = json.loads(file.read())
 
         if not loaded_params:
-            print_warning('- check does not support parameters\n')
+            print_warning(f'- no parameter maps found in {path}\n')
             return None
 
         params = list(
@@ -145,7 +147,6 @@ def find_checks(_suites, _args, _config):
     """
     checks = []
     for suite in _suites:
-        print_msg(f'running check suite: {suite.__doc__}')
         for check in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check)
             params = None
@@ -160,8 +161,6 @@ def find_checks(_suites, _args, _config):
 
             if '_params' in check_func.__code__.co_varnames:
                 params = load_parameter_map(suite, check_func.__name__, _args)
-                if not params:
-                    print_warning(f'no parameter map specified, running \'{check_func.__name__}\' without parameters')
             checks.append((check_func, suite, params))
 
     return checks
@@ -214,29 +213,27 @@ def main():
     # load configured renderer
     renderer = import_renderer(config)
 
-    # load suites
+    # load check suites
     suites = load_check_suites(args, config)
 
-    # list suites
+    # list check suites
     if args.list:
         print_list(suites)
         return
 
-    # render result
-    def render(_result, _func, _params):
-        if type(_result) == list:
-            return [render(r, _func, _params) for r in _result]
-        else:
-            return renderer.render_result(_result, _func)
-
-    # collect statistics
+    # execute checks
     stats_collector = StatsCollector()
 
     def collect_stats(_future):
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
-    # execute checks
+    def render(_result, _func, _params):
+        if type(_result) == list:
+            return [render(r, _func, _params) for r in _result]
+        else:
+            return renderer.render_result(_result, _func)
+
     executor = CheckExecutor(render)
     exec_checks(suites, args, executor, config, collect_stats)
 
