@@ -15,7 +15,6 @@ class Cluster(BaseCheckSuite):
         """
         :param _config: The configuration.
         """
-        super().__init__()
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
@@ -24,6 +23,14 @@ class Cluster(BaseCheckSuite):
         result = self.api.get('cluster/check')
 
         return result['cluster_test_result'], result
+
+    def check_shards(self):
+        """check cluster shards"""
+        rsps = {'shard:{}'.format(shard['uid']):
+                self.rex.exec_uni('/opt/redislabs/bin/shard-cli {} PING'.format(shard['uid']),
+                                  self.rex.get_targets()[0]) for shard in self.api.get('shards')}
+
+        return all(map(lambda x: x == 'PONG', rsps.values())), rsps
 
     def check_rladmin_status(self):
         """check if `rladmin status` has errors"""

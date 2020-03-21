@@ -15,7 +15,6 @@ class Nodes(BaseCheckSuite):
         """
         :param _config: The configuration.
         """
-        super().__init__()
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 

@@ -13,7 +13,6 @@ class Database(BaseCheckSuite):
         """
         :param _config: The configuration.
         """
-        super().__init__()
         self.api = ApiFetcher.instance(_config)
 
     def check_oss_api(self):
@@ -23,7 +22,7 @@ class Database(BaseCheckSuite):
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
             kwargs[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
 
-        return all(kwargs.values()) if kwargs.values() else '', {'reason': 'no OSS cluster API enabled database found'}
+        return all(kwargs.values()) if kwargs.values() else '', kwargs
 
     def check_shards_placement(self):
         """check for dense shards placement of each database"""
@@ -33,7 +32,7 @@ class Database(BaseCheckSuite):
 
         dense_bdbs = filter(lambda x: x['shards_placement'] == 'dense', bdbs)
         if not dense_bdbs:
-            return '', {'reason': 'no dense shards placement database found'}
+            return '', kwargs
 
         for bdb in dense_bdbs:
             if bdb['proxy_policy'] != 'single':

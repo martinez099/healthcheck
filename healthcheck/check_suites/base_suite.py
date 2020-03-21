@@ -1,6 +1,8 @@
 class BaseCheckSuite(object):
     """
     Base Check Suite class.
+
+    All check suites must derive from this class.
     """
 
     def run_connection_checks(self):
