@@ -37,28 +37,32 @@ class Cluster(BaseCheckSuite):
         epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
 
-        kwargs = {'number of nodes': str(number_of_nodes),
-                  'number of cores': str(number_of_cores),
-                  'total memory': '{} GB'.format(to_gb(total_memory)),
-                  'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
-                  'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
-
         if not _params:
+            kwargs = {'number of nodes': str(number_of_nodes),
+                      'number of cores': str(number_of_cores),
+                      'total memory': '{} GB'.format(to_gb(total_memory)),
+                      'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
+                      'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
+
             return None, kwargs, "CC-001: Get cluster sizing."
 
-        result = number_of_nodes >= _params['min_nodes'] and number_of_nodes % 2 != 0 and \
-            number_of_cores >= _params['min_cores'] and \
-            total_memory >= _params['min_memory_GB'] * GB and \
-            epehemeral_storage_size >= _params['min_ephemeral_storage_GB'] * GB and \
-            persistent_storage_size >= _params['min_persistent_storage_GB'] * GB
+        kwargs = {}
+        if number_of_nodes >= _params['min_nodes'] and number_of_nodes % 2 != 0:
+            kwargs['number of nodes'] += ' (min: {})'.format(_params['min_nodes'])
 
-        kwargs['number of nodes'] += ' (min: {})'.format(_params['min_nodes'])
-        kwargs['number of cores'] += ' (min: {})'.format(_params['min_cores'])
-        kwargs['total memory'] += ' (min: {} GB)'.format(_params['min_memory_GB'])
-        kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_params['min_ephemeral_storage_GB'])
-        kwargs['persistent storage size'] += ' (min: {} GB)'.format(_params['min_persistent_storage_GB'])
+        if number_of_cores >= _params['min_cores']:
+            kwargs['number of cores'] += ' (min: {})'.format(_params['min_cores'])
 
-        return result, kwargs
+        if total_memory >= _params['min_memory_GB'] * GB:
+            kwargs['total memory'] += ' (min: {} GB)'.format(_params['min_memory_GB'])
+
+        if epehemeral_storage_size >= _params['min_ephemeral_storage_GB'] * GB:
+            kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_params['min_ephemeral_storage_GB'])
+
+        if persistent_storage_size >= _params['min_persistent_storage_GB'] * GB:
+            kwargs['persistent storage size'] += ' (min: {} GB)'.format(_params['min_persistent_storage_GB'])
+
+        return not bool(kwargs), kwargs
 
     def check_health(self, _params):
         """CS-001: Check cluster health.

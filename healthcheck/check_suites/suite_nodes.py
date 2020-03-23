@@ -268,8 +268,7 @@ class Nodes(BaseCheckSuite):
         """
         cmd_targets = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
-        cmd = \
-'''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
+        cmd = '''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
 
         for port in ports:
             for source in self.rex.get_targets():
