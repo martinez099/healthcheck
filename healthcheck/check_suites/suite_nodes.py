@@ -25,6 +25,8 @@ class Nodes(BaseCheckSuite):
 
         Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
 
+        If this check fails, move the log file path to a mounted filesystem.
+
         :param _params: None
         :returns: result
         """
@@ -43,6 +45,8 @@ class Nodes(BaseCheckSuite):
 
         Calls '/v1/nodes' from API and gets the ephemeral storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured ephemeral storage path.
+
+        If this check fails, move the ephemeral storage path to a mounted filesystem.
 
         :param _params: None
         :returns: result
@@ -64,6 +68,8 @@ class Nodes(BaseCheckSuite):
         Calls '/v1/nodes' from API and gets the persistent storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured persistent storage path.
 
+        If this check fails, move the persistent storage path to a mounted filesystem.
+
         :param _params: None
         :returns: result
         """
@@ -83,6 +89,8 @@ class Nodes(BaseCheckSuite):
 
         Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
 
+        If this check fails, turn off swapping in your OS.
+
         :param _params: None
         :returns: result
         """
@@ -99,6 +107,8 @@ class Nodes(BaseCheckSuite):
         """NC-005: Check if THP is disabled on each node.
 
         Executes `cat /sys/kernel/mm/transparent_hugepage/enabled` and compares the output to 'always madvise [never]'.
+
+        If this check fails, turn off Transparent Huge Pages in your OS.
 
         :param _params: None
         :returns: result
@@ -149,6 +159,8 @@ class Nodes(BaseCheckSuite):
 
         Executes `rlcheck` and greps for 'FAILED'.
 
+        If this check fails, follow instructions from `rlcheck` output.
+
         :param _params: None
         :returns: result
         """
@@ -162,6 +174,8 @@ class Nodes(BaseCheckSuite):
         """NS-004: Check if `cnm_ctl status` has errors.
 
         Executes `cnm_ctl status` and greps for not 'RUNNING'.
+
+        If this check fails, try to restart not running services with `cnm_ctl start <SERVICE>`.
 
         :param _params: None
         :returns: result
@@ -178,6 +192,8 @@ class Nodes(BaseCheckSuite):
 
         Executes `supervisorctl status` and grep for not 'RUNNING'.
 
+        If this check fails, try to restart not running services with `supervisorctl start <SERVICE>`.
+
         :param _params: None
         :returns: result
         """
@@ -192,6 +208,8 @@ class Nodes(BaseCheckSuite):
         """NS-006: Check if `cat install.log` has errors.
 
         Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
+
+        If this check fails, try investigating 'install.log'.
 
         :param _params: None
         :returns: result
@@ -243,6 +261,8 @@ class Nodes(BaseCheckSuite):
         Does a TCP port scan from all nodes to each node for specified ports: 3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
         See https://docs.redislabs.com/latest/rs/administering/designing-production/networking/port-configurations for details.
 
+        If this check fails, investigate network connection between nodes, e.g. firewall rules.
+
         :param _params: None
         :returns: result
         """
@@ -275,6 +295,8 @@ class Nodes(BaseCheckSuite):
 
         Calls '/v1/nodes/stats' from API calculates min/avg/max/dev of 1 - 'cpu_idle' (cpu usage).
         It compares to RL recommended values, i.e. maximum of 80%.
+
+        If this check fails, increase CPU power on nodes.
 
         :param _params: None
         :returns: result
@@ -325,6 +347,8 @@ class Nodes(BaseCheckSuite):
 
         Call '/v1/nodes/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
         It compares them to RL recommended values, i.e. maximum of 2/3.
+
+        If this check fails, increase RAM on nodes.
 
         :param _params: None
         :returns: result

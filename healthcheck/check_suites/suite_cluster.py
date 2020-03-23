@@ -26,6 +26,8 @@ class Cluster(BaseCheckSuite):
         Calls '/v1/nodes' from API and compares values with passed paramters.
         If no parameters were passed, only outputs found values.
 
+        If this check fails, try upgrading your nodes.
+
         :param _params: A dict with cluster sizing values to compare to, see 'parameter_maps/cluster/check_sizing' for examples.
         :returns: result
         """
@@ -63,6 +65,8 @@ class Cluster(BaseCheckSuite):
 
         Calls '/v1/cluster/check' from API and outputs the result.
 
+        If this check fails, try investigating the failed node, i.e. run `rladmin status`, grep log files for errors, etc.
+
         :param _params: None
         :returns: result
         """
@@ -75,6 +79,8 @@ class Cluster(BaseCheckSuite):
 
         Calls '/v1/shards' from API and executes `shard-cli <UID> PING` for every shard UID on one of the cluster nodes.
         Collects the responses and compares it against 'PONG'.
+
+        If this check fails, try investigating the failed shard, i.e. grep log files for errors.
 
         :param _params: None
         :returns: result
@@ -90,6 +96,8 @@ class Cluster(BaseCheckSuite):
 
         Executes `rladmin status | grep -v endpoint | grep node` on one of the cluster nodes.
         Collects output and compares against 'OK'.
+
+        If this check fails, try investigating the failed node, i.e. grep log files for errors.
 
         :param _params: None
         :returns: result
@@ -119,6 +127,8 @@ class Cluster(BaseCheckSuite):
         """CS-005: Check license.
 
         Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
+
+        If this check fails, update your license.
 
         :param _params: None
         :returns: result

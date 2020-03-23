@@ -24,6 +24,8 @@ class Databases(BaseCheckSuite):
         See API doc for a description of possible values.
         If no parameters are passed, just outputs a subset of configuration values for each database.
 
+        If this check fails, adapt your database configuration in the UI or per REST-API.
+
         :param _params: A dict with database configuration values. See 'parameter_maps/databases/check_config' for examples.
         :returns: result
         """
@@ -59,6 +61,8 @@ class Databases(BaseCheckSuite):
         Calls '/v1/bdbs' from API and checks databases which are 'oss_cluster' enabled if their
         'shards_placement' is 'sparse' and their 'proxy_policy' is set to 'all-master-shards'.
 
+        If this check fails, adapt your database configuration through `rladmin`.
+
         :param _params: None
         :returns: result
         """
@@ -74,6 +78,8 @@ class Databases(BaseCheckSuite):
 
         Calls 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
         if their master shards are on the same node as their single proxy.
+
+        If this check fails, move all master shards to the node where the proxy runs.
 
         :param _params: None
         :returns: result
@@ -119,6 +125,8 @@ class Databases(BaseCheckSuite):
 
         Calls '/v1/bdbs' from API and checks databases which have a 'replica_sources' entry if their 'status' is 'in-sync'.
 
+        If this check fails, try investigating the network link between the failing databases.
+
         :param _params: None
         :returns: result
         """
@@ -146,6 +154,8 @@ class Databases(BaseCheckSuite):
         """DS-002: Check CRDB sources.
 
         Calls '/v1/bdbs' from API and checks databases which have a 'crdt_sources' entry if their 'status' is 'in-sync'.
+
+        If this check fails, try investigating the network link between the failing databases.
 
         :param _params: None
         :returns: result
@@ -175,6 +185,8 @@ class Databases(BaseCheckSuite):
 
         Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
 
+        If this check fails, try investigating the network connection to the endpoint.
+
         :param _params: None
         :returns: result
         """
@@ -198,6 +210,8 @@ class Databases(BaseCheckSuite):
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
         It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25K ops/sec.
+
+        If this check fails, try adding more shards or investigate the key distribution.
 
         :param _params: None
         :returns: result
@@ -248,6 +262,8 @@ class Databases(BaseCheckSuite):
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
         It compares the maximum value to Redis Labs recommended upper limits, i.e. 25 GB.
+
+        If this check fails, try adding more shards or investigate the key distribution.
 
         :param _params: None
         :returns: result
