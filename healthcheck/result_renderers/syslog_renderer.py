@@ -52,7 +52,7 @@ def render_result(_result, _func):
     else:
         raise NotImplementedError()
 
-    msg = _result[2] if len(_result) == 3 else _func.__doc__ + f' [{status}] ' + str(_result[1])
+    msg = (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0] + f' [{status}] ' + str(_result[1])
 
     print('<{}>{} {} {} {} {} {} {} {}'.format(pri, ver, ts, host, app, proc_id, msg_id, sd, msg))
 

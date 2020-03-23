@@ -51,7 +51,8 @@ def print_list(_suites):
     """
     checks = 0
     for suite in _suites:
-        print(f'{Color.green("Suite")}: {suite.__doc__}')
+        print(f'{Color.green("Suite")}: {suite.__class__.__name__}')
+        print(f'{suite.__doc__}')
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
             print(' '.join([f'{Color.yellow("-")}', check_func.__doc__]))

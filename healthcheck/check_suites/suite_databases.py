@@ -7,10 +7,9 @@ from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
 class Databases(BaseCheckSuite):
-    """check databases
-
-     Checks configuration, status and usage of each database.
-     """
+    """
+    Check configuration, status and usage of all databases.
+    """
 
     def __init__(self, _config):
         """
@@ -18,11 +17,50 @@ class Databases(BaseCheckSuite):
         """
         self.api = ApiFetcher.instance(_config)
 
+    def check_config(self, _params):
+        """DC-001: Check database configuration.
+
+        Calls '/v1/bdbs' from API and compares the values against the passed parameters.
+        See API doc for a description of possible values.
+        If no parameters are passed, just outputs a subset of configuration values for each database.
+
+        :param _params: A dict with database configuration values. See 'parameter_maps/databases/check_config' for examples.
+        :returns: result
+        """
+        bdbs = self.api.get('bdbs')
+        results = []
+
+        if not _params:
+            for bdb in bdbs:
+                results.append((None, {'uid': bdb['uid'], 'memory limit': f'{to_gb(bdb["memory_size"])} GB',
+                                       'master shards': bdb['shards_count'], 'HA': bdb['replication'],
+                                       'OSS cluster': bdb['oss_cluster'], 'CRDB': bdb['crdt']},
+                                f"DC-001: Get configuration of '{bdb['name']}'."))
+
+        else:
+            for bdb in bdbs:
+                values = dict(_params['__default__'])
+                if bdb['name'] in _params:
+                    values.update(_params[bdb['name']])
+
+                kwargs = {}
+                for k, v in values.items():
+                    result = v == bdb[k]
+                    if not result:
+                        kwargs[k] = bdb[k]
+
+                results.append((not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""))
+
+        return results
+
     def check_oss_api(self, _params):
-        """check for OSS cluster API of each database
+        """DC-002: Check for OSS cluster API of each database.
 
         Calls '/v1/bdbs' from API and checks databases which are 'oss_cluster' enabled if their
         'shards_placement' is 'sparse' and their 'proxy_policy' is set to 'all-master-shards'.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -32,10 +70,13 @@ class Databases(BaseCheckSuite):
         return all(kwargs.values()) if kwargs.values() else '', kwargs
 
     def check_shards_placement(self, _params):
-        """check for dense shards placement of each database
+        """DC-003: Check for dense shards placement of each database.
 
         Calls '/v1/nodes' and 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
         if their master shards are on the same node as their single proxy.
+
+        :param _params: None
+        :returns: result
         """
         nodes = self.api.get('nodes')
         bdbs = self.api.get('bdbs')
@@ -74,9 +115,12 @@ class Databases(BaseCheckSuite):
         return not any(kwargs.values()), kwargs
 
     def check_replica_sources(self, _params):
-        """check replicaOf sources
+        """DS-001: Check replicaOf sources.
 
         Calls '/v1/bdbs' from API and checks databases which have a 'replica_sources' entry if their 'status' is 'in-sync'.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -99,9 +143,12 @@ class Databases(BaseCheckSuite):
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
     def check_crdt_sources(self, _params):
-        """check CRDB sources
+        """DS-002: Check CRDB sources.
 
         Calls '/v1/bdbs' from API and checks databases which have a 'crdt_sources' entry if their 'status' is 'in-sync'.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -124,9 +171,12 @@ class Databases(BaseCheckSuite):
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
     def check_endpoints(self, _params):
-        """check database endpoints
+        """DS-003: Check database endpoints.
 
         Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -143,46 +193,14 @@ class Databases(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
-    def check_config(self, _params):
-        """check database configuration
-
-        :param _params: A dict with database configuration values. See 'parameter_maps/databases/check_config' for examples.
-
-        Calls '/v1/bdbs' from API and compares the values against the passed parameters.
-        See API doc for a description of possible values.
-        If no parameters are passed, just outputs a subset of configuration values for each database.
-        """
-        bdbs = self.api.get('bdbs')
-        results = []
-
-        if not _params:
-            for bdb in bdbs:
-                results.append((None, {'uid': bdb['uid'], 'memory limit': f'{to_gb(bdb["memory_size"])} GB',
-                                       'master shards': bdb['shards_count'], 'HA': bdb['replication'],
-                                       'OSS cluster': bdb['oss_cluster'], 'CRDB': bdb['crdt']},
-                                f"""get configuration of '{bdb['name']}'"""))
-
-        else:
-            for bdb in bdbs:
-                values = dict(_params['__default__'])
-                if bdb['name'] in _params:
-                    values.update(_params[bdb['name']])
-
-                kwargs = {}
-                for k, v in values.items():
-                    result = v == bdb[k]
-                    if not result:
-                        kwargs[k] = bdb[k]
-
-                results.append((not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""))
-
-        return results
-
     def check_throughput(self, _params):
-        """check throughput of each shard
+        """DU-001: Check throughput of each shard.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
         It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25K ops/sec.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -222,14 +240,17 @@ class Databases(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} Kops/sec'.format(
                     to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max/dev)")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput for '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]
 
     def check_memory_usage(self, _params):
-        """check memory usage of each shard
+        """DU-002: Check memory usage of each shard.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
         It compares the maximum value to Redis Labs recommended upper limits, i.e. 25 GB.
+
+        :param _params: None
+        :returns: result
         """
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -267,5 +288,5 @@ class Databases(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} GB'.format(
                     to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"check memory usage for '{bdb['name']}' (min/avg/max/dev)")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-002: Check memory usage for '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]

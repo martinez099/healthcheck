@@ -9,7 +9,7 @@ def render_result(_result, _func):
     :param _func: The check function executed.
     """
     to_print = {
-        'desc': _result[2] if len(_result) == 3 else _func.__doc__
+        'desc': (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0]
     }
     if _result[0] == '':
         to_print['status'] = 'SKIPPED'
