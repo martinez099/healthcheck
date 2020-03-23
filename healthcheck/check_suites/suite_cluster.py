@@ -10,7 +10,7 @@ from healthcheck.remote_executor import RemoteExecutor
 
 class Cluster(BaseCheckSuite):
     """
-    Check onfiguration, status and usage of the cluster.
+    Check configuration, status and usage of the cluster.
     """
 
     def __init__(self, _config):
@@ -23,7 +23,7 @@ class Cluster(BaseCheckSuite):
     def check_sizing(self, _params):
         """CC-001: Check cluster sizing.
 
-        Calls '/v1/nodes' and compares values with passed paramters.
+        Calls '/v1/nodes' from API and compares values with passed paramters.
         If no parameters were passed, only outputs found values.
 
         :param _params: A dict with cluster sizing values to compare to, see 'parameter_maps/cluster/check_sizing' for examples.
@@ -61,7 +61,7 @@ class Cluster(BaseCheckSuite):
     def check_health(self, _params):
         """CS-001: Check cluster health.
 
-        Calls /v1/cluster/check from the API and outputs the result.
+        Calls '/v1/cluster/check' from API and outputs the result.
 
         :param _params: None
         :returns: result
@@ -73,7 +73,7 @@ class Cluster(BaseCheckSuite):
     def check_shards(self, _params):
         """CS-002: Check cluster shards.
 
-        Calls '/v1/shards' from tha API and executes `shard-cli <UID> PING` for every shard UID on one of the cluster nodes.
+        Calls '/v1/shards' from API and executes `shard-cli <UID> PING` for every shard UID on one of the cluster nodes.
         Collects the responses and compares it against 'PONG'.
 
         :param _params: None
@@ -118,7 +118,7 @@ class Cluster(BaseCheckSuite):
     def check_license(self, _params):
         """CS-005: Check license.
 
-        Calls '/v1/license' from the API and compares the shards limit with actual shards count and checks expired field.
+        Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
 
         :param _params: None
         :returns: result
@@ -140,7 +140,7 @@ class Cluster(BaseCheckSuite):
     def check_throughput(self, _params):
         """CU-001: Get throughput of cluster.
 
-        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'total_req' (total requests per second).
+        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'total_req' (total requests per second).
 
         :param _params: None
         :returns: result
@@ -173,7 +173,7 @@ class Cluster(BaseCheckSuite):
     def check_memory_usage(self, _params):
         """CU-002: Get memory usage of cluster.
 
-        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
+        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
 
         :param _params: None
         :returns: result
@@ -208,7 +208,7 @@ class Cluster(BaseCheckSuite):
     def check_ephemeral_storage_usage(self, _params):
         """CU-003: Get ephemeral storage usage of cluster.
 
-        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
+        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
 
         :param _params: None
         :returns: result
@@ -246,7 +246,7 @@ class Cluster(BaseCheckSuite):
     def check_persistent_storage_usage(self, _params):
         """CU-004: Get persistent storage usage of cluster.
 
-        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
+        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
 
         :param _params: None
         :returns: result

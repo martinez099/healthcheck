@@ -72,7 +72,7 @@ class Databases(BaseCheckSuite):
     def check_shards_placement(self, _params):
         """DC-003: Check for dense shards placement of each database.
 
-        Calls '/v1/nodes' and 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
+        Calls 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
         if their master shards are on the same node as their single proxy.
 
         :param _params: None
