@@ -9,7 +9,10 @@ from healthcheck.remote_executor import RemoteExecutor
 
 
 class Cluster(BaseCheckSuite):
-    """Cluster - status, sizing and usage"""
+    """check cluster
+
+    Checks status, sizing and usage of the cluster.
+    """
 
     def __init__(self, _config):
         """
@@ -18,59 +21,78 @@ class Cluster(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
-    def check_health(self):
-        """check cluster health"""
+    def check_health(self, _params):
+        """check cluster health
+
+        Calls /v1/cluster/check from the API and outputs the result.
+        """
         result = self.api.get('cluster/check')
 
         return result['cluster_test_result'], result
 
-    def check_shards(self):
-        """check cluster shards"""
+    def check_shards(self, _params):
+        """check cluster shards
+
+        Calls '/v1/shards' from tha API and executes `shard-cli <UID> PING` for every shard UID on one of the cluster nodes.
+        Collects the responses and compares it against 'PONG'.
+        """
         rsps = {f'shard:{shard["uid"]}': self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING',
                                                            self.rex.get_targets()[0]) for shard in self.api.get('shards')}
         kwargs = dict(filter(lambda x: x[1] != 'PONG', rsps.items()))
 
         return not kwargs, kwargs
 
-    def check_rladmin_status(self):
-        """check if `rladmin status` has errors"""
+    def check_rladmin_status(self, _params):
+        """check if `rladmin status` has errors
+
+        Executes `rladmin status | grep -v endpoint | grep node` on one of the cluster nodes.
+        Collects output and compares against 'OK'.
+        """
         rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
                                 self.rex.get_targets()[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
-    def check_master_node(self):
-        """get master node"""
+    def check_master_node(self, _params):
+        """get master node
+
+        Executes `rladmin status` on one of the cluster nodes and greps for the master node.
+        Outputs UID, internal and external address.
+        """
         rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
         found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
         parts = re.split(r'\s+', found.group(1))
 
         return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
 
-    def check_license_shards_limit(self):
-        """check shards limit in license"""
+    def check_license(self, _params):
+        """check license
+
+        Calls '/v1/license' from the API and compares the shards limit with actual shards count and checks expired field.
+        """
         number_of_shards = self.api.get_number_of_values('shards')
         _license = self.api.get('license')
+        expired = _license['expired']
         if 'shards_limit' in _license:
             shards_limit = int(_license['shards_limit'])
         else:
             match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
             shards_limit = int(match.group(1))
 
-        result = shards_limit >= number_of_shards
-        kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards}
+        result = shards_limit >= number_of_shards and not expired
+        kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired}
 
         return result, kwargs
 
-    def check_license_expired(self):
-        """check if license is expired"""
-        expired = self.api.get('license')['expired']
+    def check_sizing(self, _params):
+        """check cluster sizing
 
-        return not expired, {'license expired': expired}
+        :param _params: A dict with cluster sizing values to compare to, see 'parameter_maps/cluster/check_sizing' for examples.
 
-    def check_sizing(self, **_params):
-        """check cluster sizing"""
+        Calls '/v1/nodes' and compares values with passed paramters.
+        If no parameters were passed, only outputs found values.
+        """
         number_of_nodes = self.api.get_number_of_values('nodes')
         number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
         total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
@@ -100,8 +122,11 @@ class Cluster(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_throughput(self):
-        """get throughput of cluster"""
+    def check_throughput(self, _params):
+        """get throughput of cluster
+
+        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'total_req' (total requests per second).
+        """
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
@@ -127,8 +152,11 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_memory_usage(self):
-        """get memory usage of cluster"""
+    def check_memory_usage(self, _params):
+        """get memory usage of cluster
+
+        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
+        """
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
@@ -156,8 +184,11 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_ephemeral_storage_usage(self):
-        """get ephemeral storage usage of cluster"""
+    def check_ephemeral_storage_usage(self, _params):
+        """get ephemeral storage usage of cluster
+
+        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
+        """
         kwargs = {}
         stats = self.api.get('cluster/stats')
 
@@ -188,8 +219,11 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_persistent_storage_usage(self):
-        """get persistent storage usage of cluster"""
+    def check_persistent_storage_usage(self, _params):
+        """get persistent storage usage of cluster
+
+        Calls '/v1/cluster/stats' and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
+        """
         kwargs = {}
         stats = self.api.get('cluster/stats')
 

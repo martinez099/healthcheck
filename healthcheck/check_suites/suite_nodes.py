@@ -9,7 +9,10 @@ from healthcheck.remote_executor import RemoteExecutor
 
 
 class Nodes(BaseCheckSuite):
-    """Nodes - setup, configuration and usage"""
+    """check nodes
+
+    Check setup, configuration and usage of each node.
+    """
 
     def __init__(self, _config):
         """
@@ -18,26 +21,37 @@ class Nodes(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
-    def check_os_version(self):
-        """get OS version of each node"""
+    def check_os_version(self, _params):
+        """get OS version of each node
+
+        Executes `cat /etc/os-release | grep PRETTY_NAME` on each node and outputs found values.
+        """
         rsps = self.rex.exec_broad('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version
                   in zip(rsps, os_versions)}
+
         return None, kwargs
 
-    def check_software_version(self):
-        """get RS version of each node"""
+    def check_software_version(self, _params):
+        """get RS version of each node
+
+        Calls '/v1/nodes' and outputs 'software_version' (RE version).
+        """
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
 
         kwargs = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
+
         return None, kwargs
 
-    def check_log_file_path(self):
-        """check if log file path is not on root filesystem"""
+    def check_log_file_path(self, _params):
+        """check if log file path is not on root filesystem
+
+        Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
+        """
         rsps = self.rex.exec_broad('sudo df -h /var/opt/redislabs/log')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         log_file_paths = [match.group(1) for match in matches]
@@ -45,10 +59,15 @@ class Nodes(BaseCheckSuite):
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': log_file_path for
                   rsp, log_file_path in zip(rsps, log_file_paths)}
+
         return result, kwargs
 
-    def check_ephemeral_storage_path(self):
-        """check if ephemeral storage path is not on root filesystem"""
+    def check_ephemeral_storage_path(self, _params):
+        """check if ephemeral storage path is not on root filesystem
+
+        Calls '/v1/nodes' from API and gets the ephemeral storage path.
+        Executes `df -h /var/opt/redislabs/log` and compares the output to the configured ephemeral storage path.
+        """
         storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
         rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
@@ -57,10 +76,15 @@ class Nodes(BaseCheckSuite):
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
+
         return result, kwargs
 
-    def check_persistent_storage_path(self):
-        """check if persistent storage path is not on root filesystem"""
+    def check_persistent_storage_path(self, _params):
+        """check if persistent storage path is not on root filesystem
+
+        Calls '/v1/nodes' from API and gets the persistent storage path.
+        Executes `df -h /var/opt/redislabs/log` and compares the output to the configured persistent storage path.
+        """
         storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
         rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
@@ -69,38 +93,53 @@ class Nodes(BaseCheckSuite):
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
+
         return result, kwargs
 
-    def check_swappiness(self):
-        """check if swappiness is disabled on each node"""
+    def check_swappiness(self, _params):
+        """check if swappiness is disabled on each node
+
+        Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
+        """
         rsps = self.rex.exec_broad('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
                   in zip(rsps, swappinesses)}
+
         return result, kwargs
 
-    def check_transparent_hugepages(self):
-        """check if THP is disabled on each node"""
+    def check_transparent_hugepages(self, _params):
+        """check if THP is disabled on each node
+
+        Executes `cat /sys/kernel/mm/transparent_hugepage/enabled` and compares the output to 'always madvise [never]'.
+        """
         rsps = self.rex.exec_broad('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
         kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
                   rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
+
         return result, kwargs
 
-    def check_rlcheck_result(self):
-        """check if `rlcheck` has errors"""
+    def check_rlcheck_result(self, _params):
+        """check if `rlcheck` has errors
+
+        Executes `rlcheck` and greps for 'FAILED'.
+        """
         rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
 
-    def check_cnm_ctl_status(self):
-        """check if `cnm_ctl status` has errors"""
+    def check_cnm_ctl_status(self, _params):
+        """check if `cnm_ctl status` has errors
+
+        Executes `cnm_ctl status` and greps for not 'RUNNING'.
+        """
         rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
@@ -108,8 +147,11 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
-    def check_supervisorctl_status(self):
-        """check if `supervisorctl status` has errors"""
+    def check_supervisorctl_status(self, _params):
+        """check if `supervisorctl status` has errors
+
+        Executes `supervisorctl status` and grep for not 'RUNNING'.
+        """
         rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
@@ -117,16 +159,22 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 1 * len(rsps), {
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
-    def check_errors_in_install_log(self):
-        """check if `cat install.log` has errors"""
+    def check_errors_in_install_log(self, _params):
+        """check if `cat install.log` has errors
+
+        Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
+        """
         rsps = self.rex.exec_broad('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
-    def check_network_link(self):
-        """get network link speed between nodes"""
+    def check_network_link(self, _params):
+        """get network link speed between nodes
+
+        Executes `ping -c 4 <TARGET>` from all nodes to each node and calculates min/avg/max/dev of RTT.
+        """
         cmd_targets = []
         for source in self.rex.get_targets():
             for target, address in self.rex.get_addrs().items():
@@ -151,10 +199,15 @@ class Nodes(BaseCheckSuite):
         mdev /= len(futures)
 
         kwargs = {key: '{}/{}/{}/{} ms'.format(to_ms(_min), to_ms(avg), to_ms(_max), to_ms(mdev))}
+
         return None, kwargs
 
-    def check_open_ports(self):
-        """check open TCP ports of each node"""
+    def check_open_ports(self, _params):
+        """check open TCP ports of each node
+
+        Does a TCP port scan from all nodes to each node for specified ports: 3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
+        See https://docs.redislabs.com/latest/rs/administering/designing-production/networking/port-configurations for details.
+        """
         cmd_targets = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
         cmd = \
@@ -179,8 +232,12 @@ class Nodes(BaseCheckSuite):
 
         return not kwargs, kwargs if kwargs else {'open': 'all'}
 
-    def check_cpu_usage(self):
-        """check CPU usage (min/avg/max/dev) of each node"""
+    def check_cpu_usage(self, _params):
+        """check CPU usage (min/avg/max/dev) of each node
+
+        Calls '/v1/nodes/stats' from API calculates min/avg/max/dev of 1 - 'cpu_idle' (cpu usage).
+        It compares to RL recommended values, i.e. maximum of 80%.
+        """
         kwargs = {}
         results = {}
 
@@ -222,8 +279,12 @@ class Nodes(BaseCheckSuite):
 
         return not any(results.values()), kwargs
 
-    def check_ram_usage(self):
-        """check RAM usage (min/avg/max/dev) of each node"""
+    def check_ram_usage(self, _params):
+        """check RAM usage (min/avg/max/dev) of each node
+
+        Call '/v1/nodes/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
+        It compares them to RL recommended values, i.e. maximum of 2/3.
+        """
         kwargs = {}
         results = {}
 
@@ -267,8 +328,11 @@ class Nodes(BaseCheckSuite):
 
         return not any(results.values()), kwargs
 
-    def check_ephemeral_storage_usage(self):
-        """get ephemeral storage usage (min/avg/max/dev) of each node"""
+    def check_ephemeral_storage_usage(self, _params):
+        """get ephemeral storage usage (min/avg/max/dev) of each node
+
+        Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'ephemeral_storage_avail'.
+        """
         kwargs = {}
 
         # get quorum-only node
@@ -315,8 +379,11 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_persistent_storage_usage(self):
-        """get persistent storage usage (min/avg/max/dev) of each node"""
+    def check_persistent_storage_usage(self, _params):
+        """get persistent storage usage (min/avg/max/dev) of each node
+
+        Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'persistent_storage_avail'.
+        """
         kwargs = {}
 
         # get quorum-only node

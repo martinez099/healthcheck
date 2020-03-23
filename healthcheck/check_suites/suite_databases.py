@@ -7,7 +7,10 @@ from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
 
 
 class Databases(BaseCheckSuite):
-    """Databases - configuration, sizing and usage"""
+    """check databases
+
+     Checks configuration, status and usage of each database.
+     """
 
     def __init__(self, _config):
         """
@@ -15,8 +18,12 @@ class Databases(BaseCheckSuite):
         """
         self.api = ApiFetcher.instance(_config)
 
-    def check_oss_api(self):
-        """check for OSS cluster API of each database"""
+    def check_oss_api(self, _params):
+        """check for OSS cluster API of each database
+
+        Calls '/v1/bdbs' from API and checks databases which are 'oss_cluster' enabled if their
+        'shards_placement' is 'sparse' and their 'proxy_policy' is set to 'all-master-shards'.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
@@ -24,8 +31,12 @@ class Databases(BaseCheckSuite):
 
         return all(kwargs.values()) if kwargs.values() else '', kwargs
 
-    def check_shards_placement(self):
-        """check for dense shards placement of each database"""
+    def check_shards_placement(self, _params):
+        """check for dense shards placement of each database
+
+        Calls '/v1/nodes' and 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
+        if their master shards are on the same node as their single proxy.
+        """
         nodes = self.api.get('nodes')
         bdbs = self.api.get('bdbs')
         kwargs = {}
@@ -62,8 +73,11 @@ class Databases(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
-    def check_replica_sources(self):
-        """check replicaOf sources"""
+    def check_replica_sources(self, _params):
+        """check replicaOf sources
+
+        Calls '/v1/bdbs' from API and checks databases which have a 'replica_sources' entry if their 'status' is 'in-sync'.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
 
@@ -84,8 +98,11 @@ class Databases(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_crdt_sources(self):
-        """check CRDB sources"""
+    def check_crdt_sources(self, _params):
+        """check CRDB sources
+
+        Calls '/v1/bdbs' from API and checks databases which have a 'crdt_sources' entry if their 'status' is 'in-sync'.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
 
@@ -106,8 +123,11 @@ class Databases(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_endpoints(self):
-        """check database endpoints"""
+    def check_endpoints(self, _params):
+        """check database endpoints
+
+        Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
 
@@ -123,8 +143,15 @@ class Databases(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
-    def check_config(self, **_params):
-        """check database configuration"""
+    def check_config(self, _params):
+        """check database configuration
+
+        :param _params: A dict with database configuration values. See 'parameter_maps/databases/check_config' for examples.
+
+        Calls '/v1/bdbs' from API and compares the values against the passed parameters.
+        See API doc for a description of possible values.
+        If no parameters are passed, just outputs a subset of configuration values for each database.
+        """
         bdbs = self.api.get('bdbs')
         results = []
 
@@ -151,8 +178,12 @@ class Databases(BaseCheckSuite):
 
         return results
 
-    def check_throughput(self):
-        """check throughput of each shard"""
+    def check_throughput(self, _params):
+        """check throughput of each shard
+
+        Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
+        It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25K ops/sec.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
         results = {}
@@ -194,8 +225,12 @@ class Databases(BaseCheckSuite):
         return [(not results[bdb['name']], kwargs[bdb['name']], f"check throughput for '{bdb['name']}' (min/avg/max/dev)")
                 for bdb in bdbs]
 
-    def check_memory_usage(self):
-        """check memory usage of each shard"""
+    def check_memory_usage(self, _params):
+        """check memory usage of each shard
+
+        Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
+        It compares the maximum value to Redis Labs recommended upper limits, i.e. 25 GB.
+        """
         bdbs = self.api.get('bdbs')
         kwargs = {}
         results = {}

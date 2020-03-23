@@ -9,7 +9,7 @@ import os
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.common_funcs import get_parameter_map_name
-from healthcheck.printer_funcs import print_list, print_error, print_warning, print_msg, print_success
+from healthcheck.printer_funcs import print_list, print_error, print_warning
 from healthcheck.stats_collector import StatsCollector
 
 
@@ -95,7 +95,6 @@ def load_parameter_map(_suite, _check_func_name, _args):
     :return: A list of tuples.
     """
     if not _args.params:
-        print_warning(f'- no parameter map specified, running \'{_check_func_name}\' without parameters')
         return None
 
     if not _args.check and not _args.suite:
@@ -159,9 +158,7 @@ def find_checks(_suites, _args, _config):
             if ('ssh' not in _config and 'docker' not in _config) and 'rex' in check_func.__code__.co_names:
                 continue
 
-            if '_params' in check_func.__code__.co_varnames:
-                params = load_parameter_map(suite, check_func.__name__, _args)
-            checks.append((check_func, suite, params))
+            checks.append((check_func, suite))
 
     return checks
 
@@ -183,7 +180,9 @@ def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
             print_error('could not find a single check, examine argument of --check')
             exit(1)
 
-        for check_func, suite, params in checks:
+        for check_func, suite in checks:
+            suite.run_connection_checks()
+            params = load_parameter_map(suite, check_func.__name__, _args)
             _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
     else:
@@ -192,8 +191,9 @@ def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
             exit(1)
 
         checks = find_checks(_suites, _args, _config)
-        for check_func, suite, params in checks:
+        for check_func, suite in checks:
             suite.run_connection_checks()
+            params = load_parameter_map(suite, check_func.__name__, _args)
             _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
     _executor.wait()
@@ -228,9 +228,9 @@ def main():
         result = _future.result()
         [stats_collector.collect(r) for r in result] if type(result) == list else stats_collector.collect(result)
 
-    def render(_result, _func, _params):
+    def render(_result, _func):
         if type(_result) == list:
-            return [render(r, _func, _params) for r in _result]
+            return [render(r, _func) for r in _result]
         else:
             return renderer.render_result(_result, _func)
 

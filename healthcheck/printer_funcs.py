@@ -49,15 +49,14 @@ def print_list(_suites):
 
     :param _suites: The list of check suites.
     """
+    checks = 0
     for suite in _suites:
         print(f'{Color.green("Suite")}: {suite.__doc__}')
         for check_name in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check_name)
-            parts = [f'{Color.yellow("-")}', check_func.__doc__]
-            if '_params' in check_func.__code__.co_varnames:
-                parts.append(Color.red("[params]"))
-            print(' '.join(parts))
-        print('')
+            print(' '.join([f'{Color.yellow("-")}', check_func.__doc__]))
+            checks += 1
+    print(f'Total {checks} checks in {len(_suites)} suites found.')
 
 
 def print_msg(_msg):

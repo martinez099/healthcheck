@@ -16,7 +16,7 @@ class CheckExecutor(object):
         self.futures = []
         self.result_cb = _result_cb
 
-    def execute(self, _func, _params={}, _done_cb=None):
+    def execute(self, _func, _params=None, _done_cb=None):
         """
         Execute a function.
 
@@ -26,7 +26,7 @@ class CheckExecutor(object):
         """
         def error_handler(_check, _params):
             try:
-                return _check(**_params)
+                return _check(_params)
             except Exception as e:
                 return Exception, {e.__class__.__name__: str(e)}
 
@@ -42,7 +42,7 @@ class CheckExecutor(object):
         Wait for completition of all futures.
         """
         for future in concurrent.futures.as_completed(self.futures):
-            self.result_cb(future.result(), future.func, future.params)
+            self.result_cb(future.result(), future.func)
         self.futures = []
 
     def shutdown(self):

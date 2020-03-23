@@ -8,7 +8,7 @@ def render_result(_result, _func):
     :param _result: The result.
     :param _func: The check function executed.
     """
-    doc = _result[2] if len(_result) == 3 else _func.__doc__
+    doc = (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0]
     if _result[0] == '':
         to_print = ['[ ]', doc, '[SKIPPED]']
     elif _result[0] is True:
