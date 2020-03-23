@@ -64,6 +64,21 @@ class Cluster(BaseCheckSuite):
 
         return not bool(kwargs), kwargs
 
+    def check_master_node(self, _params):
+        """CC-002: Get master node.
+
+        Executes `rladmin status` on one of the cluster nodes and greps for the master node.
+        Outputs UID, internal and external address.
+
+        :param _params: None
+        :returns: result
+        """
+        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
+        found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
+        parts = re.split(r'\s+', found.group(1))
+
+        return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
+
     def check_health(self, _params):
         """CS-001: Check cluster health.
 
@@ -112,23 +127,8 @@ class Cluster(BaseCheckSuite):
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
-    def check_master_node(self, _params):
-        """CS-004: Get master node.
-
-        Executes `rladmin status` on one of the cluster nodes and greps for the master node.
-        Outputs UID, internal and external address.
-
-        :param _params: None
-        :returns: result
-        """
-        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
-        found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
-        parts = re.split(r'\s+', found.group(1))
-
-        return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
-
     def check_license(self, _params):
-        """CS-005: Check license.
+        """CS-004: Check license.
 
         Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
 
