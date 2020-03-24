@@ -199,7 +199,7 @@ class Databases(BaseCheckSuite):
         """DU-001: Check throughput of each shard.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
-        It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25K ops/sec.
+        It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25 Kops.
 
         If this check fails, try adding more shards or investigate the key distribution.
 
@@ -241,7 +241,7 @@ class Databases(BaseCheckSuite):
                 if bdb['name'] not in kwargs:
                     kwargs[bdb['name']] = {}
 
-                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} Kops/sec'.format(
+                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} Kops'.format(
                     to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
         return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).")

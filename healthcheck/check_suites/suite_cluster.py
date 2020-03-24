@@ -177,10 +177,10 @@ class Cluster(BaseCheckSuite):
         q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
         std_dev = math.sqrt(q_sum / len(total_reqs))
 
-        kwargs['min'] = '{} Kops/sec'.format(to_kops(minimum))
-        kwargs['avg'] = '{} Kops/sec'.format(to_kops(average))
-        kwargs['max'] = '{} Kops/sec'.format(to_kops(maximum))
-        kwargs['dev'] = '{} Kops/sec'.format(to_kops(std_dev))
+        kwargs['min'] = '{} Kops'.format(to_kops(minimum))
+        kwargs['avg'] = '{} Kops'.format(to_kops(average))
+        kwargs['max'] = '{} Kops'.format(to_kops(maximum))
+        kwargs['dev'] = '{} Kops'.format(to_kops(std_dev))
 
         return None, kwargs
 
