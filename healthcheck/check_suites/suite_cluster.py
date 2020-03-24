@@ -4,7 +4,7 @@ import re
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import GB, to_gb, to_kops
+from healthcheck.common_funcs import GB, to_gb, to_kops, to_percent
 from healthcheck.remote_executor import RemoteExecutor
 
 
@@ -212,10 +212,10 @@ class Cluster(BaseCheckSuite):
 
         total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
 
-        kwargs['min'] = '{} GB'.format(to_gb(total_mem - maximum))
-        kwargs['avg'] = '{} GB'.format(to_gb(total_mem - average))
-        kwargs['max'] = '{} GB'.format(to_gb(total_mem - minimum))
-        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_mem - maximum), to_percent((100 / total_mem) * (total_mem - maximum)))
+        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_mem - average), to_percent((100 / total_mem) * (total_mem - average)))
+        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_mem - minimum), to_percent((100 / total_mem) * (total_mem - minimum)))
+        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_mem) * std_dev))
 
         return None, kwargs
 
@@ -248,12 +248,12 @@ class Cluster(BaseCheckSuite):
                                  ephemeral_storage_avails, 0)
         std_dev = math.sqrt(q_sum / len(ephemeral_storage_avails))
 
-        ephemeral_storage_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
+        total_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
 
-        kwargs['min'] = '{} GB'.format(to_gb(ephemeral_storage_size - maximum))
-        kwargs['avg'] = '{} GB'.format(to_gb(ephemeral_storage_size - average))
-        kwargs['max'] = '{} GB'.format(to_gb(ephemeral_storage_size - minimum))
-        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
+        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
+        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
+        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
 
         return None, kwargs
 
@@ -286,11 +286,11 @@ class Cluster(BaseCheckSuite):
                                  persistent_storage_avails, 0)
         std_dev = math.sqrt(q_sum / len(persistent_storage_avails))
 
-        persistent_storage_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
+        total_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
 
-        kwargs['min'] = '{} GB'.format(to_gb(persistent_storage_size - maximum))
-        kwargs['avg'] = '{} GB'.format(to_gb(persistent_storage_size - average))
-        kwargs['max'] = '{} GB'.format(to_gb(persistent_storage_size - minimum))
-        kwargs['dev'] = '{} GB'.format(to_gb(std_dev))
+        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
+        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
+        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
+        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
 
         return None, kwargs

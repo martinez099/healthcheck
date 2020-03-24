@@ -32,7 +32,8 @@ def render_stats(_stats):
 
     :param _stats: A stats collector.
     """
-    print("total checks run: {}".format(
+    print('')
+    print('total checks run: {}'.format(
         sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print(f'- {Color.green("succeeded")}: {_stats.succeeded}')
     print(f'- {Color.yellow("no result")}: {_stats.no_result}')

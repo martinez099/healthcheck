@@ -254,7 +254,7 @@ class Databases(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} Kops/sec'.format(
                     to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput for '{bdb['name']}' (min/avg/max/dev).")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]
 
     def check_databases_usage_002(self, _params):
@@ -304,5 +304,5 @@ class Databases(BaseCheckSuite):
                 kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = '{}/{}/{}/{} GB'.format(
                     to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-002: Check memory usage for '{bdb['name']}' (min/avg/max/dev).")
+        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]

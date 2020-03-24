@@ -21,7 +21,7 @@ def to_percent(_value):
     :param _value: The numeric value in decimal.
     :return:
     """
-    return '{:.1f}'.format(_value * 100)
+    return '{:.1f}'.format(_value)
 
 
 def to_kops(_value):
