@@ -20,7 +20,7 @@ class Nodes(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
-    def check_log_file_path(self, _params):
+    def check_nodes_config_001(self, _params):
         """NC-001: Check if log file path is not on root filesystem.
 
         Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
@@ -40,7 +40,7 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_ephemeral_storage_path(self, _params):
+    def check_nodes_config_002(self, _params):
         """NC-002: Check if ephemeral storage path is not on root filesystem.
 
         Calls '/v1/nodes' from API and gets the ephemeral storage path.
@@ -62,7 +62,7 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_persistent_storage_path(self, _params):
+    def check_nodes_config_003(self, _params):
         """NC-003: Check if persistent storage path is not on root filesystem.
 
         Calls '/v1/nodes' from API and gets the persistent storage path.
@@ -84,7 +84,7 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_swappiness(self, _params):
+    def check_nodes_config_004(self, _params):
         """NC-004: Check if swappiness is disabled on each node.
 
         Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
@@ -103,7 +103,7 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_transparent_hugepages(self, _params):
+    def check_nodes_config_005(self, _params):
         """NC-005: Check if THP is disabled on each node.
 
         Executes `cat /sys/kernel/mm/transparent_hugepage/enabled` and compares the output to 'always madvise [never]'.
@@ -122,7 +122,7 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_os_version(self, _params):
+    def check_nodes_status_001(self, _params):
         """NS-001: Get OS version of each node.
 
         Executes `cat /etc/os-release | grep PRETTY_NAME` on each node and outputs found values.
@@ -139,7 +139,7 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_software_version(self, _params):
+    def check_nodes_status_002(self, _params):
         """NS-002: Get RS version of each node.
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
@@ -154,7 +154,7 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_rlcheck_result(self, _params):
+    def check_nodes_status_003(self, _params):
         """NS-003: Check if `rlcheck` has errors.
 
         Executes `rlcheck` and greps for 'FAILED'.
@@ -170,7 +170,7 @@ class Nodes(BaseCheckSuite):
 
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
 
-    def check_cnm_ctl_status(self, _params):
+    def check_nodes_status_004(self, _params):
         """NS-004: Check if `cnm_ctl status` has errors.
 
         Executes `cnm_ctl status` and greps for not 'RUNNING'.
@@ -187,7 +187,7 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
-    def check_supervisorctl_status(self, _params):
+    def check_nodes_status_005(self, _params):
         """NS-005: Check if `supervisorctl status` has errors.
 
         Executes `supervisorctl status` and grep for not 'RUNNING'.
@@ -204,7 +204,7 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 1 * len(rsps), {
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
-    def check_errors_in_install_log(self, _params):
+    def check_nodes_status_006(self, _params):
         """NS-006: Check if `cat install.log` has errors.
 
         Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
@@ -220,7 +220,7 @@ class Nodes(BaseCheckSuite):
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
-    def check_network_link(self, _params):
+    def check_nodes_status_007(self, _params):
         """NS-007: Get network link speed between nodes.
 
         Executes `ping -c 4 <TARGET>` from all nodes to each node and calculates min/avg/max/dev of RTT.
@@ -255,7 +255,7 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_open_ports(self, _params):
+    def check_nodes_status_008(self, _params):
         """NS-008: Check open TCP ports of each node.
 
         Does a TCP port scan from all nodes to each node for specified ports: 3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
@@ -289,7 +289,7 @@ class Nodes(BaseCheckSuite):
 
         return not kwargs, kwargs if kwargs else {'open': 'all'}
 
-    def check_cpu_usage(self, _params):
+    def check_nodes_usage_001(self, _params):
         """NU-001: Check CPU usage (min/avg/max/dev) of each node.
 
         Calls '/v1/nodes/stats' from API calculates min/avg/max/dev of 1 - 'cpu_idle' (cpu usage).
@@ -341,7 +341,7 @@ class Nodes(BaseCheckSuite):
 
         return not any(results.values()), kwargs
 
-    def check_ram_usage(self, _params):
+    def check_nodes_usage_002(self, _params):
         """NU-002: Check RAM usage (min/avg/max/dev) of each node.
 
         Call '/v1/nodes/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
@@ -395,7 +395,7 @@ class Nodes(BaseCheckSuite):
 
         return not any(results.values()), kwargs
 
-    def check_ephemeral_storage_usage(self, _params):
+    def check_nodes_usage_003(self, _params):
         """NU-003: Get ephemeral storage usage (min/avg/max/dev) of each node.
 
         Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'ephemeral_storage_avail'.
@@ -449,7 +449,7 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_persistent_storage_usage(self, _params):
+    def check_nodes_usage_004(self, _params):
         """NU-004: Get persistent storage usage (min/avg/max/dev) of each node.
 
         Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'persistent_storage_avail'.

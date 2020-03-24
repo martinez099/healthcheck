@@ -20,7 +20,7 @@ class Cluster(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
-    def check_sizing(self, _params):
+    def check_cluster_config_001(self, _params):
         """CC-001: Check cluster sizing.
 
         Calls '/v1/nodes' from API and compares values with passed paramters.
@@ -64,7 +64,7 @@ class Cluster(BaseCheckSuite):
 
         return not bool(kwargs), kwargs
 
-    def check_master_node(self, _params):
+    def check_cluster_config_002(self, _params):
         """CC-002: Get master node.
 
         Executes `rladmin status` on one of the cluster nodes and greps for the master node.
@@ -79,7 +79,7 @@ class Cluster(BaseCheckSuite):
 
         return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
 
-    def check_health(self, _params):
+    def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
 
         Calls '/v1/cluster/check' from API and outputs the result.
@@ -93,7 +93,7 @@ class Cluster(BaseCheckSuite):
 
         return result['cluster_test_result'], result
 
-    def check_shards(self, _params):
+    def check_cluster_status_002(self, _params):
         """CS-002: Check cluster shards.
 
         Calls '/v1/shards' from API and executes `shard-cli <UID> PING` for every shard UID on one of the cluster nodes.
@@ -110,7 +110,7 @@ class Cluster(BaseCheckSuite):
 
         return not kwargs, kwargs
 
-    def check_rladmin_status(self, _params):
+    def check_cluster_status_003(self, _params):
         """CS-003: Check if `rladmin status` has errors.
 
         Executes `rladmin status | grep -v endpoint | grep node` on one of the cluster nodes.
@@ -127,7 +127,7 @@ class Cluster(BaseCheckSuite):
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
-    def check_license(self, _params):
+    def check_cluster_status_004(self, _params):
         """CS-004: Check license.
 
         Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
@@ -151,7 +151,7 @@ class Cluster(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_throughput(self, _params):
+    def check_cluster_usage_001(self, _params):
         """CU-001: Get throughput of cluster.
 
         Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'total_req' (total requests per second).
@@ -184,7 +184,7 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_memory_usage(self, _params):
+    def check_cluster_usage_002(self, _params):
         """CU-002: Get memory usage of cluster.
 
         Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
@@ -219,7 +219,7 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_ephemeral_storage_usage(self, _params):
+    def check_cluster_usage_003(self, _params):
         """CU-003: Get ephemeral storage usage of cluster.
 
         Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
@@ -257,7 +257,7 @@ class Cluster(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_persistent_storage_usage(self, _params):
+    def check_cluster_usage_004(self, _params):
         """CU-004: Get persistent storage usage of cluster.
 
         Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).

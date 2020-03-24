@@ -17,7 +17,7 @@ class Databases(BaseCheckSuite):
         """
         self.api = ApiFetcher.instance(_config)
 
-    def check_config(self, _params):
+    def check_databases_config_001(self, _params):
         """DC-001: Check database configuration.
 
         Calls '/v1/bdbs' from API and compares the values against the passed parameters.
@@ -55,7 +55,7 @@ class Databases(BaseCheckSuite):
 
         return results
 
-    def check_oss_api(self, _params):
+    def check_databases_config_002(self, _params):
         """DC-002: Check for OSS cluster API of each database.
 
         Calls '/v1/bdbs' from API and checks databases which are 'oss_cluster' enabled if their
@@ -73,7 +73,7 @@ class Databases(BaseCheckSuite):
 
         return all(kwargs.values()) if kwargs.values() else '', kwargs
 
-    def check_shards_placement(self, _params):
+    def check_databases_config_003(self, _params):
         """DC-003: Check for dense shards placement of each database.
 
         Calls 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
@@ -120,7 +120,7 @@ class Databases(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
-    def check_replica_sources(self, _params):
+    def check_databases_status_001(self, _params):
         """DS-001: Check replicaOf sources.
 
         Calls '/v1/bdbs' from API and checks databases which have a 'replica_sources' entry if their 'status' is 'in-sync'.
@@ -150,7 +150,7 @@ class Databases(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_crdt_sources(self, _params):
+    def check_databases_status_002(self, _params):
         """DS-002: Check CRDB sources.
 
         Calls '/v1/bdbs' from API and checks databases which have a 'crdt_sources' entry if their 'status' is 'in-sync'.
@@ -180,7 +180,7 @@ class Databases(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
 
-    def check_endpoints(self, _params):
+    def check_databases_status_003(self, _params):
         """DS-003: Check database endpoints.
 
         Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
@@ -205,7 +205,7 @@ class Databases(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
-    def check_throughput(self, _params):
+    def check_databases_usage_001(self, _params):
         """DU-001: Check throughput of each shard.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
@@ -257,7 +257,7 @@ class Databases(BaseCheckSuite):
         return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput for '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]
 
-    def check_memory_usage(self, _params):
+    def check_databases_usage_002(self, _params):
         """DU-002: Check memory usage of each shard.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
