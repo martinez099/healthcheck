@@ -97,24 +97,14 @@ class Databases(BaseCheckSuite):
                 kwargs[bdb['name']] = "proxy policy set to '{}' instead of 'single'".format(bdb['proxy_policy'])
                 continue
 
-            internal_endpoints = list(filter(lambda e: e['addr_type'] == 'internal', bdb['endpoints']))
-            if len(internal_endpoints) > 1:
-                kwargs[bdb['name']] = "multiple internal endpoints found"
+            endpoint_nodes = list(filter(lambda node: node['addr'] == bdb['endpoints'][0]['addr'][0] and node['uid'], nodes))
+            if len(endpoint_nodes) < 1:
+                kwargs[bdb['name']] = f"no endpoint node found"
                 continue
 
-            endpoint_addrs = internal_endpoints[0]['addr']
-            if len(endpoint_addrs) > 1:
-                kwargs[bdb['name']] = "multiple addresses for internal endpoint found"
-                continue
-
-            endpoint_nodes = list(filter(lambda n: n['addr'] == endpoint_addrs[0] and n['uid'], nodes))
-            if len(endpoint_nodes) > 1:
-                kwargs[bdb['name']] = "multiple nodes for endpoint found"
-                continue
-
-            master_shards = filter(lambda s: s['bdb_uid'] == bdb['uid'] and s['role'] == 'master', self.api.get('shards'))
-            shards_not_on_endpoint = filter(lambda s: int(s['node_uid']) != endpoint_nodes[0]['uid'], master_shards)
-            result = list(map(lambda r: 'shard:{}'.format(r['uid']), shards_not_on_endpoint))
+            master_shards = filter(lambda shard: shard['bdb_uid'] == bdb['uid'] and shard['role'] == 'master', self.api.get('shards'))
+            shards_not_on_endpoint = filter(lambda shard: int(shard['node_uid']) != endpoint_nodes[0]['uid'], master_shards)
+            result = list(map(lambda shard: 'shard:{}'.format(shard['uid']), shards_not_on_endpoint))
             if result:
                 kwargs[bdb['name']] = result
 
