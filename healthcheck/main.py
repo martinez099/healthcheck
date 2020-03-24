@@ -85,6 +85,36 @@ def load_check_suites(_args, _config, _check_connection=True):
     return suites
 
 
+def find_checks(_suites, _args, _config):
+    """
+    Collect all checks to be executed.
+
+    :param _suites: A list of loaded check suites.
+    :param _args: The parsed cmdline arguments.
+    :param _config: The parsed configuration.
+    :return: A list with found checks to execute.
+    """
+    checks = []
+    for suite in _suites:
+        for check in filter(lambda x: x.startswith('check_'), dir(suite)):
+            check_func = getattr(suite, check)
+            if _args.check:
+                check_arg = _args.check.lower()
+                check_doc = check_func.__doc__.split('\n')[0].lower()
+                if check_arg not in check_func.__name__ and check_arg not in check_doc:
+                    continue
+
+            if 'api' not in _config and 'api' in check_func.__code__.co_names:
+                continue
+
+            if 'ssh' not in _config and 'docker' not in _config and 'rex' in check_func.__code__.co_names:
+                continue
+
+            checks.append((check_func, suite))
+
+    return checks
+
+
 def load_parameter_map(_suite, _check_func_name, _args):
     """
     Load a parameter map.
@@ -133,34 +163,6 @@ def load_parameter_map(_suite, _check_func_name, _args):
             exit(1)
 
     return params
-
-
-def find_checks(_suites, _args, _config):
-    """
-    Collect all checks to be executed.
-
-    :param _suites: A list of loaded check suites.
-    :param _args: The parsed cmdline arguments.
-    :param _config: The parsed configuration.
-    :return: A list with found checks to execute.
-    """
-    checks = []
-    for suite in _suites:
-        for check in filter(lambda x: x.startswith('check_'), dir(suite)):
-            check_func = getattr(suite, check)
-            params = None
-            if _args.check and _args.check.lower() not in check_func.__doc__.lower():
-                continue
-
-            if 'api' not in _config and 'api' in check_func.__code__.co_names:
-                continue
-
-            if ('ssh' not in _config and 'docker' not in _config) and 'rex' in check_func.__code__.co_names:
-                continue
-
-            checks.append((check_func, suite))
-
-    return checks
 
 
 def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
