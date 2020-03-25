@@ -258,7 +258,8 @@ class Nodes(BaseCheckSuite):
     def check_nodes_status_008(self, _params):
         """NS-008: Check open TCP ports of each node.
 
-        Does a TCP port scan from all nodes to each node for specified ports: 3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
+        Does a TCP port scan from all nodes to each node for specified ports:
+        3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
         See https://docs.redislabs.com/latest/rs/administering/designing-production/networking/port-configurations for details.
 
         If this check fails, investigate network connection between nodes, e.g. firewall rules.
@@ -402,7 +403,8 @@ class Nodes(BaseCheckSuite):
     def check_nodes_usage_003(self, _params):
         """NU-003: Get ephemeral storage usage (min/avg/max/dev) of each node.
 
-        Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
+        Calls '/v1/nodes/stats' and calculates
+        min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
 
         :param _params: None
         :returns: result
@@ -460,7 +462,8 @@ class Nodes(BaseCheckSuite):
     def check_nodes_usage_004(self, _params):
         """NU-004: Get persistent storage usage (min/avg/max/dev) of each node.
 
-        Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
+        Calls '/v1/nodes/stats' and calculates
+        min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
 
         :param _params: None
         :returns: result

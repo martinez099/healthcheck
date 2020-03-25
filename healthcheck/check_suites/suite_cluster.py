@@ -222,7 +222,8 @@ class Cluster(BaseCheckSuite):
     def check_cluster_usage_003(self, _params):
         """CU-003: Get ephemeral storage usage of cluster.
 
-        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
+        Calls '/v1/cluster/stats' from API and calculates
+        min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
 
         :param _params: None
         :returns: result
@@ -260,7 +261,8 @@ class Cluster(BaseCheckSuite):
     def check_cluster_usage_004(self, _params):
         """CU-004: Get persistent storage usage of cluster.
 
-        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
+        Calls '/v1/cluster/stats' from API and calculates
+        min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
 
         :param _params: None
         :returns: result
