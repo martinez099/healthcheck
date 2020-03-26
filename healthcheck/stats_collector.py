@@ -35,4 +35,4 @@ class StatsCollector(object):
 
         :return: The return code.
         """
-        return 2 if self.failed or self.errors else 0
+        return 3 if self.errors else 2 if self.failed else 0

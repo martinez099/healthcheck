@@ -69,6 +69,7 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 
 ### Return code
 The script exits with the following return code:
-- 0 - if no errors or failures occured.
-- 1 - if preconditions were not met, e.g. wrong parameters passed.
-- 2 - if checks result in errors or failures.
+- 0 - If no errors or failures occured.
+- 1 - If preconditions were not met, e.g. wrong parameters passed.
+- 2 - If checks failed.
+- 3 - If errors occurred.
