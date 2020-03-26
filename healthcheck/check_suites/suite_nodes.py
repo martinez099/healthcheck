@@ -122,8 +122,8 @@ class Nodes(BaseCheckSuite):
 
         return result, kwargs
 
-    def check_nodes_status_001(self, _params):
-        """NS-001: Get OS version of each node.
+    def check_nodes_config_006(self, _params):
+        """NC-006: Get OS version of each node.
 
         Executes `cat /etc/os-release | grep PRETTY_NAME` on each node and outputs found values.
 
@@ -139,8 +139,8 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_nodes_status_002(self, _params):
-        """NS-002: Get RS version of each node.
+    def check_nodes_config_007(self, _params):
+        """NC-007: Get RS version of each node.
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
 
@@ -154,58 +154,8 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_nodes_status_003(self, _params):
-        """NS-003: Check if `rlcheck` has errors.
-
-        Executes `rlcheck` and greps for 'FAILED'.
-
-        If this check fails, follow instructions from `rlcheck` output.
-
-        :param _params: None
-        :returns: result
-        """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
-        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
-        errors = sum([len(f[0]) for f in failed])
-
-        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
-
-    def check_nodes_status_004(self, _params):
-        """NS-004: Check if `cnm_ctl status` has errors.
-
-        Executes `cnm_ctl status` and greps for not 'RUNNING'.
-
-        If this check fails, try to restart not running services with `cnm_ctl start <SERVICE>`.
-
-        :param _params: None
-        :returns: result
-        """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
-        sum_not_running = sum([len(r[0]) for r in not_running])
-
-        return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
-                                      n_r in not_running}
-
-    def check_nodes_status_005(self, _params):
-        """NS-005: Check if `supervisorctl status` has errors.
-
-        Executes `supervisorctl status` and grep for not 'RUNNING'.
-
-        If this check fails, try to restart not running services with `supervisorctl start <SERVICE>`.
-
-        :param _params: None
-        :returns: result
-        """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
-        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
-        sum_not_running = sum([len(r[0]) for r in not_running])
-
-        return sum_not_running == 1 * len(rsps), {
-            f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
-
-    def check_nodes_status_006(self, _params):
-        """NS-006: Check if `cat install.log` has errors.
+    def check_nodes_config_008(self, _params):
+        """NC-008: Check if `cat install.log` has errors.
 
         Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
 
@@ -220,8 +170,8 @@ class Nodes(BaseCheckSuite):
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
-    def check_nodes_status_007(self, _params):
-        """NS-007: Get network link speed between nodes.
+    def check_nodes_config_009(self, _params):
+        """NC-009: Get network link speed between nodes.
 
         Executes `ping -c 4 <TARGET>` from all nodes to each node and calculates min/avg/max/dev of RTT.
 
@@ -255,8 +205,8 @@ class Nodes(BaseCheckSuite):
 
         return None, kwargs
 
-    def check_nodes_status_008(self, _params):
-        """NS-008: Check open TCP ports of each node.
+    def check_nodes_config_010(self, _params):
+        """NC-010: Check open TCP ports of each node.
 
         Does a TCP port scan from all nodes to each node for specified ports:
         3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
@@ -289,6 +239,56 @@ class Nodes(BaseCheckSuite):
                 kwargs[node_name].append(failed)
 
         return not kwargs, kwargs if kwargs else {'open': 'all'}
+
+    def check_nodes_status_001(self, _params):
+        """NS-001: Check if `rlcheck` has errors.
+
+        Executes `rlcheck` and greps for 'FAILED'.
+
+        If this check fails, follow instructions from `rlcheck` output.
+
+        :param _params: None
+        :returns: result
+        """
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
+        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
+        errors = sum([len(f[0]) for f in failed])
+
+        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
+
+    def check_nodes_status_002(self, _params):
+        """NS-002: Check if `cnm_ctl status` has errors.
+
+        Executes `cnm_ctl status` and greps for not 'RUNNING'.
+
+        If this check fails, try to restart not running services with `cnm_ctl start <SERVICE>`.
+
+        :param _params: None
+        :returns: result
+        """
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
+        sum_not_running = sum([len(r[0]) for r in not_running])
+
+        return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
+                                      n_r in not_running}
+
+    def check_nodes_status_003(self, _params):
+        """NS-003: Check if `supervisorctl status` has errors.
+
+        Executes `supervisorctl status` and grep for not 'RUNNING'.
+
+        If this check fails, try to restart not running services with `supervisorctl start <SERVICE>`.
+
+        :param _params: None
+        :returns: result
+        """
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
+        not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
+        sum_not_running = sum([len(r[0]) for r in not_running])
+
+        return sum_not_running == 1 * len(rsps), {
+            f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_nodes_usage_001(self, _params):
         """NU-001: Check CPU usage (min/avg/max/dev) of each node.
