@@ -24,7 +24,7 @@ def parse_args():
     options = parser.add_argument_group()
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
-    options.add_argument('-c', '--check', help="Specify a check to execute.", type=str)
+    options.add_argument('-c', '--check', help="Specify a check (or list of checks) to execute.", type=str)
     options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
     options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
 
@@ -99,9 +99,8 @@ def find_checks(_suites, _args, _config):
         for check in filter(lambda x: x.startswith('check_'), dir(suite)):
             check_func = getattr(suite, check)
             if _args.check:
-                check_arg = _args.check.lower()
                 check_doc = check_func.__doc__.split('\n')[0].lower()
-                if check_arg not in check_func.__name__ and check_arg not in check_doc:
+                if not list(filter(lambda x: x in check_func.__name__ or x in check_doc, _args.check.lower().split(','))):
                     continue
 
             if 'api' not in _config and 'api' in check_func.__code__.co_names:
