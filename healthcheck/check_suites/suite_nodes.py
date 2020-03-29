@@ -21,11 +21,11 @@ class Nodes(BaseCheckSuite):
         self.rex = RemoteExecutor.instance(_config)
 
     def check_nodes_config_001(self, _params):
-        """NC-001: Check if log file path is not on root filesystem.
+        """NC-001: Check if log file path is not on the root filesystem.
 
         Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
 
-        If this check fails, move the log file path to a mounted filesystem.
+        Remedy: Move the log file path to a mounted filesystem.
 
         :param _params: None
         :returns: result
@@ -41,12 +41,12 @@ class Nodes(BaseCheckSuite):
         return result, kwargs
 
     def check_nodes_config_002(self, _params):
-        """NC-002: Check if ephemeral storage path is not on root filesystem.
+        """NC-002: Check if ephemeral storage path is not on the root filesystem.
 
         Calls '/v1/nodes' from API and gets the ephemeral storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured ephemeral storage path.
 
-        If this check fails, move the ephemeral storage path to a mounted filesystem.
+        Remedy: Move the ephemeral storage path to a mounted filesystem.
 
         :param _params: None
         :returns: result
@@ -63,12 +63,12 @@ class Nodes(BaseCheckSuite):
         return result, kwargs
 
     def check_nodes_config_003(self, _params):
-        """NC-003: Check if persistent storage path is not on root filesystem.
+        """NC-003: Check if persistent storage path is not on the root filesystem.
 
         Calls '/v1/nodes' from API and gets the persistent storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured persistent storage path.
 
-        If this check fails, move the persistent storage path to a mounted filesystem.
+        Remedy: Move the persistent storage path to a mounted filesystem.
 
         :param _params: None
         :returns: result
@@ -89,7 +89,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
 
-        If this check fails, turn off swapping in your OS.
+        Remedy: Turn off swapping in your OS.
 
         :param _params: None
         :returns: result
@@ -108,7 +108,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `cat /sys/kernel/mm/transparent_hugepage/enabled` and compares the output to 'always madvise [never]'.
 
-        If this check fails, turn off Transparent Huge Pages in your OS.
+        Remedy: Turn off Transparent Huge Pages in your OS.
 
         :param _params: None
         :returns: result
@@ -159,7 +159,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
 
-        If this check fails, try investigating 'install.log'.
+        Remedy: Inevstigate errors in 'install.log'.
 
         :param _params: None
         :returns: result
@@ -212,7 +212,7 @@ class Nodes(BaseCheckSuite):
         3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
         See https://docs.redislabs.com/latest/rs/administering/designing-production/networking/port-configurations for details.
 
-        If this check fails, investigate network connection between nodes, e.g. firewall rules.
+        Remedy: Investigate network connection between nodes, e.g. firewall rules.
 
         :param _params: None
         :returns: result
@@ -245,7 +245,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `rlcheck` and greps for 'FAILED'.
 
-        If this check fails, follow instructions from `rlcheck` output.
+        Remedy: Follow instructions from `rlcheck` output.
 
         :param _params: None
         :returns: result
@@ -261,7 +261,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `cnm_ctl status` and greps for not 'RUNNING'.
 
-        If this check fails, try to restart not running services with `cnm_ctl start <SERVICE>`.
+        Remedy: Start not running services with `cnm_ctl start <SERVICE>`.
 
         :param _params: None
         :returns: result
@@ -278,7 +278,7 @@ class Nodes(BaseCheckSuite):
 
         Executes `supervisorctl status` and grep for not 'RUNNING'.
 
-        If this check fails, try to restart not running services with `supervisorctl start <SERVICE>`.
+        Remedy: Start not running services with `supervisorctl start <SERVICE>`.
 
         :param _params: None
         :returns: result
@@ -291,12 +291,12 @@ class Nodes(BaseCheckSuite):
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_nodes_usage_001(self, _params):
-        """NU-001: Check CPU usage (min/avg/max/dev) of each node.
+        """NU-001: Check CPU usage of each node.
 
         Calls '/v1/nodes/stats' from API calculates min/avg/max/dev of 1 - 'cpu_idle' (cpu usage).
         It compares to RL recommended values, i.e. maximum of 80%.
 
-        If this check fails, increase CPU power on nodes.
+        Remedy: Increase CPU power on nodes.
 
         :param _params: None
         :returns: result
@@ -343,12 +343,12 @@ class Nodes(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_nodes_usage_002(self, _params):
-        """NU-002: Check RAM usage (min/avg/max/dev) of each node.
+        """NU-002: Check RAM usage of each node.
 
         Call '/v1/nodes/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
         It compares them to RL recommended values, i.e. maximum of 2/3.
 
-        If this check fails, increase RAM on nodes.
+        Remedy: Increase RAM on nodes.
 
         :param _params: None
         :returns: result
@@ -401,7 +401,7 @@ class Nodes(BaseCheckSuite):
         return not any(results.values()), kwargs
 
     def check_nodes_usage_003(self, _params):
-        """NU-003: Get ephemeral storage usage (min/avg/max/dev) of each node.
+        """NU-003: Get ephemeral storage usage of each node.
 
         Calls '/v1/nodes/stats' and calculates
         min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
@@ -460,7 +460,7 @@ class Nodes(BaseCheckSuite):
         return None, kwargs
 
     def check_nodes_usage_004(self, _params):
-        """NU-004: Get persistent storage usage (min/avg/max/dev) of each node.
+        """NU-004: Get persistent storage usage of each node.
 
         Calls '/v1/nodes/stats' and calculates
         min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
