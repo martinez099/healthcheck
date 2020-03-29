@@ -1,7 +1,7 @@
 # healthcheck
 This is a command-line tool to check the health of a Redis Enterprise cluster.
 
-Click [here](https://docs.google.com/document/d/1C-vlVB8Xcq8GC_cVQNr_K0RGMAVj8cXWg-KOXOj06i4) for more information.
+Click [here](https://docs.google.com/document/d/1yoCBxP40CzRpA525btg8LtlD3yGYSfgZotJw7GIqNrA) for more information.
 
 ## Description
 The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
