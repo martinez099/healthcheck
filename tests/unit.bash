@@ -9,7 +9,7 @@ docker exec -d --privileged redislabs "/opt/redislabs/bin/rladmin" cluster creat
 sleep 10
 
 # create 1 database
-url -k -u "test@redislabs.com:test" --request POST --url "https://localhost:9443/v1/bdbs" --header 'content-type: application/json' --data '{"name":"db1","type":"redis","memory_size":102400,"port":12000}'
+curl -k -u "test@redislabs.com:test" --request POST --url "https://localhost:9443/v1/bdbs" --header 'content-type: application/json' --data '{"name":"db1","type":"redis","memory_size":102400,"port":12000}'
 
 # run SUT
 cd ..
