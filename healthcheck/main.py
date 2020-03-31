@@ -217,7 +217,7 @@ def main():
         if type(_result) == list:
             return [render(r, _func) for r in _result]
         else:
-            return renderer.render_result(_result, _func, _cluster_name="asdf")
+            return renderer.render_result(_result, _func, _cluster_name=config['api']['fqdn'])
 
     checks = find_checks(suites, args, config)
     exec_checks(suites, checks, args, render, collect_stats)

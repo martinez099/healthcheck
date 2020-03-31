@@ -1,4 +1,5 @@
 import datetime
+import re
 
 
 preface = False
@@ -32,6 +33,7 @@ img#logo {{ float: right; margin: 10px; width: 200px }}
         preface = True
 
     doc = (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0]
+    remedy = None
     print(f'<tr><td>{doc}</td>')
     if _result[0] == '':
         print('<td>SKIPPED</td>')
@@ -39,6 +41,8 @@ img#logo {{ float: right; margin: 10px; width: 200px }}
         print('<td style="background-color:green">SUCCEDED</td>')
     elif _result[0] is False:
         print('<td style="background-color:red">FAILED</td>')
+        doc = (_result[2] if len(_result) == 3 else _func.__doc__)
+        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)[0]
     elif _result[0] is None:
         print('<td style="background-color:yellow">NO RESULT</td>')
     elif _result[0] is Exception:
@@ -48,6 +52,8 @@ img#logo {{ float: right; margin: 10px; width: 200px }}
 
     print('<td>')
     print(', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()]))
+    if remedy:
+        print(f'&nbsp;<i><b>Remedy:</b> {remedy}</i>')
     print('</td></tr>')
 
 
@@ -60,7 +66,7 @@ def render_stats(_stats):
     print('</table>')
     print('<table style="width:200px"><tr style="height:20px"><th></th></tr>')
     print('<tr><td>')
-    print("total checks run: {}".format(
+    print("Total checks run: {}".format(
         sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))
     print('</td></tr><tr><td style="background-color:green;text-align:right">')
     print(f'succeeded:</td><td>{_stats.succeeded}')
