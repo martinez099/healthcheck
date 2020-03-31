@@ -31,7 +31,7 @@ class RemoteExecutor(object):
         self.addrs = {}
         self.locks = {}
         self.cache = {}
-        self.connected = False
+        self.connected = None
 
     @classmethod
     def instance(cls, _config):
@@ -50,7 +50,7 @@ class RemoteExecutor(object):
         """
         Check SSH connection.
         """
-        if not self.connected:
+        if self.connected is None:
             print_msg('checking SSH connections ...')
             for target in self.targets:
                 try:
@@ -59,6 +59,7 @@ class RemoteExecutor(object):
                     self.connected = True
                 except Exception as e:
                     print_error(f'could not connect to host {target}:', e)
+                    self.connected = False
             print_msg('')
 
     def get_addr(self, _hostname):

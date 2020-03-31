@@ -19,7 +19,7 @@ class ApiFetcher(object):
 
         self.cache = {}
         self.uids = {}
-        self.connected = False
+        self.connected = None
 
     @classmethod
     def instance(cls, _config):
@@ -38,7 +38,7 @@ class ApiFetcher(object):
         """
         Check API connection.
         """
-        if not self.connected:
+        if self.connected is None:
             try:
                 print_msg('checking API connection ...')
                 fqdn = self.get_value('cluster', 'name')
@@ -46,6 +46,7 @@ class ApiFetcher(object):
                 self.connected = True
             except Exception as e:
                 print_error('could not connect to Redis Enterprise REST-API:', e)
+                self.connected = False
             print_msg('')
 
     def get_uid(self, _internal_addr):
