@@ -9,7 +9,7 @@ import os
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.common_funcs import get_parameter_map_name
-from healthcheck.printer_funcs import print_list, print_error, print_warning
+from healthcheck.printer_funcs import print_list, print_error, print_warning, print_msg
 from healthcheck.stats_collector import StatsCollector
 
 
@@ -165,65 +165,48 @@ def load_parameter_map(_suite, _check_func_name, _args):
     return params
 
 
-def exec_checks(_suites, _args, _executor, _config, _done_cb=None):
+def exec_checks(_suites, _checks, _args, _result_cb, _done_cb=None):
     """
     Execute checks.
 
-    :param _suites: The loaded check suites.
+    :param _suites: Loaded check suites.
+    :param _checks: Found checks.
     :param _args: The parsed arguments.
-    :param _executor: The check executor.
-    :param _config: The parsed configuration.
+    :param _result_cb: A result callback.
     :param _done_cb: An optional callback, executed after each check execution.
     """
-    if _args.check:
-        checks = find_checks(_suites, _args, _config)
+    executor = CheckExecutor(_result_cb)
 
-        if not checks:
-            print_error('could not find a single check, examine argument of --check')
-            exit(1)
+    if _args.check and not _checks:
+        print_error('could not find a single check, examine argument of --check')
+        exit(1)
 
-        for check_func, suite in checks:
-            suite.run_connection_checks()
-            params = load_parameter_map(suite, check_func.__name__, _args)
-            _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
+    elif not _suites:
+        print_error('could not find check suite, examine argument of --suite')
+        exit(1)
 
-    else:
-        if not _suites:
-            print_error('could not find check suite, examine argument of --suite')
-            exit(1)
+    for check_func, suite in _checks:
+        suite.run_connection_checks()
+        params = load_parameter_map(suite, check_func.__name__, _args)
+        executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
-        checks = find_checks(_suites, _args, _config)
-        for check_func, suite in checks:
-            suite.run_connection_checks()
-            params = load_parameter_map(suite, check_func.__name__, _args)
-            _executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
-
-    _executor.wait()
+    executor.wait()
+    executor.shutdown()
 
 
 def main():
 
-    # configure logging
     logging.basicConfig(level=logging.INFO)
 
-    # parse command line arguments
     args = parse_args()
-
-    # parse configuration file
     config = parse_config(args)
-
-    # load configured renderer
-    renderer = import_renderer(config)
-
-    # load check suites
     suites = load_check_suites(args, config)
 
-    # list check suites
     if args.list:
         print_list(suites)
         return
 
-    # execute checks
+    renderer = import_renderer(config)
     stats_collector = StatsCollector()
 
     def collect_stats(_future):
@@ -234,16 +217,12 @@ def main():
         if type(_result) == list:
             return [render(r, _func) for r in _result]
         else:
-            return renderer.render_result(_result, _func)
+            return renderer.render_result(_result, _func, _cluster_name="asdf")
 
-    executor = CheckExecutor(render)
-    exec_checks(suites, args, executor, config, collect_stats)
-
-    # render statistics
+    checks = find_checks(suites, args, config)
+    exec_checks(suites, checks, args, render, collect_stats)
     renderer.render_stats(stats_collector)
 
-    # shutdown
-    executor.shutdown()
     logging.shutdown()
 
     exit(stats_collector.return_code())

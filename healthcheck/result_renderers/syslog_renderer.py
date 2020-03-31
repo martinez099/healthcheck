@@ -3,22 +3,7 @@ import os
 import socket
 
 
-def render_sd(_name, _kwargs):
-    """
-    Render a structered data element, details see https://tools.ietf.org/html/rfc5424.
-
-    :param _name: A name for the SD element.
-    :param _kwargs: KW args for the SD element.
-    :return:
-    """
-    parts = [_name]
-    for k, v in _kwargs.items():
-        parts.append(f'{k}="{v}"')
-
-    return '[' + ' '.join(parts) + ']'
-
-
-def render_result(_result, _func):
+def render_result(_result, _func, *_args, **_kwargs):
     """
     Render result, tries to comply with https://tools.ietf.org/html/rfc5424.
 

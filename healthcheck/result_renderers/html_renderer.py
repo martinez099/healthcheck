@@ -1,7 +1,10 @@
+import datetime
+
+
 preface = False
 
 
-def render_result(_result, _func):
+def render_result(_result, _func, *_args, **_kwargs):
     """
     Render result.
 
@@ -10,14 +13,20 @@ def render_result(_result, _func):
     """
     global preface
     if not preface:
-        print('''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<html><head><title>RE health check result</title>
+        print(f'''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>RE HealthCheck results for {_kwargs["_cluster_name"]}</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <style>
-table th { text-align: left }
-table tr td { border-bottom: 1px solid #ddd }
+table {{ font-family: monospace }}
+table th {{ text-align: left }}
+table tr td {{ border-bottom: 1px solid #ddd }}
+img#logo {{ float: right; margin: 10px; width: 200px }}
 </style>
-</head><body style="font-family:monospace">
+</head>
+<body>
+<img src="https://redislabs.com/wp-content/uploads/2018/09/br-Redis-labs-logo@2x.png" alt="Redis Labs logo" id="logo">
+<h1>RE HealthCheck results for {_kwargs["_cluster_name"]}</h1>
+<p>{datetime.datetime.now().isoformat().replace('T', ' ').split('.')[0]}</p>
 <table style="width:100%">
 <tr><th>Code: Description</th><th>Result</th><th>Info</th></tr>''')
         preface = True
@@ -49,7 +58,7 @@ def render_stats(_stats):
     :param _stats: A stats collector.
     """
     print('</table>')
-    print('<table style="width:170px"><tr style="height:20px"><th></th></tr>')
+    print('<table style="width:200px"><tr style="height:20px"><th></th></tr>')
     print('<tr><td>')
     print("total checks run: {}".format(
         sum([_stats.succeeded, _stats.no_result, _stats.failed, _stats.errors, _stats.skipped])))

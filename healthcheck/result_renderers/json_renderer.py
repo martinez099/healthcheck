@@ -1,7 +1,7 @@
 import json
 
 
-def render_result(_result, _func):
+def render_result(_result, _func, *_args, **_kwargs):
     """
     Render result.
 

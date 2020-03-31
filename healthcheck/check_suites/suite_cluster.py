@@ -108,7 +108,7 @@ class Cluster(BaseCheckSuite):
                                                            self.rex.get_targets()[0]) for shard in self.api.get('shards')}
         kwargs = dict(filter(lambda x: x[1] != 'PONG', rsps.items()))
 
-        return not kwargs, kwargs
+        return not kwargs, kwargs if kwargs else {'OK': 'all'}
 
     def check_cluster_status_003(self, _params):
         """CS-003: Check if `rladmin status` has errors.
