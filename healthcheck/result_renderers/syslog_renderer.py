@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import socket
 
 
@@ -19,6 +20,7 @@ def render_result(_result, _func, *_args, **_kwargs):
     msg_id = '-'
     sd = '-'
 
+    remedy = None
     if _result[0] == '':
         status = 'SKIPPED'
         pri += 6  # severity = 6, i.e. Informational
@@ -28,6 +30,8 @@ def render_result(_result, _func, *_args, **_kwargs):
     elif _result[0] is False:
         status = 'FAILED'
         pri += 3  # severity = 3, i.e. Error
+        doc = (_result[2] if len(_result) == 3 else _func.__doc__)
+        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)[0]
     elif _result[0] is None:
         status = 'NO RESULT'
         pri += 6  # severity = 6, i.e. Informational
@@ -38,6 +42,8 @@ def render_result(_result, _func, *_args, **_kwargs):
         raise NotImplementedError()
 
     msg = (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0] + f' [{status}] ' + str(_result[1])
+    if remedy:
+        msg += f' Remedy: {remedy}'
 
     print('<{}>{} {} {} {} {} {} {} {}'.format(pri, ver, ts, host, app, proc_id, msg_id, sd, msg))
 
