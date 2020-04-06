@@ -79,6 +79,23 @@ class Cluster(BaseCheckSuite):
 
         return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
 
+    def check_cluster_config_003(self, _params):
+        """CC-003: Get shards distribution.
+
+        Calls '/v1/cluster/shards' and counts shards per node.
+
+        :param _params: None
+        :return:  result
+        """
+        kwargs = {}
+        for shard in self.api.get('shards'):
+            node = 'node:{}'.format(shard['node_uid'])
+            if node not in kwargs:
+                kwargs[node] = {'master': 0, 'slave': 0}
+            kwargs[node][shard['role']] += 1
+
+        return None, kwargs
+
     def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
 
@@ -106,10 +123,9 @@ class Cluster(BaseCheckSuite):
         """
         kwargs = {}
         for shard in self.api.get('shards'):
-            name = f'shard:{shard["uid"]}'
             ping_rsp = self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING', self.rex.get_targets()[0])
             if ping_rsp != 'PONG' or shard['status'] != 'active' or shard['detailed_status'] != 'ok':
-                kwargs[name] = shard
+                kwargs[f'shard:{shard["uid"]}'] = shard
 
         return not kwargs, kwargs if kwargs else {'OK': 'all'}
 
