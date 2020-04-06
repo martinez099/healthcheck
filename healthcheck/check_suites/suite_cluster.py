@@ -104,9 +104,12 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = {f'shard:{shard["uid"]}': self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING',
-                                                           self.rex.get_targets()[0]) for shard in self.api.get('shards')}
-        kwargs = dict(filter(lambda x: x[1] != 'PONG', rsps.items()))
+        kwargs = {}
+        for shard in self.api.get('shards'):
+            name = f'shard:{shard["uid"]}'
+            ping_rsp = self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING', self.rex.get_targets()[0])
+            if ping_rsp != 'PONG' or shard['status'] != 'active' or shard['detailed_status'] != 'ok':
+                kwargs[name] = shard
 
         return not kwargs, kwargs if kwargs else {'OK': 'all'}
 
