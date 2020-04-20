@@ -40,10 +40,10 @@ class Cluster(BaseCheckSuite):
 
         if not _params:
             info = {'number of nodes': str(number_of_nodes),
-                      'number of cores': str(number_of_cores),
-                      'total memory': '{} GB'.format(to_gb(total_memory)),
-                      'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
-                      'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
+                    'number of cores': str(number_of_cores),
+                    'total memory': '{} GB'.format(to_gb(total_memory)),
+                    'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
+                    'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
 
             return None, info, "CC-001: Get cluster sizing."
 
@@ -170,7 +170,7 @@ class Cluster(BaseCheckSuite):
         expiration_date = datetime.datetime.fromisoformat(_license['expiration_date'].split('T')[0])
         expires_in = datetime.datetime.now() - expiration_date
         info = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
-                  'expires in': expires_in}
+                'expires in': expires_in}
 
         return result, info
 

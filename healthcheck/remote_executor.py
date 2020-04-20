@@ -50,17 +50,19 @@ class RemoteExecutor(object):
         """
         Check SSH connection.
         """
-        if self.connected is None:
-            print_msg('checking SSH connections ...')
-            for target in self.targets:
-                try:
-                    self.exec_uni('sudo pwd', target)
-                    print_success(f'- successfully connected to {target}')
-                    self.connected = True
-                except Exception as e:
-                    print_error(f'could not connect to host {target}:', e)
-                    self.connected = False
-            print_msg('')
+        if self.connected is not None:
+            return
+
+        print_msg('checking SSH connections ...')
+        for target in self.targets:
+            try:
+                self.exec_uni('sudo pwd', target)
+                print_success(f'- successfully connected to {target}')
+                self.connected = True
+            except Exception as e:
+                print_error(f'could not connect to host {target}:', e)
+                self.connected = False
+        print_msg('')
 
     def get_addr(self, _hostname):
         """
@@ -69,9 +71,7 @@ class RemoteExecutor(object):
         :param _hostname: The hostname of the node.
         :return: The internal address.
         """
-        addrs = self.get_addrs()
-
-        return addrs[_hostname]
+        return self.get_addrs()[_hostname]
 
     def get_addrs(self):
         """
@@ -152,7 +152,6 @@ class RemoteExecutor(object):
         :return: The response.
         :raise Exception: If an error occurred.
         """
-
         # lookup from cache
         if _target in self.cache and _cmd in self.cache[_target]:
             return self.cache[_target][_cmd]
