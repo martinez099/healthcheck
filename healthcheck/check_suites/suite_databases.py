@@ -110,6 +110,22 @@ class Databases(BaseCheckSuite):
 
         return not any(kwargs.values()), kwargs
 
+    def check_database_config_004(self, _params):
+        """DC-004: Get database modules.
+
+        Calls 'v1/bdbs' from API and outputs loaded modules.
+
+        :param _params: None
+        :returns: result
+        """
+        bdbs = self.api.get('bdbs')
+        kwargs = {}
+        for bdb in bdbs:
+            if bdb['module_list']:
+                kwargs[bdb['name']] = bdb['module_list']
+
+        return None, kwargs
+
     def check_databases_status_001(self, _params):
         """DS-001: Check replicaOf sources.
 
