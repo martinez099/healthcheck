@@ -101,9 +101,7 @@ def get_parameter_map_name(_path):
     :param _path: The file path of the parameter map.
     :return: The name of the parameter map.
     """
-    fname = _path.split('/')[-1:]
-
-    return fname[0].split('.')[0]
+    return _path.split('/')[-1:][0].split('.')[0]
 
 
 def redis_ping(_host, _port, auth=None):
