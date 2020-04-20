@@ -39,31 +39,31 @@ class Cluster(BaseCheckSuite):
         persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
 
         if not _params:
-            kwargs = {'number of nodes': str(number_of_nodes),
+            info = {'number of nodes': str(number_of_nodes),
                       'number of cores': str(number_of_cores),
                       'total memory': '{} GB'.format(to_gb(total_memory)),
                       'ephemeral storage size': '{} GB'.format(to_gb(epehemeral_storage_size)),
                       'persistent storage size': '{} GB'.format(to_gb(persistent_storage_size))}
 
-            return None, kwargs, "CC-001: Get cluster sizing."
+            return None, info, "CC-001: Get cluster sizing."
 
-        kwargs = {}
+        info = {}
         if number_of_nodes >= _params['min_nodes'] and number_of_nodes % 2 != 0:
-            kwargs['number of nodes'] += ' (min: {})'.format(_params['min_nodes'])
+            info['number of nodes'] += ' (min: {})'.format(_params['min_nodes'])
 
         if number_of_cores >= _params['min_cores']:
-            kwargs['number of cores'] += ' (min: {})'.format(_params['min_cores'])
+            info['number of cores'] += ' (min: {})'.format(_params['min_cores'])
 
         if total_memory >= _params['min_memory_GB'] * GB:
-            kwargs['total memory'] += ' (min: {} GB)'.format(_params['min_memory_GB'])
+            info['total memory'] += ' (min: {} GB)'.format(_params['min_memory_GB'])
 
         if epehemeral_storage_size >= _params['min_ephemeral_storage_GB'] * GB:
-            kwargs['ephemeral storage size'] += ' (min: {} GB)'.format(_params['min_ephemeral_storage_GB'])
+            info['ephemeral storage size'] += ' (min: {} GB)'.format(_params['min_ephemeral_storage_GB'])
 
         if persistent_storage_size >= _params['min_persistent_storage_GB'] * GB:
-            kwargs['persistent storage size'] += ' (min: {} GB)'.format(_params['min_persistent_storage_GB'])
+            info['persistent storage size'] += ' (min: {} GB)'.format(_params['min_persistent_storage_GB'])
 
-        return not bool(kwargs), kwargs
+        return not bool(info), info
 
     def check_cluster_config_002(self, _params):
         """CC-002: Get master node.
@@ -88,14 +88,14 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :return:  result
         """
-        kwargs = {}
+        info = {}
         for shard in self.api.get('shards'):
             node = 'node:{}'.format(shard['node_uid'])
-            if node not in kwargs:
-                kwargs[node] = {'master': 0, 'slave': 0}
-            kwargs[node][shard['role']] += 1
+            if node not in info:
+                info[node] = {'master': 0, 'slave': 0}
+            info[node][shard['role']] += 1
 
-        return None, kwargs
+        return None, info
 
     def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
@@ -122,13 +122,13 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         for shard in self.api.get('shards'):
             ping_rsp = self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING', self.rex.get_targets()[0])
             if ping_rsp != 'PONG' or shard['status'] != 'active' or shard['detailed_status'] != 'ok':
-                kwargs[f'shard:{shard["uid"]}'] = shard
+                info[f'shard:{shard["uid"]}'] = shard
 
-        return not kwargs, kwargs if kwargs else {'OK': 'all'}
+        return not info, info if info else {'OK': 'all'}
 
     def check_cluster_status_003(self, _params):
         """CS-003: Check if `rladmin status` has errors.
@@ -169,10 +169,10 @@ class Cluster(BaseCheckSuite):
         result = shards_limit >= number_of_shards and not expired
         expiration_date = datetime.datetime.fromisoformat(_license['expiration_date'].split('T')[0])
         expires_in = datetime.datetime.now() - expiration_date
-        kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
+        info = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
                   'expires in': expires_in}
 
-        return result, kwargs
+        return result, info
 
     def check_cluster_status_005(self, _params):
         """CS-005: Check cluster alerts
@@ -197,7 +197,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
@@ -215,12 +215,12 @@ class Cluster(BaseCheckSuite):
         q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
         std_dev = math.sqrt(q_sum / len(total_reqs))
 
-        kwargs['min'] = '{} Kops'.format(to_kops(minimum))
-        kwargs['avg'] = '{} Kops'.format(to_kops(average))
-        kwargs['max'] = '{} Kops'.format(to_kops(maximum))
-        kwargs['dev'] = '{} Kops'.format(to_kops(std_dev))
+        info['min'] = '{} Kops'.format(to_kops(minimum))
+        info['avg'] = '{} Kops'.format(to_kops(average))
+        info['max'] = '{} Kops'.format(to_kops(maximum))
+        info['dev'] = '{} Kops'.format(to_kops(std_dev))
 
-        return None, kwargs
+        return None, info
 
     def check_cluster_usage_002(self, _params):
         """CU-002: Get memory usage of cluster.
@@ -230,7 +230,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
@@ -250,12 +250,12 @@ class Cluster(BaseCheckSuite):
 
         total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
 
-        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_mem - maximum), to_percent((100 / total_mem) * (total_mem - maximum)))
-        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_mem - average), to_percent((100 / total_mem) * (total_mem - average)))
-        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_mem - minimum), to_percent((100 / total_mem) * (total_mem - minimum)))
-        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_mem) * std_dev))
+        info['min'] = '{} GB ({} %)'.format(to_gb(total_mem - maximum), to_percent((100 / total_mem) * (total_mem - maximum)))
+        info['avg'] = '{} GB ({} %)'.format(to_gb(total_mem - average), to_percent((100 / total_mem) * (total_mem - average)))
+        info['max'] = '{} GB ({} %)'.format(to_gb(total_mem - minimum), to_percent((100 / total_mem) * (total_mem - minimum)))
+        info['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_mem) * std_dev))
 
-        return None, kwargs
+        return None, info
 
     def check_cluster_usage_003(self, _params):
         """CU-003: Get ephemeral storage usage of cluster.
@@ -266,7 +266,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
@@ -289,12 +289,12 @@ class Cluster(BaseCheckSuite):
 
         total_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
 
-        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
-        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
-        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
-        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
+        info['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
+        info['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
+        info['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
+        info['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
 
-        return None, kwargs
+        return None, info
 
     def check_cluster_usage_004(self, _params):
         """CU-004: Get persistent storage usage of cluster.
@@ -305,7 +305,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         stats = self.api.get('cluster/stats')
 
         # calculate minimum
@@ -328,9 +328,9 @@ class Cluster(BaseCheckSuite):
 
         total_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
 
-        kwargs['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
-        kwargs['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
-        kwargs['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
-        kwargs['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
+        info['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
+        info['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
+        info['max'] = '{} GB ({} %)'.format(to_gb(total_size - minimum), to_percent((100 / total_size) * (total_size - minimum)))
+        info['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
 
-        return None, kwargs
+        return None, info

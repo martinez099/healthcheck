@@ -35,10 +35,10 @@ class Nodes(BaseCheckSuite):
         log_file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': log_file_path for
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': log_file_path for
                   rsp, log_file_path in zip(rsps, log_file_paths)}
 
-        return result, kwargs
+        return result, info
 
     def check_nodes_config_002(self, _params):
         """NC-002: Check if ephemeral storage path is not on the root filesystem.
@@ -57,10 +57,10 @@ class Nodes(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
 
-        return result, kwargs
+        return result, info
 
     def check_nodes_config_003(self, _params):
         """NC-003: Check if persistent storage path is not on the root filesystem.
@@ -79,10 +79,10 @@ class Nodes(BaseCheckSuite):
         file_paths = [match.group(1) for match in matches]
 
         result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
                   rsp, tmp_file_path in zip(rsps, file_paths)}
 
-        return result, kwargs
+        return result, info
 
     def check_nodes_config_004(self, _params):
         """NC-004: Check if swappiness is disabled on each node.
@@ -98,10 +98,10 @@ class Nodes(BaseCheckSuite):
         swappinesses = [rsp.result() for rsp in rsps]
 
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
                   in zip(rsps, swappinesses)}
 
-        return result, kwargs
+        return result, info
 
     def check_nodes_config_005(self, _params):
         """NC-005: Check if THP is disabled on each node.
@@ -117,10 +117,10 @@ class Nodes(BaseCheckSuite):
         transparent_hugepages = [rsp.result() for rsp in rsps]
 
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
                   rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
 
-        return result, kwargs
+        return result, info
 
     def check_nodes_config_006(self, _params):
         """NC-006: Get OS version of each node.
@@ -134,10 +134,10 @@ class Nodes(BaseCheckSuite):
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
 
-        kwargs = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version
                   in zip(rsps, os_versions)}
 
-        return None, kwargs
+        return None, info
 
     def check_nodes_config_007(self, _params):
         """NC-007: Get RS version of each node.
@@ -150,9 +150,9 @@ class Nodes(BaseCheckSuite):
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
 
-        kwargs = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
+        info = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
 
-        return None, kwargs
+        return None, info
 
     def check_nodes_config_008(self, _params):
         """NC-008: Check if `cat install.log` has errors.
@@ -201,9 +201,9 @@ class Nodes(BaseCheckSuite):
         avg /= len(futures)
         mdev /= len(futures)
 
-        kwargs = {key: '{}/{}/{}/{} ms'.format(to_ms(_min), to_ms(avg), to_ms(_max), to_ms(mdev))}
+        info = {key: '{}/{}/{}/{} ms'.format(to_ms(_min), to_ms(avg), to_ms(_max), to_ms(mdev))}
 
-        return None, kwargs
+        return None, info
 
     def check_nodes_config_010(self, _params):
         """NC-010: Check open TCP ports of each node.
@@ -228,17 +228,17 @@ class Nodes(BaseCheckSuite):
                         continue
                     cmd_targets.append((cmd.format(internal, port), source))
 
-        kwargs = {}
+        info = {}
         futures = self.rex.exec_multi(cmd_targets)
         for future in futures:
             failed = future.result()
             if failed:
                 node_name = f'node:{self.api.get_uid(self.rex.get_addr(future.target))}'
-                if node_name not in kwargs:
-                    kwargs[node_name] = []
-                kwargs[node_name].append(failed)
+                if node_name not in info:
+                    info[node_name] = []
+                info[node_name].append(failed)
 
-        return not kwargs, kwargs if kwargs else {'OK': 'all'}
+        return not info, info if info else {'OK': 'all'}
 
     def check_nodes_status_001(self, _params):
         """NS-001: Check if `rlcheck` has errors.
@@ -301,13 +301,13 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         alerts = self.api.get('nodes/alerts')
-        kwargs = {}
+        info = {}
         for uid in alerts:
             enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
             if enableds:
-                kwargs['node:{}'.format(uid)] = enableds
+                info['node:{}'.format(uid)] = enableds
 
-        return not kwargs, kwargs
+        return not info, info
 
     def check_nodes_usage_001(self, _params):
         """NU-001: Check CPU usage of each node.
@@ -320,7 +320,7 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         results = {}
 
         # get quorum-only node
@@ -354,12 +354,12 @@ class Nodes(BaseCheckSuite):
                 node_name += ' (quorum only)'
 
             results[node_name] = maximum > .8
-            kwargs[node_name] = '{}/{}/{}/{} %'.format(to_percent(minimum * 100),
+            info[node_name] = '{}/{}/{}/{} %'.format(to_percent(minimum * 100),
                                                        to_percent(average * 100),
                                                        to_percent(maximum * 100),
                                                        to_percent(std_dev * 100))
 
-        return not any(results.values()), kwargs
+        return not any(results.values()), info
 
     def check_nodes_usage_002(self, _params):
         """NU-002: Check RAM usage of each node.
@@ -372,7 +372,7 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
         results = {}
 
         # get quorum-only node
@@ -408,7 +408,7 @@ class Nodes(BaseCheckSuite):
                 node_name += ' (quorum only)'
 
             results[node_name] = minimum < (total_mem * 2/3)
-            kwargs[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_mem - maximum),
+            info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_mem - maximum),
                                                                         to_gb(total_mem - average),
                                                                         to_gb(total_mem - minimum),
                                                                         to_gb(std_dev),
@@ -417,7 +417,7 @@ class Nodes(BaseCheckSuite):
                                                                         to_percent((100 / total_mem) * (total_mem - minimum)),
                                                                         to_percent((100 / total_mem) * std_dev))
 
-        return not any(results.values()), kwargs
+        return not any(results.values()), info
 
     def check_nodes_usage_003(self, _params):
         """NU-003: Get ephemeral storage usage of each node.
@@ -428,7 +428,7 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
 
         # get quorum-only node
         nodes = self.api.get('nodes')
@@ -467,7 +467,7 @@ class Nodes(BaseCheckSuite):
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            kwargs[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
+            info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
                                                                         to_gb(total_size - average),
                                                                         to_gb(total_size - minimum),
                                                                         to_gb(std_dev),
@@ -476,7 +476,7 @@ class Nodes(BaseCheckSuite):
                                                                         to_percent((100 / total_size) * (total_size - minimum)),
                                                                         to_percent((100 / total_size) * std_dev))
 
-        return None, kwargs
+        return None, info
 
     def check_nodes_usage_004(self, _params):
         """NU-004: Get persistent storage usage of each node.
@@ -487,7 +487,7 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        kwargs = {}
+        info = {}
 
         # get quorum-only node
         nodes = self.api.get('nodes')
@@ -526,7 +526,7 @@ class Nodes(BaseCheckSuite):
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            kwargs[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
+            info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
                                                                         to_gb(total_size - average),
                                                                         to_gb(total_size - minimum),
                                                                         to_gb(std_dev),
@@ -535,4 +535,4 @@ class Nodes(BaseCheckSuite):
                                                                         to_percent((100 / total_size) * (total_size - minimum)),
                                                                         to_percent((100 / total_size) * std_dev))
 
-        return None, kwargs
+        return None, info

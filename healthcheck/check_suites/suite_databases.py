@@ -45,13 +45,13 @@ class Databases(BaseCheckSuite):
                 if bdb['name'] in _params:
                     values.update(_params[bdb['name']])
 
-                kwargs = {}
+                info = {}
                 for k, v in values.items():
                     result = v == bdb[k]
                     if not result:
-                        kwargs[k] = bdb[k]
+                        info[k] = bdb[k]
 
-                results.append((not bool(kwargs), kwargs, f"""check configuration of '{bdb['name']}'"""))
+                results.append((not bool(info), info, f"""check configuration of '{bdb['name']}'"""))
 
         return results
 
@@ -67,11 +67,11 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
-            kwargs[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
+            info[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
 
-        return all(kwargs.values()) if kwargs.values() else '', kwargs
+        return all(info.values()) if info.values() else '', info
 
     def check_databases_config_003(self, _params):
         """DC-003: Check for dense shards placement of each database.
@@ -86,29 +86,29 @@ class Databases(BaseCheckSuite):
         """
         nodes = self.api.get('nodes')
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
 
         dense_bdbs = filter(lambda x: x['shards_placement'] == 'dense', bdbs)
         if not dense_bdbs:
-            return '', kwargs
+            return '', info
 
         for bdb in dense_bdbs:
             if bdb['proxy_policy'] != 'single':
-                kwargs[bdb['name']] = "proxy policy set to '{}' instead of 'single'".format(bdb['proxy_policy'])
+                info[bdb['name']] = "proxy policy set to '{}' instead of 'single'".format(bdb['proxy_policy'])
                 continue
 
             endpoint_nodes = list(filter(lambda node: node['addr'] == bdb['endpoints'][0]['addr'][0] and node['uid'], nodes))
             if len(endpoint_nodes) < 1:
-                kwargs[bdb['name']] = f"no endpoint node found"
+                info[bdb['name']] = f"no endpoint node found"
                 continue
 
             master_shards = filter(lambda shard: shard['bdb_uid'] == bdb['uid'] and shard['role'] == 'master', self.api.get('shards'))
             shards_not_on_endpoint = filter(lambda shard: int(shard['node_uid']) != endpoint_nodes[0]['uid'], master_shards)
             result = list(map(lambda shard: 'shard:{}'.format(shard['uid']), shards_not_on_endpoint))
             if result:
-                kwargs[bdb['name']] = result
+                info[bdb['name']] = result
 
-        return not any(kwargs.values()), kwargs
+        return not any(info.values()), info
 
     def check_database_config_004(self, _params):
         """DC-004: Get database modules.
@@ -131,24 +131,24 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
 
         for bdb in bdbs:
             replica_sources = bdb['replica_sources']
             if replica_sources:
-                kwargs[bdb['name']] = {
+                info[bdb['name']] = {
                     'replica_sync': bdb['replica_sync']
                 }
             for replica_source in replica_sources:
                 address = replica_source['uri'].split('@')[1]
-                kwargs[bdb['name']][address] = {
+                info[bdb['name']][address] = {
                     'status': replica_source['status'],
                     'lag': replica_source['lag'],
                     'compression': replica_source['compression']
                 }
 
         return all(filter(lambda x: x[0] == 'in-sync',
-                          map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
+                          map(lambda x: list(x.values()), info.values()))) if info else '', info
 
     def check_databases_status_002(self, _params):
         """DS-002: Check CRDB sources.
@@ -161,24 +161,24 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
 
         for bdb in bdbs:
             crdt_sources = bdb['crdt_sources']
             if crdt_sources:
-                kwargs[bdb['name']] = {
+                info[bdb['name']] = {
                     'crdt_sync': bdb['crdt_sync']
                 }
             for crdt_source in crdt_sources:
                 address = crdt_source['uri'].split('@')[1]
-                kwargs[bdb['name']][address] = {
+                info[bdb['name']][address] = {
                     'status': crdt_source['status'],
                     'lag': crdt_source['lag'],
                     'compression': crdt_source['compression']
                 }
 
         return all(filter(lambda x: x[0] == 'in-sync',
-                          map(lambda x: list(x.values()), kwargs.values()))) if kwargs else '', kwargs
+                          map(lambda x: list(x.values()), info.values()))) if info else '', info
 
     def check_databases_status_003(self, _params):
         """DS-003: Check database endpoints.
@@ -191,7 +191,7 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
 
         for bdb in bdbs:
             endpoints = bdb['endpoints']
@@ -201,9 +201,9 @@ class Databases(BaseCheckSuite):
                 endpoint = endpoints[0]
 
             result = redis_ping(endpoint['addr'][0], endpoint['port'])
-            kwargs[endpoint['dns_name']] = result
+            info[endpoint['dns_name']] = result
 
-        return all(v is True for v in kwargs.values()), kwargs
+        return all(v is True for v in info.values()), info
 
     def check_databases_status_004(self, _params):
         """DS-004: Check database alerts
@@ -216,13 +216,13 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         alerts = self.api.get('bdbs/alerts')
-        kwargs = {}
+        info = {}
         for uid in alerts:
             enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
             if enableds:
-                kwargs['db:{}'.format(uid)] = enableds
+                info['db:{}'.format(uid)] = enableds
 
-        return not kwargs, kwargs
+        return not info, info
 
     def check_databases_usage_001(self, _params):
         """DU-001: Check throughput of each shard.
@@ -236,7 +236,7 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
         results = {}
 
         for bdb in bdbs:
@@ -267,13 +267,13 @@ class Databases(BaseCheckSuite):
                     result = maximum > 25000
                 results[bdb['name']] = result
 
-                if bdb['name'] not in kwargs:
-                    kwargs[bdb['name']] = {}
+                if bdb['name'] not in info:
+                    info[bdb['name']] = {}
 
-                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
+                info[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
                     '{}/{}/{}/{} Kops'.format(to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).")
+        return [(not results[bdb['name']], info[bdb['name']], f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]
 
     def check_databases_usage_002(self, _params):
@@ -288,7 +288,7 @@ class Databases(BaseCheckSuite):
         :returns: result
         """
         bdbs = self.api.get('bdbs')
-        kwargs = {}
+        info = {}
         results = {}
 
         for bdb in bdbs:
@@ -317,11 +317,11 @@ class Databases(BaseCheckSuite):
                     result = maximum > (25 * GB)
                 results[bdb['name']] = result
 
-                if bdb['name'] not in kwargs:
-                    kwargs[bdb['name']] = {}
+                if bdb['name'] not in info:
+                    info[bdb['name']] = {}
 
-                kwargs[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
+                info[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
                     '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
-        return [(not results[bdb['name']], kwargs[bdb['name']], f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).")
+        return [(not results[bdb['name']], info[bdb['name']], f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).")
                 for bdb in bdbs]
