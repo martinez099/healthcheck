@@ -55,8 +55,33 @@ class Databases(BaseCheckSuite):
 
         return results
 
-    def check_databases_config_002(self, _params):
-        """DC-002: Check for OSS cluster API of each database.
+    def check_databases_status_002(self, _params):
+        """DS-002: Check database endpoints.
+
+        Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
+
+        Remedy: Investigate the network connection to the endpoint.
+
+        :param _params: None
+        :returns: result
+        """
+        bdbs = self.api.get('bdbs')
+        info = {}
+
+        for bdb in bdbs:
+            endpoints = bdb['endpoints']
+            if len(endpoints) > 1:
+                endpoint = list(filter(lambda x: x['addr_type'] == 'external', endpoints))[0]
+            else:
+                endpoint = endpoints[0]
+
+            result = redis_ping(endpoint['addr'][0], endpoint['port'])
+            info[endpoint['dns_name']] = result
+
+        return all(v is True for v in info.values()), info
+
+    def check_databases_config_003(self, _params):
+        """DC-003: Check for OSS cluster API of each database.
 
         Calls '/v1/bdbs' from API and checks databases which are 'oss_cluster' enabled if their
         'shards_placement' is 'sparse' and their 'proxy_policy' is set to 'all-master-shards'.
@@ -73,8 +98,8 @@ class Databases(BaseCheckSuite):
 
         return all(info.values()) if info.values() else '', info
 
-    def check_databases_config_003(self, _params):
-        """DC-003: Check for dense shards placement of each database.
+    def check_databases_config_004(self, _params):
+        """DC-004: Check for dense shards placement of each database.
 
         Calls 'v1/bdbs' from API and checks databases which have 'shards_placement' set to 'dense'
         if their master shards are on the same node as their single proxy.
@@ -110,8 +135,8 @@ class Databases(BaseCheckSuite):
 
         return not any(info.values()), info
 
-    def check_database_config_004(self, _params):
-        """DC-004: Get database modules.
+    def check_database_config_005(self, _params):
+        """DC-005: Get database modules.
 
         Calls 'v1/bdbs' from API and outputs loaded Redis modules.
 
@@ -179,31 +204,6 @@ class Databases(BaseCheckSuite):
 
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), info.values()))) if info else '', info
-
-    def check_databases_status_003(self, _params):
-        """DS-003: Check database endpoints.
-
-        Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
-
-        Remedy: Investigate the network connection to the endpoint.
-
-        :param _params: None
-        :returns: result
-        """
-        bdbs = self.api.get('bdbs')
-        info = {}
-
-        for bdb in bdbs:
-            endpoints = bdb['endpoints']
-            if len(endpoints) > 1:
-                endpoint = list(filter(lambda x: x['addr_type'] == 'external', endpoints))[0]
-            else:
-                endpoint = endpoints[0]
-
-            result = redis_ping(endpoint['addr'][0], endpoint['port'])
-            info[endpoint['dns_name']] = result
-
-        return all(v is True for v in info.values()), info
 
     def check_databases_status_004(self, _params):
         """DS-004: Check database alerts

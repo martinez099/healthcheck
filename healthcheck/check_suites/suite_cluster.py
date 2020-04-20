@@ -97,6 +97,33 @@ class Cluster(BaseCheckSuite):
 
         return None, info
 
+    def check_cluster_config_004(self, _params):
+        """CC-004: Check license.
+
+        Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
+
+        Remedy: Update your license.
+
+        :param _params: None
+        :returns: result
+        """
+        number_of_shards = self.api.get_number_of_values('shards')
+        _license = self.api.get('license')
+        expired = _license['expired']
+        if 'shards_limit' in _license:
+            shards_limit = int(_license['shards_limit'])
+        else:
+            match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
+            shards_limit = int(match.group(1))
+
+        result = shards_limit >= number_of_shards and not expired
+        expiration_date = datetime.datetime.fromisoformat(_license['expiration_date'].split('T')[0])
+        expires_in = datetime.datetime.now() - expiration_date
+        info = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
+                'expires in': expires_in}
+
+        return result, info
+
     def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
 
@@ -148,34 +175,7 @@ class Cluster(BaseCheckSuite):
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
 
     def check_cluster_status_004(self, _params):
-        """CS-004: Check license.
-
-        Calls '/v1/license' from API and compares the shards limit with actual shards count and checks expired field.
-
-        Remedy: Update your license.
-
-        :param _params: None
-        :returns: result
-        """
-        number_of_shards = self.api.get_number_of_values('shards')
-        _license = self.api.get('license')
-        expired = _license['expired']
-        if 'shards_limit' in _license:
-            shards_limit = int(_license['shards_limit'])
-        else:
-            match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
-            shards_limit = int(match.group(1))
-
-        result = shards_limit >= number_of_shards and not expired
-        expiration_date = datetime.datetime.fromisoformat(_license['expiration_date'].split('T')[0])
-        expires_in = datetime.datetime.now() - expiration_date
-        info = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
-                'expires in': expires_in}
-
-        return result, info
-
-    def check_cluster_status_005(self, _params):
-        """CS-005: Check cluster alerts
+        """CS-004: Check cluster alerts.
 
         Calls '/v1/cluster/alerts' from API and outputs triggered alerts.
 

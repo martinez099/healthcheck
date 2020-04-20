@@ -21,7 +21,23 @@ class Nodes(BaseCheckSuite):
         self.rex = RemoteExecutor.instance(_config)
 
     def check_nodes_config_001(self, _params):
-        """NC-001: Check if log file path is not on the root filesystem.
+        """NC-001: Check if `rlcheck` has errors.
+
+        Executes `rlcheck` and greps for 'FAILED'.
+
+        Remedy: Follow instructions from `rlcheck` output.
+
+        :param _params: None
+        :returns: result
+        """
+        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
+        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
+        errors = sum([len(f[0]) for f in failed])
+
+        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
+
+    def check_nodes_config_002(self, _params):
+        """NC-002: Check if log file path is not on the root filesystem.
 
         Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
 
@@ -40,8 +56,8 @@ class Nodes(BaseCheckSuite):
 
         return result, info
 
-    def check_nodes_config_002(self, _params):
-        """NC-002: Check if ephemeral storage path is not on the root filesystem.
+    def check_nodes_config_003(self, _params):
+        """NC-003: Check if ephemeral storage path is not on the root filesystem.
 
         Calls '/v1/nodes' from API and gets the ephemeral storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured ephemeral storage path.
@@ -62,8 +78,8 @@ class Nodes(BaseCheckSuite):
 
         return result, info
 
-    def check_nodes_config_003(self, _params):
-        """NC-003: Check if persistent storage path is not on the root filesystem.
+    def check_nodes_config_004(self, _params):
+        """NC-004: Check if persistent storage path is not on the root filesystem.
 
         Calls '/v1/nodes' from API and gets the persistent storage path.
         Executes `df -h /var/opt/redislabs/log` and compares the output to the configured persistent storage path.
@@ -84,8 +100,8 @@ class Nodes(BaseCheckSuite):
 
         return result, info
 
-    def check_nodes_config_004(self, _params):
-        """NC-004: Check if swappiness is disabled on each node.
+    def check_nodes_config_005(self, _params):
+        """NC-005: Check if swappiness is disabled on each node.
 
         Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
 
@@ -103,8 +119,8 @@ class Nodes(BaseCheckSuite):
 
         return result, info
 
-    def check_nodes_config_005(self, _params):
-        """NC-005: Check if THP is disabled on each node.
+    def check_nodes_config_006(self, _params):
+        """NC-006: Check if THP is disabled on each node.
 
         Executes `cat /sys/kernel/mm/transparent_hugepage/enabled` and compares the output to 'always madvise [never]'.
 
@@ -122,8 +138,8 @@ class Nodes(BaseCheckSuite):
 
         return result, info
 
-    def check_nodes_config_006(self, _params):
-        """NC-006: Get OS version of each node.
+    def check_nodes_config_007(self, _params):
+        """NC-007: Get OS version of each node.
 
         Executes `cat /etc/os-release | grep PRETTY_NAME` on each node and outputs found values.
 
@@ -139,8 +155,8 @@ class Nodes(BaseCheckSuite):
 
         return None, info
 
-    def check_nodes_config_007(self, _params):
-        """NC-007: Get RS version of each node.
+    def check_nodes_config_008(self, _params):
+        """NC-008: Get RS version of each node.
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
 
@@ -154,8 +170,8 @@ class Nodes(BaseCheckSuite):
 
         return None, info
 
-    def check_nodes_config_008(self, _params):
-        """NC-008: Check if `cat install.log` has errors.
+    def check_nodes_config_009(self, _params):
+        """NC-009: Check if `cat install.log` has errors.
 
         Executes `grep error /var/opt/redislabs/log/install.log` and counts result.
 
@@ -170,8 +186,8 @@ class Nodes(BaseCheckSuite):
         return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
-    def check_nodes_config_009(self, _params):
-        """NC-009: Get network link speed between nodes.
+    def check_nodes_config_010(self, _params):
+        """NC-010: Get network link speed between nodes.
 
         Executes `ping -c 4 <TARGET>` from all nodes to each node and calculates min/avg/max/dev of RTT.
 
@@ -205,8 +221,8 @@ class Nodes(BaseCheckSuite):
 
         return None, info
 
-    def check_nodes_config_010(self, _params):
-        """NC-010: Check open TCP ports of each node.
+    def check_nodes_config_011(self, _params):
+        """NC-011: Check open TCP ports of each node.
 
         Does a TCP port scan from all nodes to each node for specified ports:
         3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443 and 36379.
@@ -240,24 +256,9 @@ class Nodes(BaseCheckSuite):
 
         return not info, info if info else {'OK': 'all'}
 
+
     def check_nodes_status_001(self, _params):
-        """NS-001: Check if `rlcheck` has errors.
-
-        Executes `rlcheck` and greps for 'FAILED'.
-
-        Remedy: Follow instructions from `rlcheck` output.
-
-        :param _params: None
-        :returns: result
-        """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
-        failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
-        errors = sum([len(f[0]) for f in failed])
-
-        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
-
-    def check_nodes_status_002(self, _params):
-        """NS-002: Check if `cnm_ctl status` has errors.
+        """NS-001: Check if `cnm_ctl status` has errors.
 
         Executes `cnm_ctl status` and greps for not 'RUNNING'.
 
@@ -273,8 +274,8 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
-    def check_nodes_status_003(self, _params):
-        """NS-003: Check if `supervisorctl status` has errors.
+    def check_nodes_status_002(self, _params):
+        """NS-002: Check if `supervisorctl status` has errors.
 
         Executes `supervisorctl status` and grep for not 'RUNNING'.
 
@@ -290,8 +291,8 @@ class Nodes(BaseCheckSuite):
         return sum_not_running == 1 * len(rsps), {
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
-    def check_nodes_status_004(self, _params):
-        """DS-004: Check node alerts
+    def check_nodes_status_003(self, _params):
+        """DS-003: Check node alerts
 
         Calls '/v1/nodes/alerts' from API and outputs triggered alerts.
 
