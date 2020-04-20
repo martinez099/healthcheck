@@ -170,6 +170,21 @@ class Cluster(BaseCheckSuite):
 
         return result, kwargs
 
+    def check_cluster_status_005(self, _params):
+        """CS-005: Check cluster alerts
+
+        Calls '/v1/cluster/alerts' from API and outputs triggered alerts.
+
+        Remedy: Investigate triggered alerts by checking log files.
+
+        :param _params: None
+        :returns: result
+        """
+        alerts = self.api.get('cluster/alerts')
+        enableds = list(filter(lambda x: x[1]['state'], alerts.items()))
+
+        return not enableds, dict(enableds)
+
     def check_cluster_usage_001(self, _params):
         """CU-001: Get throughput of cluster.
 

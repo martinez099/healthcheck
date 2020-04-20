@@ -195,6 +195,25 @@ class Databases(BaseCheckSuite):
 
         return all(v is True for v in kwargs.values()), kwargs
 
+    def check_databases_status_004(self, _params):
+        """DS-004: Check database alerts
+
+        Calls '/v1/bdbs/alerts' from API and outputs triggered alerts.
+
+        Remedy: Investigate triggered alerts by checking log files.
+
+        :param _params: None
+        :returns: result
+        """
+        alerts = self.api.get('bdbs/alerts')
+        kwargs = {}
+        for uid in alerts:
+            enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
+            if enableds:
+                kwargs['db:{}'.format(uid)] = enableds
+
+        return not kwargs, kwargs
+
     def check_databases_usage_001(self, _params):
         """DU-001: Check throughput of each shard.
 

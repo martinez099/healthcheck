@@ -238,7 +238,7 @@ class Nodes(BaseCheckSuite):
                     kwargs[node_name] = []
                 kwargs[node_name].append(failed)
 
-        return not kwargs, kwargs if kwargs else {'open': 'all'}
+        return not kwargs, kwargs if kwargs else {'OK': 'all'}
 
     def check_nodes_status_001(self, _params):
         """NS-001: Check if `rlcheck` has errors.
@@ -289,6 +289,25 @@ class Nodes(BaseCheckSuite):
 
         return sum_not_running == 1 * len(rsps), {
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
+
+    def check_nodes_status_004(self, _params):
+        """DS-004: Check node alerts
+
+        Calls '/v1/nodes/alerts' from API and outputs triggered alerts.
+
+        Remedy: Investigate triggered alerts by checking log files.
+
+        :param _params: None
+        :returns: result
+        """
+        alerts = self.api.get('nodes/alerts')
+        kwargs = {}
+        for uid in alerts:
+            enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
+            if enableds:
+                kwargs['node:{}'.format(uid)] = enableds
+
+        return not kwargs, kwargs
 
     def check_nodes_usage_001(self, _params):
         """NU-001: Check CPU usage of each node.
