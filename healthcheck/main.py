@@ -22,6 +22,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     options = parser.add_argument_group()
+    options.add_argument('-n', '--no-connection-checks', help="Supress initial connection checks.", action='store_true')
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
     options.add_argument('-c', '--check', help="Specify a check (or CSV list of checks) to execute.", type=str)
@@ -186,7 +187,8 @@ def exec_checks(_suites, _checks, _args, _result_cb, _done_cb=None):
         exit(1)
 
     for check_func, suite in _checks:
-        suite.run_connection_checks()
+        if not _args.no_connection_checks:
+            suite.run_connection_checks()
         params = load_parameter_map(suite, check_func.__name__, _args)
         executor.execute(check_func, _params=params[0][1] if params else {}, _done_cb=_done_cb)
 
