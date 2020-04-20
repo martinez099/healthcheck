@@ -1,4 +1,5 @@
 import functools
+import datetime
 import math
 import re
 
@@ -166,7 +167,10 @@ class Cluster(BaseCheckSuite):
             shards_limit = int(match.group(1))
 
         result = shards_limit >= number_of_shards and not expired
-        kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired}
+        expiration_date = datetime.datetime.fromisoformat(_license['expiration_date'].split('T')[0])
+        expires_in = datetime.datetime.now() - expiration_date
+        kwargs = {'shards limit': shards_limit, 'number of shards': number_of_shards, 'expired': expired,
+                  'expires in': expires_in}
 
         return result, kwargs
 
