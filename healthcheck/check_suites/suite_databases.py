@@ -55,8 +55,8 @@ class Databases(BaseCheckSuite):
 
         return results
 
-    def check_databases_status_002(self, _params):
-        """DS-002: Check database endpoints.
+    def check_databases_config_002(self, _params):
+        """DC-002: Check database endpoints.
 
         Calls '/v1/bdbs' from API and sends a Redis PING to each endpoint and compares the response to 'PONG'.
 
@@ -205,8 +205,8 @@ class Databases(BaseCheckSuite):
         return all(filter(lambda x: x[0] == 'in-sync',
                           map(lambda x: list(x.values()), info.values()))) if info else '', info
 
-    def check_databases_status_004(self, _params):
-        """DS-004: Check database alerts
+    def check_databases_status_003(self, _params):
+        """DS-003: Check database alerts.
 
         Calls '/v1/bdbs/alerts' from API and outputs triggered alerts.
 

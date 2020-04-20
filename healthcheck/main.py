@@ -197,7 +197,9 @@ def exec_checks(_suites, _checks, _args, _result_cb, _done_cb=None):
 
 
 def main():
-
+    """
+    Here we go. That's where all starts and all ends.
+    """
     logging.basicConfig(level=logging.INFO)
 
     args = parse_args()

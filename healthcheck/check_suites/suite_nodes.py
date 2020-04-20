@@ -256,7 +256,6 @@ class Nodes(BaseCheckSuite):
 
         return not info, info if info else {'OK': 'all'}
 
-
     def check_nodes_status_001(self, _params):
         """NS-001: Check if `cnm_ctl status` has errors.
 
@@ -292,7 +291,7 @@ class Nodes(BaseCheckSuite):
             f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_nodes_status_003(self, _params):
-        """DS-003: Check node alerts
+        """NS-003: Check node alerts
 
         Calls '/v1/nodes/alerts' from API and outputs triggered alerts.
 
