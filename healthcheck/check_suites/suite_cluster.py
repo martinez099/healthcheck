@@ -125,19 +125,22 @@ class Cluster(BaseCheckSuite):
         return result, info
 
     def check_cluser_config_005(self, _params):
-        """CC-005: Check min TLS version.
+        """CC-005: Check min TLS versions.
 
-        Calls '/v1/cluster' and checks 'min_control_TLS_version'.
+        Calls '/v1/cluster' and checks 'min_control_TLS_version' and 'min_data_TLS_version' against '1.2'.
 
-        Remedy: Set 'min_control_TLS_version' to '1.2' via REST-API.
+        Remedy: Use `rladmin cluster config` to set 'min_control_TLS_version' and 'min_data_TLS_version' to '1.2'.
 
         :param _params: None
         :return: result
         """
         cluster = self.api.get('cluster')
-        min_control_TLS_version = cluster['min_control_TLS_version'] == '1.2'
+        min_control_TLS_version = cluster.get('min_control_TLS_version')
+        min_data_TLS_version = cluster.get('min_data_TLS_version')
 
-        return min_control_TLS_version, {'min control TLS version': cluster['min_control_TLS_version']}
+        return min_control_TLS_version == '1.2' and min_data_TLS_version == '1.2', {
+            'min control TLS version': min_control_TLS_version,
+            'min data TLS version': min_data_TLS_version}
 
     def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
