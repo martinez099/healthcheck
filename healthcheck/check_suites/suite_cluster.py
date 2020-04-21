@@ -124,6 +124,21 @@ class Cluster(BaseCheckSuite):
 
         return result, info
 
+    def check_cluser_config_005(self, _params):
+        """CC-005: Check min TLS version.
+
+        Calls '/v1/cluster' and checks 'min_control_TLS_version'.
+
+        Remedy: Set 'min_control_TLS_version' to '1.2' via REST-API.
+
+        :param _params: None
+        :return: result
+        """
+        cluster = self.api.get('cluster')
+        min_control_TLS_version = cluster['min_control_TLS_version'] == '1.2'
+
+        return min_control_TLS_version, {'min control TLS version': cluster['min_control_TLS_version']}
+
     def check_cluster_status_001(self, _params):
         """CS-001: Check cluster health.
 
