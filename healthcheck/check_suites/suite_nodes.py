@@ -20,6 +20,20 @@ class Nodes(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
+    def _get_file_systems(self, _path):
+        """
+        Get the filesystem of each node on which the given filepath is stored.
+
+        :param _path: The file path.
+        :return: A dict mapping node:UID -> filesystem
+        """
+        rsps = self.rex.exec_broad(f'sudo df -h {_path}')
+        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
+        fsystems = [match.group(1) for match in matches]
+
+        return {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': fsystem for rsp, fsystem in
+                zip(rsps, fsystems)}
+
     def check_nodes_config_001(self, _params):
         """NC-001: Check if `rlcheck` has errors.
 
@@ -46,15 +60,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('sudo df -h /var/opt/redislabs/log')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
-        log_file_paths = [match.group(1) for match in matches]
+        filesystems = self._get_file_systems('/var/opt/redislabs/log')
+        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
-        result = any(['/dev/root' not in log_file_path for log_file_path in log_file_paths])
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': log_file_path for
-                  rsp, log_file_path in zip(rsps, log_file_paths)}
-
-        return result, info
+        return result, filesystems
 
     def check_nodes_config_003(self, _params):
         """NC-003: Check if ephemeral storage path is not on the root filesystem.
@@ -68,15 +77,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
-        rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
-        file_paths = [match.group(1) for match in matches]
+        filesystems = self._get_file_systems(storage_paths[0])
+        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
-        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
-                  rsp, tmp_file_path in zip(rsps, file_paths)}
-
-        return result, info
+        return result, filesystems
 
     def check_nodes_config_004(self, _params):
         """NC-004: Check if persistent storage path is not on the root filesystem.
@@ -90,15 +94,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
-        rsps = self.rex.exec_broad(f'sudo df -h {storage_paths[0]}')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
-        file_paths = [match.group(1) for match in matches]
+        filesystems = self._get_file_systems(storage_paths[0])
+        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
-        result = any(['/dev/root' not in tmp_file_path for tmp_file_path in file_paths])
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': tmp_file_path for
-                  rsp, tmp_file_path in zip(rsps, file_paths)}
-
-        return result, info
+        return result, filesystems
 
     def check_nodes_config_005(self, _params):
         """NC-005: Check if swappiness is disabled on each node.
@@ -112,10 +111,9 @@ class Nodes(BaseCheckSuite):
         """
         rsps = self.rex.exec_broad('grep swap /etc/sysctl.conf || echo inactive')
         swappinesses = [rsp.result() for rsp in rsps]
-
         result = any([swappiness == 'inactive' for swappiness in swappinesses])
         info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
-                  in zip(rsps, swappinesses)}
+                in zip(rsps, swappinesses)}
 
         return result, info
 
@@ -131,10 +129,9 @@ class Nodes(BaseCheckSuite):
         """
         rsps = self.rex.exec_broad('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
-
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
         info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
-                  rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
+                rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
 
         return result, info
 
@@ -149,9 +146,8 @@ class Nodes(BaseCheckSuite):
         rsps = self.rex.exec_broad('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
-
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version
-                  in zip(rsps, os_versions)}
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version in
+                zip(rsps, os_versions)}
 
         return None, info
 
@@ -165,7 +161,6 @@ class Nodes(BaseCheckSuite):
         """
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
-
         info = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
 
         return None, info
@@ -187,7 +182,7 @@ class Nodes(BaseCheckSuite):
                             rsp in rsps}
 
     def check_nodes_config_010(self, _params):
-        """NC-010: Get network link speed between nodes.
+        """NC-010: Get network link between nodes.
 
         Executes `ping -c 4 <TARGET>` from all nodes to each node and calculates min/avg/max/dev of RTT.
 
@@ -255,6 +250,24 @@ class Nodes(BaseCheckSuite):
                 info[node_name].append(failed)
 
         return not info, info if info else {'OK': 'all'}
+
+    def check_nodes_config_012(self, _params):
+        """NC-012: Check if `vm.overcommit_memory` is set to 1 on each node.
+
+        Executes `cat /proc/sys/vm/overcommit_memory` and compares the output to '1'.
+
+        Remedy: Set `vm.overcommit_memory=1` in `/etc/sysctl.conf` in your OS.
+
+        :param _params: None
+        :returns: result
+        """
+        rsps = self.rex.exec_broad('cat /proc/sys/vm/overcommit_memory')
+        overcommit_mems = [rsp.result() for rsp in rsps]
+        result = all(overcommit_mem == '1' for overcommit_mem in overcommit_mems)
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': overcommit_mem for
+                rsp, overcommit_mem in zip(rsps, overcommit_mems)}
+
+        return result, info
 
     def check_nodes_status_001(self, _params):
         """NS-001: Check if `cnm_ctl status` has errors.
@@ -355,9 +368,9 @@ class Nodes(BaseCheckSuite):
 
             results[node_name] = maximum > .8
             info[node_name] = '{}/{}/{}/{} %'.format(to_percent(minimum * 100),
-                                                       to_percent(average * 100),
-                                                       to_percent(maximum * 100),
-                                                       to_percent(std_dev * 100))
+                                                     to_percent(average * 100),
+                                                     to_percent(maximum * 100),
+                                                     to_percent(std_dev * 100))
 
         return not any(results.values()), info
 
@@ -409,13 +422,13 @@ class Nodes(BaseCheckSuite):
 
             results[node_name] = minimum < (total_mem * 2/3)
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_mem - maximum),
-                                                                        to_gb(total_mem - average),
-                                                                        to_gb(total_mem - minimum),
-                                                                        to_gb(std_dev),
-                                                                        to_percent((100 / total_mem) * (total_mem - maximum)),
-                                                                        to_percent((100 / total_mem) * (total_mem - average)),
-                                                                        to_percent((100 / total_mem) * (total_mem - minimum)),
-                                                                        to_percent((100 / total_mem) * std_dev))
+                                                                      to_gb(total_mem - average),
+                                                                      to_gb(total_mem - minimum),
+                                                                      to_gb(std_dev),
+                                                                      to_percent((100 / total_mem) * (total_mem - maximum)),
+                                                                      to_percent((100 / total_mem) * (total_mem - average)),
+                                                                      to_percent((100 / total_mem) * (total_mem - minimum)),
+                                                                      to_percent((100 / total_mem) * std_dev))
 
         return not any(results.values()), info
 
@@ -468,13 +481,13 @@ class Nodes(BaseCheckSuite):
                 node_name += ' (quorum only)'
 
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
-                                                                        to_gb(total_size - average),
-                                                                        to_gb(total_size - minimum),
-                                                                        to_gb(std_dev),
-                                                                        to_percent((100 / total_size) * (total_size - maximum)),
-                                                                        to_percent((100 / total_size) * (total_size - average)),
-                                                                        to_percent((100 / total_size) * (total_size - minimum)),
-                                                                        to_percent((100 / total_size) * std_dev))
+                                                                      to_gb(total_size - average),
+                                                                      to_gb(total_size - minimum),
+                                                                      to_gb(std_dev),
+                                                                      to_percent((100 / total_size) * (total_size - maximum)),
+                                                                      to_percent((100 / total_size) * (total_size - average)),
+                                                                      to_percent((100 / total_size) * (total_size - minimum)),
+                                                                      to_percent((100 / total_size) * std_dev))
 
         return None, info
 
@@ -527,12 +540,12 @@ class Nodes(BaseCheckSuite):
                 node_name += ' (quorum only)'
 
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
-                                                                        to_gb(total_size - average),
-                                                                        to_gb(total_size - minimum),
-                                                                        to_gb(std_dev),
-                                                                        to_percent((100 / total_size) * (total_size - maximum)),
-                                                                        to_percent((100 / total_size) * (total_size - average)),
-                                                                        to_percent((100 / total_size) * (total_size - minimum)),
-                                                                        to_percent((100 / total_size) * std_dev))
+                                                                      to_gb(total_size - average),
+                                                                      to_gb(total_size - minimum),
+                                                                      to_gb(std_dev),
+                                                                      to_percent((100 / total_size) * (total_size - maximum)),
+                                                                      to_percent((100 / total_size) * (total_size - average)),
+                                                                      to_percent((100 / total_size) * (total_size - minimum)),
+                                                                      to_percent((100 / total_size) * std_dev))
 
         return None, info
