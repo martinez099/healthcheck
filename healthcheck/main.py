@@ -20,13 +20,13 @@ def parse_args():
     :return: The parsed command line arguments.
     """
     parser = argparse.ArgumentParser()
-
     options = parser.add_argument_group()
-    options.add_argument('-n', '--no-connection-checks', help="Supress initial connection checks.", action='store_true')
-    options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
-    options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
+
     options.add_argument('-c', '--check', help="Specify a check (or CSV list of checks) to execute.", type=str)
+    options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
+    options.add_argument('-n', '--no-connection-checks', help="Supress initial connection checks.", action='store_true')
     options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
+    options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
     options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
 
     return parser.parse_args()

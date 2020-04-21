@@ -38,16 +38,18 @@ class ApiFetcher(object):
         """
         Check API connection.
         """
-        if self.connected is None:
-            try:
-                print_msg('checking API connection ...')
-                fqdn = self.get_value('cluster', 'name')
-                print_success(f'- successfully connected to {fqdn}')
-                self.connected = True
-            except Exception as e:
-                print_error('could not connect to Redis Enterprise REST-API:', e)
-                self.connected = False
-            print_msg('')
+        if self.connected is not None:
+            return
+
+        print_msg('checking API connection ...')
+        try:
+            fqdn = self.get_value('cluster', 'name')
+            print_success(f'- successfully connected to {fqdn}')
+            self.connected = True
+        except Exception as e:
+            print_error('could not connect to Redis Enterprise REST-API:', e)
+            self.connected = False
+        print_msg('')
 
     def get_uid(self, _internal_addr):
         """
