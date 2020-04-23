@@ -1,4 +1,4 @@
-# healthcheck
+# HealthCheck
 This is a command-line tool to check the health of a Redis Enterprise cluster.
 
 Click [here](https://docs.google.com/document/d/1yoCBxP40CzRpA525btg8LtlD3yGYSfgZotJw7GIqNrA) for more information.
@@ -6,9 +6,12 @@ Click [here](https://docs.google.com/document/d/1yoCBxP40CzRpA525btg8LtlD3yGYSfg
 ## Description
 The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
 
-It checks configuration, status and usage of a cluster, its nodes and databases.
-
 ### Checks
+There are 3 categories of checks:
+- Configuration
+- Status
+- Usage
+
 Each check has a result which is indicated by:
 - `[+]` check succeeded: The conditions were met.
 - `[-]` check failed: The conditions were not met.
