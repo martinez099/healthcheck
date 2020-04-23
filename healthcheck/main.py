@@ -9,7 +9,7 @@ import os
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
 from healthcheck.common_funcs import get_parameter_map_name
-from healthcheck.printer_funcs import print_list, print_error, print_warning, print_msg
+from healthcheck.printer_funcs import print_list, print_error, print_warning
 from healthcheck.stats_collector import StatsCollector
 
 
@@ -24,7 +24,7 @@ def parse_args():
 
     options.add_argument('-c', '--check', help="Specify a check (or CSV list of checks) to execute.", type=str)
     options.add_argument('-l', '--list', help="List all check suites.", action='store_true')
-    options.add_argument('-n', '--no-connection-checks', help="Supress initial connection checks.", action='store_true')
+    options.add_argument('-n', '--no-connection-checks', help="Suppress initial connection checks.", action='store_true')
     options.add_argument('-p', '--params', help="Specify a parameter map to use.", type=str)
     options.add_argument('-s', '--suite', help="Specify a suite to execute.", type=str)
     options.add_argument('-cfg', '--config', help="Path to config file", type=str, default='config.ini')
