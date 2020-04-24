@@ -240,6 +240,28 @@ class Databases(BaseCheckSuite):
         results = {}
 
         for bdb in bdbs:
+            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+            ints = db_stats['intervals']
+
+            # calculate minimum
+            minimum = min([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
+
+            # calculate average
+            total_reqs = list(filter(lambda i: i.get('total_req'), ints))
+            sum_total_req = sum([i['total_req'] for i in total_reqs])
+            average = sum_total_req / len(total_reqs)
+
+            # calculate maximum
+            maximum = max([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
+
+            # calculate std deviation
+            q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
+            std_dev = math.sqrt(q_sum / len(total_reqs))
+
+            info[bdb['name']] = {
+                'total': '{}/{}/{}/{} Kops'.format(to_kops(minimum), to_kops(average), to_kops(maximum),
+                                                   to_kops(std_dev))}
+
             for shard_uid in bdb['shard_list']:
                 shard_stats = self.api.get(f'shards/stats/{shard_uid}')
                 ints = shard_stats['intervals']
@@ -267,14 +289,11 @@ class Databases(BaseCheckSuite):
                     result = maximum > 25000
                 results[bdb['name']] = result
 
-                if bdb['name'] not in info:
-                    info[bdb['name']] = {}
-
                 info[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
                     '{}/{}/{}/{} Kops'.format(to_kops(minimum), to_kops(average), to_kops(maximum), to_kops(std_dev))
 
-        return [(not results[bdb['name']], info[bdb['name']], f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).")
-                for bdb in bdbs]
+        return [(not results[bdb['name']], info[bdb['name']],
+                 f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
 
     def check_databases_usage_002(self, _params):
         """DU-002: Check memory usage of each shard.
@@ -292,6 +311,27 @@ class Databases(BaseCheckSuite):
         results = {}
 
         for bdb in bdbs:
+            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+            ints = db_stats['intervals']
+
+            # calculate minimum
+            minimum = min([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
+
+            # calculate average
+            used_memories = list(filter(lambda i: i.get('used_memory'), ints))
+            sum_total_ram_usage = sum([i['used_memory'] for i in used_memories])
+            average = sum_total_ram_usage / len(used_memories)
+
+            # calculate maximum
+            maximum = max([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
+
+            # calculate std deviation
+            q_sum = functools.reduce(lambda x, y: x + pow(y['used_memory'] - average, 2), used_memories, 0)
+            std_dev = math.sqrt(q_sum / len(used_memories))
+
+            info[bdb['name']] = {
+                'total': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum),
+                                                 to_gb(std_dev))}
             for shard_uid in bdb['shard_list']:
                 shard_stats = self.api.get(f'shards/stats/{shard_uid}')
                 ints = shard_stats['intervals']
@@ -317,11 +357,8 @@ class Databases(BaseCheckSuite):
                     result = maximum > (25 * GB)
                 results[bdb['name']] = result
 
-                if bdb['name'] not in info:
-                    info[bdb['name']] = {}
-
                 info[bdb['name']][f'shard:{shard_uid} ({shard_stats["role"]})'] = \
                     '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
-        return [(not results[bdb['name']], info[bdb['name']], f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).")
-                for bdb in bdbs]
+        return [(not results[bdb['name']], info[bdb['name']],
+                 f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
