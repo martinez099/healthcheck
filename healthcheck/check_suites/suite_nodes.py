@@ -18,6 +18,19 @@ class Nodes(BaseCheckSuite):
         self.api = ApiFetcher.instance(_config)
         self.rex = RemoteExecutor.instance(_config)
 
+    def _get_quorum_only_nodes(self):
+        """
+        Get UID of nodes marked 'quorum only'.
+
+        :return: A list of node:UIDs.
+        """
+        nodes = self.api.get('nodes')
+        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex.get_targets()[0]) for node in nodes]
+        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
+
+        return list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+
     def _get_file_systems(self, _path):
         """
         Get the filesystem of each node on which the given filepath is stored.
@@ -194,7 +207,7 @@ class Nodes(BaseCheckSuite):
                     continue
                 cmd_targets.append((f'ping -c 4 {address}', source))
 
-        # calculate averages
+        # calculate values
         _min, avg, _max, mdev = .0, .0, .0, .0
         futures = self.rex.exec_multi(cmd_targets)
         key = 'rtt min/avg/max/mdev'
@@ -228,7 +241,7 @@ class Nodes(BaseCheckSuite):
         """
         cmd_targets = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
-        cmd = 'python -c "import socket; socket.create_connection(('"'{0}'"', {1}))" 2> /dev/null || echo '"'{0}:{1}'"''
+        cmd = '''python -c "import socket; socket.create_connection(('"'{0}'"', {1}))" 2> /dev/null || echo '"'{0}:{1}'"' '''
 
         for port in ports:
             for source in self.rex.get_targets():
@@ -333,13 +346,7 @@ class Nodes(BaseCheckSuite):
         """
         info = {}
         results = {}
-
-        # get quorum-only node
-        nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                  self.rex.get_targets()[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+        quorum_onlys = self._get_quorum_only_nodes()
 
         for stats in self.api.get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'cpu_idle')
@@ -348,13 +355,13 @@ class Nodes(BaseCheckSuite):
             if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            results[node_name] = minimum < .2
+            results[node_name] = minimum > .2
             info[node_name] = '{}/{}/{}/{} %'.format(to_percent((1 - maximum) * 100),
                                                      to_percent((1 - average) * 100),
                                                      to_percent((1 - minimum) * 100),
                                                      to_percent(std_dev * 100))
 
-        return not any(results.values()), info
+        return all(results.values()), info
 
     def check_nodes_usage_002(self, _params):
         """NU-002: Check RAM usage of each node.
@@ -369,17 +376,10 @@ class Nodes(BaseCheckSuite):
         """
         info = {}
         results = {}
-
-        # get quorum-only node
-        nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                  self.rex.get_targets()[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+        quorum_onlys = self._get_quorum_only_nodes()
 
         for stats in self.api.get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'free_memory')
-
             total_mem = self.api.get_value(f'nodes/{stats["uid"]}', 'total_memory')
 
             node_name = f'node:{stats["uid"]}'
@@ -408,18 +408,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         info = {}
-
-        # get quorum-only node
-        nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                  self.rex.get_targets()[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = list(
-            map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+        quorum_onlys = self._get_quorum_only_nodes()
 
         for stats in self.api.get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ephemeral_storage_avail')
-
             total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'ephemeral_storage_size')
 
             node_name = f'node:{stats["uid"]}'
@@ -447,18 +439,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         info = {}
-
-        # get quorum-only node
-        nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                  self.rex.get_targets()[0]) for node in nodes]
-        matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
-        quorum_onlys = list(
-            map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
+        quorum_onlys = self._get_quorum_only_nodes()
 
         for stats in self.api.get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'persistent_storage_avail')
-
             total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'persistent_storage_size')
 
             node_name = f'node:{stats["uid"]}'

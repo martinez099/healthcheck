@@ -194,7 +194,7 @@ class RemoteExecutor(object):
             parts = ['docker', 'exec', '--user', 'root', _target, _cmd]
         elif self.mode == 'k8s':
             parts = ['kubectl', 'exec', _target, '--container', self.k8s_container, '--namespace', self.k8s_ns,
-                     '--', _cmd.replace('sudo', '')]
+                     '--', _cmd.replace('sudo ', '')]
         elif self.mode == 'ssh':
             parts = ['ssh']
             if self.ssh_key:
