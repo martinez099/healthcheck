@@ -1,11 +1,9 @@
-import functools
 import datetime
-import math
 import re
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import GB, to_gb, to_kops, to_percent
+from healthcheck.common_funcs import calc_usage, GB, to_gb, to_kops, to_percent
 from healthcheck.remote_executor import RemoteExecutor
 
 
@@ -218,20 +216,7 @@ class Cluster(BaseCheckSuite):
         info = {}
         stats = self.api.get('cluster/stats')
 
-        # calculate minimum
-        minimum = min([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
-
-        # calculate average
-        total_reqs = list(filter(lambda x: x.get('total_req'), stats['intervals']))
-        sum_total_req = sum([i['total_req'] for i in total_reqs])
-        average = sum_total_req / len(total_reqs)
-
-        # calculate maximum
-        maximum = max([i['total_req'] for i in filter(lambda x: x.get('total_req'), stats['intervals'])])
-
-        # calculate std deviation
-        q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
-        std_dev = math.sqrt(q_sum / len(total_reqs))
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'total_req')
 
         info['min'] = '{} Kops'.format(to_kops(minimum))
         info['avg'] = '{} Kops'.format(to_kops(average))
@@ -251,20 +236,7 @@ class Cluster(BaseCheckSuite):
         info = {}
         stats = self.api.get('cluster/stats')
 
-        # calculate minimum
-        minimum = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
-
-        # calculate average
-        free_mems = list(filter(lambda x: x.get('free_memory'), stats['intervals']))
-        sum_free_mem = sum(i['free_memory'] for i in free_mems)
-        average = sum_free_mem/len(free_mems)
-
-        # calculate maximum
-        maximum = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), stats['intervals']))
-
-        # calculate std deviation
-        q_sum = functools.reduce(lambda x, y: x + pow(y['free_memory'] - average, 2), free_mems, 0)
-        std_dev = math.sqrt(q_sum / len(free_mems))
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'free_memory')
 
         total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
 
@@ -287,23 +259,7 @@ class Cluster(BaseCheckSuite):
         info = {}
         stats = self.api.get('cluster/stats')
 
-        # calculate minimum
-        minimum = min([i['ephemeral_storage_avail'] for i in
-                       filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
-
-        # calculate average
-        ephemeral_storage_avails = list(filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals']))
-        sum_ephemeral_storage_avail = sum(i['ephemeral_storage_avail'] for i in ephemeral_storage_avails)
-        average = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
-
-        # calculate maximum
-        maximum = max([i['ephemeral_storage_avail'] for i in
-                       filter(lambda x: x.get('ephemeral_storage_avail'), stats['intervals'])])
-
-        # calculate std deviation
-        q_sum = functools.reduce(lambda x, y: x + pow(y['ephemeral_storage_avail'] - average, 2),
-                                 ephemeral_storage_avails, 0)
-        std_dev = math.sqrt(q_sum / len(ephemeral_storage_avails))
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ephemeral_storage_avail')
 
         total_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
 
@@ -326,23 +282,7 @@ class Cluster(BaseCheckSuite):
         info = {}
         stats = self.api.get('cluster/stats')
 
-        # calculate minimum
-        minimum = min([i['persistent_storage_avail'] for i in
-                       filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
-
-        # calculate average
-        persistent_storage_avails = list(filter(lambda x: x.get('persistent_storage_avail'), stats['intervals']))
-        sum_persistent_storage_avail = sum(i['persistent_storage_avail'] for i in persistent_storage_avails)
-        average = sum_persistent_storage_avail / len(persistent_storage_avails)
-
-        # calculate maximum
-        maximum = max([i['persistent_storage_avail'] for i in
-                       filter(lambda x: x.get('persistent_storage_avail'), stats['intervals'])])
-
-        # calculate std deviation
-        q_sum = functools.reduce(lambda x, y: x + pow(y['persistent_storage_avail'] - average, 2),
-                                 persistent_storage_avails, 0)
-        std_dev = math.sqrt(q_sum / len(persistent_storage_avails))
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'persistent_storage_avail')
 
         total_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
 

@@ -16,20 +16,22 @@ SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 GB = pow(1024, 3)
 
 
-def calc_std_dev_and_avg(_values, _key):
+def calc_usage(_values, _key):
     """
-    Calculate standard deviation and average.
+    Calculate minimum, average, maximum and standard deviation.
 
     :param _values: A list of value dicts.
     :param _key: The key of the value.
     :return: A tuple (standard deviation, average)
     """
     vals = list(filter(lambda x: x.get(_key), _values))
+    min_ = min([i[_key] for i in vals])
     avg = sum(i[_key] for i in vals) / len(vals)
+    max_ = max([i[_key] for i in filter(lambda i: i.get(_key), vals)])
     q_sum = functools.reduce(lambda x, y: x + pow(y[_key] - avg, 2), vals, 0)
     std_dev = math.sqrt(q_sum / len(vals))
 
-    return std_dev, avg
+    return min_, avg, max_, std_dev
 
 
 def to_percent(_value):

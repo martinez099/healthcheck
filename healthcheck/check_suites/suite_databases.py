@@ -1,9 +1,6 @@
-import functools
-import math
-
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import GB, to_gb, to_kops, redis_ping
+from healthcheck.common_funcs import calc_usage, GB, to_gb, to_kops, redis_ping
 
 
 class Databases(BaseCheckSuite):
@@ -78,7 +75,7 @@ class Databases(BaseCheckSuite):
             result = redis_ping(endpoint['addr'][0], endpoint['port'])
             info[endpoint['dns_name']] = result
 
-        return all(v is True for v in info.values()), info
+        return all(v is True for v in info.values()) if info else '', info
 
     def check_databases_config_003(self, _params):
         """DC-003: Check for OSS cluster API of each database.
@@ -241,22 +238,8 @@ class Databases(BaseCheckSuite):
 
         for bdb in bdbs:
             db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
-            ints = db_stats['intervals']
 
-            # calculate minimum
-            minimum = min([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
-
-            # calculate average
-            total_reqs = list(filter(lambda i: i.get('total_req'), ints))
-            sum_total_req = sum([i['total_req'] for i in total_reqs])
-            average = sum_total_req / len(total_reqs)
-
-            # calculate maximum
-            maximum = max([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
-
-            # calculate std deviation
-            q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
-            std_dev = math.sqrt(q_sum / len(total_reqs))
+            minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'total_req')
 
             info[bdb['name']] = {
                 'total': '{}/{}/{}/{} Kops'.format(to_kops(minimum), to_kops(average), to_kops(maximum),
@@ -264,22 +247,8 @@ class Databases(BaseCheckSuite):
 
             for shard_uid in bdb['shard_list']:
                 shard_stats = self.api.get(f'shards/stats/{shard_uid}')
-                ints = shard_stats['intervals']
 
-                # calculate minimum
-                minimum = min([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
-
-                # calculate average
-                total_reqs = list(filter(lambda i: i.get('total_req'), ints))
-                sum_total_req = sum([i['total_req'] for i in total_reqs])
-                average = sum_total_req / len(total_reqs)
-
-                # calculate maximum
-                maximum = max([i['total_req'] for i in filter(lambda i: i.get('total_req'), ints)])
-
-                # calculate std deviation
-                q_sum = functools.reduce(lambda x, y: x + pow(y['total_req'] - average, 2), total_reqs, 0)
-                std_dev = math.sqrt(q_sum / len(total_reqs))
+                minimum, average, maximum, std_dev = calc_usage(shard_stats['intervals'], 'total_req')
 
                 if bdb['bigstore']:
                     result = maximum > 5000
@@ -312,44 +281,17 @@ class Databases(BaseCheckSuite):
 
         for bdb in bdbs:
             db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
-            ints = db_stats['intervals']
 
-            # calculate minimum
-            minimum = min([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
-
-            # calculate average
-            used_memories = list(filter(lambda i: i.get('used_memory'), ints))
-            sum_total_ram_usage = sum([i['used_memory'] for i in used_memories])
-            average = sum_total_ram_usage / len(used_memories)
-
-            # calculate maximum
-            maximum = max([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
-
-            # calculate std deviation
-            q_sum = functools.reduce(lambda x, y: x + pow(y['used_memory'] - average, 2), used_memories, 0)
-            std_dev = math.sqrt(q_sum / len(used_memories))
+            minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'used_memory')
 
             info[bdb['name']] = {
                 'total': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum),
                                                  to_gb(std_dev))}
+
             for shard_uid in bdb['shard_list']:
                 shard_stats = self.api.get(f'shards/stats/{shard_uid}')
-                ints = shard_stats['intervals']
 
-                # calculate minimum
-                minimum = min([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
-
-                # calculate average
-                used_memories = list(filter(lambda x: x.get('used_memory'), ints))
-                sum_total_ram_usage = sum([i['used_memory'] for i in used_memories])
-                average = sum_total_ram_usage / len(used_memories)
-
-                # calculate maximum
-                maximum = max([i['used_memory'] for i in filter(lambda i: i.get('used_memory'), ints)])
-
-                # calculate std deviation
-                q_sum = functools.reduce(lambda x, y: x + pow(y['used_memory'] - average, 2), used_memories, 0)
-                std_dev = math.sqrt(q_sum / len(used_memories))
+                minimum, average, maximum, std_dev = calc_usage(shard_stats['intervals'], 'used_memory')
 
                 if bdb['bigstore']:
                     result = maximum > (50 * GB)

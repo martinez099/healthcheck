@@ -60,7 +60,7 @@ class RemoteExecutor(object):
         if self.connected is not None:
             return
 
-        print_msg('checking SSH connections ...')
+        print_msg(f'checking {self.mode} connections ...')
         for target in self.targets:
             try:
                 self.exec_uni('sudo pwd', target)

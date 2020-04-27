@@ -2,7 +2,7 @@ import re
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import calc_std_dev_and_avg, to_gb, to_percent, to_ms
+from healthcheck.common_funcs import calc_usage, to_gb, to_percent, to_ms
 from healthcheck.remote_executor import RemoteExecutor
 
 
@@ -341,21 +341,11 @@ class Nodes(BaseCheckSuite):
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        for stat in self.api.get('nodes/stats'):
-            ints = stat['intervals']
-            uid = stat['uid']
+        for stats in self.api.get('nodes/stats'):
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'cpu_idle')
 
-            # calculate minimum
-            minimum = min((i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
-
-            # calculate deviation and average
-            std_dev, average = calc_std_dev_and_avg(ints, 'cpu_idle')
-
-            # calculate maximum
-            maximum = max((i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
-
-            node_name = f'node:{uid}'
-            if uid in quorum_onlys:
+            node_name = f'node:{stats["uid"]}'
+            if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'
 
             results[node_name] = minimum < .2
@@ -387,23 +377,13 @@ class Nodes(BaseCheckSuite):
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
         quorum_onlys = list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        for stat in self.api.get('nodes/stats'):
-            ints = stat['intervals']
-            uid = stat['uid']
+        for stats in self.api.get('nodes/stats'):
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'free_memory')
 
-            # calculate minimum
-            minimum = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
+            total_mem = self.api.get_value(f'nodes/{stats["uid"]}', 'total_memory')
 
-            # calculate deviation and average
-            std_dev, average = calc_std_dev_and_avg(ints, 'free_memory')
-
-            # calculate maximum
-            maximum = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
-
-            total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
-
-            node_name = f'node:{uid}'
-            if uid in quorum_onlys:
+            node_name = f'node:{stats["uid"]}'
+            if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'
 
             results[node_name] = minimum > (total_mem * 1/3)
@@ -437,25 +417,13 @@ class Nodes(BaseCheckSuite):
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        for stat in self.api.get('nodes/stats'):
-            ints = stat['intervals']
-            uid = stat['uid']
+        for stats in self.api.get('nodes/stats'):
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ephemeral_storage_avail')
 
-            # calculate minimum
-            minimum = min(
-                i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
+            total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'ephemeral_storage_size')
 
-            # calculate deviation and average
-            std_dev, average = calc_std_dev_and_avg(ints, 'ephemeral_storage_avail')
-
-            # calculate maximum
-            maximum = max(
-                i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
-
-            total_size = self.api.get_value(f'nodes/{uid}', 'ephemeral_storage_size')
-
-            node_name = f'node:{uid}'
-            if uid in quorum_onlys:
+            node_name = f'node:{stats["uid"]}'
+            if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'
 
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
@@ -488,25 +456,13 @@ class Nodes(BaseCheckSuite):
         quorum_onlys = list(
             map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
 
-        for stat in self.api.get('nodes/stats'):
-            ints = stat['intervals']
-            uid = stat['uid']
+        for stats in self.api.get('nodes/stats'):
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'persistent_storage_avail')
 
-            # calculate minimum
-            minimum = min(
-                i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
+            total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'persistent_storage_size')
 
-            # calculate deviation and average
-            std_dev, average = calc_std_dev_and_avg(ints, 'persistent_storage_avail')
-
-            # calculate maximum
-            maximum = max(
-                i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
-
-            total_size = self.api.get_value(f'nodes/{uid}', 'persistent_storage_size')
-
-            node_name = f'node:{uid}'
-            if uid in quorum_onlys:
+            node_name = f'node:{stats["uid"]}'
+            if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'
 
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_size - maximum),
