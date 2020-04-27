@@ -108,7 +108,8 @@ def find_checks(_suites, _args, _config):
             if 'api' not in _config and 'api' in check_func.__code__.co_names:
                 continue
 
-            if 'ssh' not in _config and 'docker' not in _config and 'rex' in check_func.__code__.co_names:
+            if not filter(lambda x: x in _config,
+                          ['ssh', 'docker', 'k8s']) and 'rex' in check_func.__code__.co_names:
                 continue
 
             checks.append((check_func, suite))
@@ -221,7 +222,7 @@ def main():
         if type(_result) == list:
             return [render(r, _func) for r in _result]
         else:
-            return renderer.render_result(_result, _func, _cluster_name=config['api']['fqdn'])
+            return renderer.render_result(_result, _func, _cluster_name=config['api']['addr'])
 
     checks = find_checks(suites, args, config)
     exec_checks(suites, checks, args, render, collect_stats)

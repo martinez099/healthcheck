@@ -18,15 +18,22 @@ class RemoteExecutor(object):
         self.targets = []
         self.ssh_user = None
         self.ssh_key = None
-        self.is_docker = False
+        self.k8s_ns = None
+        self.k8s_container = 'redis-enterprise-node'
+        self.mode = None
 
         if 'ssh' in _config:
             self.targets = list(map(lambda x: x.strip(), _config['ssh']['hosts'].split(',')))
             self.ssh_user = _config['ssh']['user']
             self.ssh_key = _config['ssh']['key']
+            self.mode = 'ssh'
         elif 'docker' in _config:
             self.targets = list(map(lambda x: x.strip(), _config['docker']['containers'].split(',')))
-            self.is_docker = True
+            self.mode = 'docker'
+        elif 'k8s' in _config:
+            self.targets = list(map(lambda x: x.strip(), _config['k8s']['pods'].split(',')))
+            self.k8s_ns = _config['k8s']['namespace']
+            self.mode = 'k8s'
 
         self.addrs = {}
         self.locks = {}
@@ -80,7 +87,7 @@ class RemoteExecutor(object):
         :return: The internal addresses.
         """
         if not self.addrs:
-            self.addrs = {future.target: future.result().split()[0] for future in self.exec_broad('hostname -i')}
+            self.addrs = {future.target: future.result().split()[0] for future in self.exec_broad('hostname -I')}
 
         return self.addrs
 
@@ -183,9 +190,12 @@ class RemoteExecutor(object):
         :return: The response.
         :raise Exception: If an error occurred.
         """
-        if self.is_docker:
+        if self.mode == 'docker':
             parts = ['docker', 'exec', '--user', 'root', _target, _cmd]
-        else:
+        elif self.mode == 'k8s':
+            parts = ['kubectl', 'exec', _target, '--container', self.k8s_container, '--namespace', self.k8s_ns,
+                     '--', _cmd.replace('sudo', '')]
+        elif self.mode == 'ssh':
             parts = ['ssh']
             if self.ssh_key:
                 parts.append('-i {}'.format(self.ssh_key))
@@ -194,5 +204,7 @@ class RemoteExecutor(object):
             else:
                 parts.append(_target)
             parts.append('''-C '{}' '''.format(_cmd))
+        else:
+            raise Exception('unknown REX mode')
 
         return ' '.join(parts)

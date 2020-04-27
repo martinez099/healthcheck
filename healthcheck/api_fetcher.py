@@ -13,7 +13,7 @@ class ApiFetcher(object):
         :param _config: The parsed configuration.
         """
         if 'api' in _config:
-            self.fqdn = _config['api']['fqdn']
+            self.addr = _config['api']['addr']
             self.username = _config['api']['user']
             self.password = _config['api']['pass']
 
@@ -43,8 +43,8 @@ class ApiFetcher(object):
 
         print_msg('checking API connection ...')
         try:
-            fqdn = self.get_value('cluster', 'name')
-            print_success(f'- successfully connected to {fqdn}')
+            addr = self.get_value('cluster', 'name')
+            print_success(f'- successfully connected to {addr}')
             self.connected = True
         except Exception as e:
             print_error('could not connect to Redis Enterprise REST-API:', e)
@@ -132,6 +132,11 @@ class ApiFetcher(object):
         if _topic in self.cache:
             return self.cache[_topic]
         else:
-            rsp = http_get('https://{}:9443/v1/{}'.format(self.fqdn, _topic), self.username, self.password)
+            if ':' in self.addr:
+                url = 'https://{}/v1/{}'.format(self.addr, _topic)
+            else:
+                url = 'https://{}:9443/v1/{}'.format(self.addr, _topic)
+
+            rsp = http_get(url, self.username, self.password)
             self.cache[_topic] = rsp
             return rsp

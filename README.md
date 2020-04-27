@@ -37,15 +37,17 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 ## Setup
 - Fill in the `config.ini` file with the following configuration data:
   - Under a section call `http`, HTTP access to the REST-API of a Redis Enterprise cluster:
-    - FQDN of the cluster
+    - Address of the cluster, i.e. FQDN
     - Username of the cluster
     - Password of the cluster
   - Under a scetion calls `ssh`, SSH access to all nodes of the Redis Enterprise cluster:
     - SSH username
     - CSV list of hostnames
     - Path to SSH private key file
-  - Alternatively to SSH, under a section called `docker`, a CSV list of Docker `containers` (name or ID) can be specified.
-  - Under a section called `renderer`, a renderer module name can be specified. Options are: 
+  - Alternatively to SSH:
+    - Under a section called `docker`, a CSV list of Docker `containers` (name or ID) can be specified.
+    - Under a section called `k8s`, a CSV list of Kubernetes `pods` and a `namespace` can be specified.
+  - Under a section called `renderer`, a renderer module name can be specified. Options are:
     - `basic` The default renderer.
     - `json` Renders results in JSON format.
     - `html` Renders result in HTML format.
@@ -59,7 +61,9 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - To run one check suite, execute `./hc -s <SUITE>`, e.g.
   - execute `./hc -s node` for node checks.
 - To run a single check, execute `./hc -c <CHECK>`, e.g.
-  - execute `./hc -c "network link"` to get the network link speed between all nodes.
+  - execute `./hc -c "network link"` to get the network link between all nodes.
+  - execute `./hc -c status` to execute all status check.
+  - execute `./hc -c DS-001,DS-002` to execute 1st and 2nd database status check.
 - If a check supports a parameter map, execute `./hc -c <CHECK> -p <PARAMS>`, e.g.
   - execute `./hc -c "cluster sizing" -p reco` for cluster sizing check with `recommended` HW requirements.
   - execute `./hc -c "database config" -p config1` for database configuration check with parameter map `config1`.

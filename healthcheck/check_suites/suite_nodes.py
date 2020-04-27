@@ -1,10 +1,8 @@
-import functools
-import math
 import re
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import to_gb, to_percent, to_ms
+from healthcheck.common_funcs import calc_std_dev_and_avg, to_gb, to_percent, to_ms
 from healthcheck.remote_executor import RemoteExecutor
 
 
@@ -230,7 +228,7 @@ class Nodes(BaseCheckSuite):
         """
         cmd_targets = []
         ports = [3333, 3334, 3335, 3336, 3337, 3338, 3339, 8001, 8070, 8080, 8443, 9443, 36379]
-        cmd = '''python -c "import socket; socket.create_connection(('"'"'{0}'"'"', {1}))" 2> /dev/null || echo '"'"'{0}:{1}'"'"' '''
+        cmd = 'python -c "import socket; socket.create_connection(('"'{0}'"', {1}))" 2> /dev/null || echo '"'{0}:{1}'"''
 
         for port in ports:
             for source in self.rex.get_targets():
@@ -252,11 +250,11 @@ class Nodes(BaseCheckSuite):
         return not info, info if info else {'OK': 'all'}
 
     def check_nodes_config_012(self, _params):
-        """NC-012: Check if `vm.overcommit_memory` is set to 1 on each node.
+        """NC-012: Check if 'vm.overcommit_memory' is set to '1' on each node.
 
         Executes `cat /proc/sys/vm/overcommit_memory` and compares the output to '1'.
 
-        Remedy: Set `vm.overcommit_memory=1` in `/etc/sysctl.conf` in your OS.
+        Remedy: Set 'vm.overcommit_memory=1' in '/etc/sysctl.conf' in your OS.
 
         :param _params: None
         :returns: result
@@ -348,28 +346,22 @@ class Nodes(BaseCheckSuite):
             uid = stat['uid']
 
             # calculate minimum
-            minimum = min((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
+            minimum = min((i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
 
-            # calculate average
-            cpu_idles = list(filter(lambda x: x.get('cpu_idle'), ints))
-            sum_cpu_usage = sum((1 - i['cpu_idle']) for i in cpu_idles)
-            average = sum_cpu_usage/len(cpu_idles)
+            # calculate deviation and average
+            std_dev, average = calc_std_dev_and_avg(ints, 'cpu_idle')
 
             # calculate maximum
-            maximum = max((1 - i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
-
-            # calculate std deviation
-            q_sum = functools.reduce(lambda x, y: x + pow((1 - y['cpu_idle']) - average, 2), cpu_idles, 0)
-            std_dev = math.sqrt(q_sum / len(cpu_idles))
+            maximum = max((i['cpu_idle']) for i in filter(lambda x: x.get('cpu_idle'), ints))
 
             node_name = f'node:{uid}'
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            results[node_name] = maximum > .8
-            info[node_name] = '{}/{}/{}/{} %'.format(to_percent(minimum * 100),
-                                                     to_percent(average * 100),
-                                                     to_percent(maximum * 100),
+            results[node_name] = minimum < .2
+            info[node_name] = '{}/{}/{}/{} %'.format(to_percent((1 - maximum) * 100),
+                                                     to_percent((1 - average) * 100),
+                                                     to_percent((1 - minimum) * 100),
                                                      to_percent(std_dev * 100))
 
         return not any(results.values()), info
@@ -402,17 +394,11 @@ class Nodes(BaseCheckSuite):
             # calculate minimum
             minimum = min(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
 
-            # calculate average
-            free_mems = list(filter(lambda x: x.get('free_memory'), ints))
-            sum_free_mem = sum(i['free_memory'] for i in free_mems)
-            average = sum_free_mem/len(free_mems)
+            # calculate deviation and average
+            std_dev, average = calc_std_dev_and_avg(ints, 'free_memory')
 
             # calculate maximum
             maximum = max(i['free_memory'] for i in filter(lambda x: x.get('free_memory'), ints))
-
-            # calculate std deviation
-            q_sum = functools.reduce(lambda x, y: x + pow(y['free_memory'] - average, 2), free_mems, 0)
-            std_dev = math.sqrt(q_sum / len(free_mems))
 
             total_mem = self.api.get_value(f'nodes/{uid}', 'total_memory')
 
@@ -420,7 +406,7 @@ class Nodes(BaseCheckSuite):
             if uid in quorum_onlys:
                 node_name += ' (quorum only)'
 
-            results[node_name] = minimum < (total_mem * 2/3)
+            results[node_name] = minimum > (total_mem * 1/3)
             info[node_name] = '{}/{}/{}/{} GB ({}/{}/{}/{} %)'.format(to_gb(total_mem - maximum),
                                                                       to_gb(total_mem - average),
                                                                       to_gb(total_mem - minimum),
@@ -430,7 +416,7 @@ class Nodes(BaseCheckSuite):
                                                                       to_percent((100 / total_mem) * (total_mem - minimum)),
                                                                       to_percent((100 / total_mem) * std_dev))
 
-        return not any(results.values()), info
+        return all(results.values()), info
 
     def check_nodes_usage_003(self, _params):
         """NU-003: Get ephemeral storage usage of each node.
@@ -459,20 +445,12 @@ class Nodes(BaseCheckSuite):
             minimum = min(
                 i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
 
-            # calculate average
-            ephemeral_storage_avails = list(filter(lambda x: x.get('ephemeral_storage_avail'), ints))
-            sum_ephemeral_storage_avail = sum(i['ephemeral_storage_avail'] for i in ephemeral_storage_avails)
-            average = sum_ephemeral_storage_avail / len(ephemeral_storage_avails)
+            # calculate deviation and average
+            std_dev, average = calc_std_dev_and_avg(ints, 'ephemeral_storage_avail')
 
             # calculate maximum
             maximum = max(
                 i['ephemeral_storage_avail'] for i in filter(lambda x: x.get('ephemeral_storage_avail'), ints))
-
-            # calculate std deviation
-            q_sum = functools.reduce(
-                lambda x, y: x + pow(y['ephemeral_storage_avail'] - average, 2),
-                ephemeral_storage_avails, 0)
-            std_dev = math.sqrt(q_sum / len(ephemeral_storage_avails))
 
             total_size = self.api.get_value(f'nodes/{uid}', 'ephemeral_storage_size')
 
@@ -518,20 +496,12 @@ class Nodes(BaseCheckSuite):
             minimum = min(
                 i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
 
-            # calculate average
-            persistent_storage_avails = list(filter(lambda x: x.get('persistent_storage_avail'), ints))
-            sum_persistent_storage_avail = sum(i['persistent_storage_avail'] for i in persistent_storage_avails)
-            average = sum_persistent_storage_avail / len(persistent_storage_avails)
+            # calculate deviation and average
+            std_dev, average = calc_std_dev_and_avg(ints, 'persistent_storage_avail')
 
             # calculate maximum
             maximum = max(
                 i['persistent_storage_avail'] for i in filter(lambda x: x.get('persistent_storage_avail'), ints))
-
-            # calculate std deviation
-            q_sum = functools.reduce(
-                lambda x, y: x + pow(y['persistent_storage_avail'] - average, 2),
-                persistent_storage_avails, 0)
-            std_dev = math.sqrt(q_sum / len(persistent_storage_avails))
 
             total_size = self.api.get_value(f'nodes/{uid}', 'persistent_storage_size')
 

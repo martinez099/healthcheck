@@ -1,5 +1,7 @@
 import base64
+import functools
 import json
+import math
 import logging
 import socket
 import ssl
@@ -12,6 +14,22 @@ SSL_CONTEXT.check_hostname = False
 SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 GB = pow(1024, 3)
+
+
+def calc_std_dev_and_avg(_values, _key):
+    """
+    Calculate standard deviation and average.
+
+    :param _values: A list of value dicts.
+    :param _key: The key of the value.
+    :return: A tuple (standard deviation, average)
+    """
+    vals = list(filter(lambda x: x.get(_key), _values))
+    avg = sum(i[_key] for i in vals) / len(vals)
+    q_sum = functools.reduce(lambda x, y: x + pow(y[_key] - avg, 2), vals, 0)
+    std_dev = math.sqrt(q_sum / len(vals))
+
+    return std_dev, avg
 
 
 def to_percent(_value):
