@@ -12,6 +12,7 @@ def render_result(_result, _func, *_args, **_kwargs):
     to_print = {
         'desc': (_result[2] if len(_result) == 3 else _func.__doc__).split('\n')[0]
     }
+    remedy = None
     if _result[0] == '':
         to_print['status'] = 'SKIPPED'
     elif _result[0] is True:
@@ -19,8 +20,7 @@ def render_result(_result, _func, *_args, **_kwargs):
     elif _result[0] is False:
         to_print['status'] = 'FAILED'
         doc = (_result[2] if len(_result) == 3 else _func.__doc__)
-        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)[0]
-        to_print['remedy'] = remedy
+        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)
     elif _result[0] is None:
         to_print['status'] = 'NO RESULT'
     elif _result[0] is Exception:
@@ -28,6 +28,8 @@ def render_result(_result, _func, *_args, **_kwargs):
     else:
         raise NotImplementedError()
 
+    if remedy:
+        to_print['remedy'] = remedy[0]
     to_print['info'] = _result[1]
     print(json.dumps(to_print))
 

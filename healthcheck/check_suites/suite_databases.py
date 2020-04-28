@@ -222,7 +222,7 @@ class Databases(BaseCheckSuite):
         return not info, info
 
     def check_databases_usage_001(self, _params):
-        """DU-001: Check throughput of each shard.
+        """DU-001: Check throughput of each database.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
         It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25 Kops.

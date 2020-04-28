@@ -42,7 +42,7 @@ img#logo {{ float: right; margin: 10px; width: 200px }}
     elif _result[0] is False:
         print('<td style="background-color:red">FAILED</td>')
         doc = (_result[2] if len(_result) == 3 else _func.__doc__)
-        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)[0]
+        remedy = re.findall(r'Remedy: (.*)', doc, re.MULTILINE)
     elif _result[0] is None:
         print('<td style="background-color:yellow">NO RESULT</td>')
     elif _result[0] is Exception:
@@ -53,7 +53,7 @@ img#logo {{ float: right; margin: 10px; width: 200px }}
     print('<td>')
     print(', '.join([str(k) + ': ' + str(v) for k, v in _result[1].items()]))
     if remedy:
-        print(f'&nbsp;<i><b>Remedy:</b> {remedy}</i>')
+        print(f'&nbsp;<i><b>Remedy:</b> {remedy[0]}</i>')
     print('</td></tr>')
 
 

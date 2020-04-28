@@ -30,13 +30,21 @@ curl --silent \
      --header 'content-type: application/json' \
      --data '{"name":"db1","type":"redis","memory_size":102400,"port":12000}' &> /dev/null
 
-# run SUT
+echo "waiting 10 seconds for database to be created ..."
+sleep 10
+
+# put some traffic
+docker exec redislabs "/opt/redislabs/bin/memtier_benchmark" \
+            --server localhost \
+            --port 12000 \
+            --hide-histogram &> /dev/null
+
 cd ..
 echo "running checks ..."
 ./hc --config tests/unit.ini &> /dev/null
 rc=${?}
 
-# cleanup
+echo "cleaning up ..."
 docker stop redislabs
 docker rm redislabs
 
