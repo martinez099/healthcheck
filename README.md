@@ -4,7 +4,7 @@ This is a command-line tool to check the health of a Redis Enterprise cluster.
 Click [here](https://docs.google.com/document/d/1yoCBxP40CzRpA525btg8LtlD3yGYSfgZotJw7GIqNrA) for more information.
 
 ## Description
-The tool does *read-only* operations via SSH remote execution and the Redis Enterprise REST-API.
+The tool does *read-only* operations via remote execution (e.g. SSH) and the Redis Enterprise REST-API.
 
 ### Checks
 There are 3 categories of checks:
@@ -31,10 +31,16 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - To provide your own parameters, clone or edit a paramter map in `parameter_maps/<SUITE>/<CHECK>/`.
 - Alternatively you can pass the full filename (i.e. with `.json` at the end) and it will look it up in the current directory.
 
-## Prerequisites
-- Python v3.7, no dependencies are required.
-
 ## Setup
+### Prerequisites
+- Python 3.7 (no further dependencies required)
+- A remote executor:
+  - `ssh`
+  - `docker`
+  - `kubectl`
+- Access to a *Redis Enterprise* cluster
+  
+### Configuration
 - Fill in the `config.ini` file with the following configuration data:
   - Under a section call `http`, HTTP access to the REST-API of a Redis Enterprise cluster:
     - Address of the cluster, i.e. FQDN
