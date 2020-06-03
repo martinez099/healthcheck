@@ -2,7 +2,7 @@ import re
 
 from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
-from healthcheck.common_funcs import calc_usage, to_gb, to_percent, to_ms
+from healthcheck.common_funcs import calc_usage, parse_semver, to_gb, to_percent, to_ms
 from healthcheck.remote_executor import RemoteExecutor
 
 
@@ -163,7 +163,7 @@ class Nodes(BaseCheckSuite):
         return None, info
 
     def check_nodes_config_008(self, _params):
-        """NC-008: Get RS version of each node.
+        """NC-008: Check RS version of each node.
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
 
@@ -172,9 +172,10 @@ class Nodes(BaseCheckSuite):
         """
         node_ids = self.api.get_values('nodes', 'uid')
         software_versions = self.api.get_values('nodes', 'software_version')
+        result = all(map(lambda x: parse_semver(x)[0:2] == (5, 6), software_versions))
         info = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
 
-        return None, info
+        return result, info
 
     def check_nodes_config_009(self, _params):
         """NC-009: Check if `cat install.log` has errors.

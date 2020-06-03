@@ -3,6 +3,7 @@ import functools
 import json
 import math
 import logging
+import re
 import socket
 import ssl
 
@@ -22,7 +23,7 @@ def calc_usage(_values, _key):
 
     :param _values: A list of value dicts.
     :param _key: The key of the value.
-    :return: A tuple (standard deviation, average)
+    :return: A tuple (minimum, average, maximum, standard deviation).
     """
     vals = list(filter(lambda x: x.get(_key), _values))
     min_ = min([i[_key] for i in vals])
@@ -32,6 +33,18 @@ def calc_usage(_values, _key):
     std_dev = math.sqrt(q_sum / len(vals))
 
     return min_, avg, max_, std_dev
+
+
+def parse_semver(_version):
+    """
+    Parse a semantic version string, e.g. '5.6.0-20'.
+
+    :param _version: The version string.
+    :return: A tuple (major, minor, patch, build).
+    """
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)-(\d+)$', _version)
+
+    return tuple(map(int, match.groups()))
 
 
 def to_percent(_value):
