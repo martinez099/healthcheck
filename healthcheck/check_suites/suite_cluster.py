@@ -292,3 +292,31 @@ class Cluster(BaseCheckSuite):
         info['dev'] = '{} GB ({} %)'.format(to_gb(std_dev), to_percent((100 / total_size) * std_dev))
 
         return None, info
+
+    def check_cluster_usage_005(self, _params):
+        """CU-005: Get network traffic usage of cluster.
+
+        Calls '/v1/cluster/stats' from API and calculates min/avg/max/dev of 'ingress_bytes' and 'egress_bytes'.
+
+        :param _params:
+        :return:
+        """
+        info = {}
+        stats = self.api.get('cluster/stats')
+
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ingress_bytes')
+        info['ingress'] = {
+            'min': '{} GB'.format(to_gb(minimum)),
+            'avg': '{} GB'.format(to_gb(average)),
+            'max': '{} GB'.format(to_gb(maximum)),
+            'dev': '{} GB'.format(to_gb(std_dev)),
+        }
+        minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'egress_bytes')
+        info['egress'] = {
+            'min': '{} GB'.format(to_gb(minimum)),
+            'avg': '{} GB'.format(to_gb(average)),
+            'max': '{} GB'.format(to_gb(maximum)),
+            'dev': '{} GB'.format(to_gb(std_dev)),
+        }
+
+        return None, info

@@ -240,7 +240,6 @@ class Databases(BaseCheckSuite):
             db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'total_req')
-
             info[bdb['name']] = {
                 'total': '{}/{}/{}/{} Kops'.format(to_kops(minimum), to_kops(average), to_kops(maximum),
                                                    to_kops(std_dev))}
@@ -265,7 +264,7 @@ class Databases(BaseCheckSuite):
                  f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
 
     def check_databases_usage_002(self, _params):
-        """DU-002: Check memory usage of each shard.
+        """DU-002: Check memory usage of each database.
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
         It compares the maximum value to Redis Labs recommended upper limits, i.e. 25 GB.
@@ -283,7 +282,6 @@ class Databases(BaseCheckSuite):
             db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'used_memory')
-
             info[bdb['name']] = {
                 'total': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum),
                                                  to_gb(std_dev))}
@@ -304,3 +302,26 @@ class Databases(BaseCheckSuite):
 
         return [(not results[bdb['name']], info[bdb['name']],
                  f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
+
+    def check_databases_usage_003(self, _params):
+        """DU-003: Check network traffic usage of each database.
+
+        Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'egress_bytes' and 'ingress_bytes' of each DB.
+
+        :param _params: None
+        :returns: result
+        """
+        bdbs = self.api.get('bdbs')
+        info = {}
+
+        for bdb in bdbs:
+            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+
+            minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'ingress_bytes')
+            info[bdb['name']] = {
+                'ingress': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+            }
+            minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'egress_bytes')
+            info[bdb['name']]['egress'] = '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+
+        return None, info

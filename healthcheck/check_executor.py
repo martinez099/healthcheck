@@ -43,6 +43,7 @@ class CheckExecutor(object):
         """
         for future in concurrent.futures.as_completed(self.futures):
             self.result_cb(future.result(), future.func)
+
         self.futures = []
 
     def shutdown(self):

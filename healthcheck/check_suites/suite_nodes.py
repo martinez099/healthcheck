@@ -460,3 +460,28 @@ class Nodes(BaseCheckSuite):
                                                                       to_percent((100 / total_size) * std_dev))
 
         return None, info
+
+    def check_nodes_usage_005(self, _params):
+        """NU-005: Get network traffic usage of each node.
+
+        Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'ingress_bytes' and 'egress_bytes'.
+
+        :param _params: None
+        :returns: result
+        """
+        info = {}
+        quorum_onlys = self._get_quorum_only_nodes()
+
+        for stats in self.api.get('nodes/stats'):
+            node_name = f'node:{stats["uid"]}'
+            if stats['uid'] in quorum_onlys:
+                node_name += ' (quorum only)'
+
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ingress_bytes')
+            info[node_name] = {
+                'ingress': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev)),
+            }
+            minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'egress_bytes')
+            info[node_name]['egress'] = '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+
+        return None, info
