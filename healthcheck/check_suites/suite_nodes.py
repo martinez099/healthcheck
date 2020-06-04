@@ -167,6 +167,8 @@ class Nodes(BaseCheckSuite):
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
 
+        Remedy: Upgrade Redis Enterprise software version to 5.6.
+
         :param _params: None
         :returns: result
         """
