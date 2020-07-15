@@ -77,8 +77,10 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 - For a quick help, execute `./hc -h`.
 
 ### Run with Docker
-- Build Docker image and give it a name, e.g. `docker build . --tag hc:latest`.
-- Run Docker image with optional arguments, e.g. `docker run hc -s nodes`.
+- Either
+  - build Docker image and give it a name, e.g. `docker build . --tag healthchekc:latest`.
+  - pull Docker image form Redis Labs repository, e.g. `docker pull redislabs/healthcheck:latest`
+- Run Docker image with optional arguments, e.g. `docker run healthcheck -s nodes`.
 
 ### Return code
 The script exits with the following return code:
