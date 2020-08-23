@@ -111,20 +111,19 @@ class Nodes(BaseCheckSuite):
         return result, filesystems
 
     def check_nodes_config_005(self, _params):
-        """NC-005: Check if swappiness is disabled on each node.
+        """NC-005: Check swaps on each node.
 
-        Executes `grep swap /etc/sysctl.conf || echo inactive` and compares the output to 'inactive'.
+        Executes `wc -l < /proc/swaps` and checks if the output is > 1.
 
-        Remedy: Turn off swapping in your OS.
+        Remedy: Turn off swapping in your OS by executing `swapoff -a`.
 
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('grep swap /etc/sysctl.conf || echo inactive')
-        swappinesses = [rsp.result() for rsp in rsps]
-        result = any([swappiness == 'inactive' for swappiness in swappinesses])
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': swappiness for rsp, swappiness
-                in zip(rsps, swappinesses)}
+        rsps = self.rex.exec_broad("sh -c 'wc -l < /proc/swaps'")
+        swaps = [int(rsp.result()) for rsp in rsps]
+        result = any([swap <= 1 for swap in swaps])
+        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': 'OK' if swap <= 1 else 'FAILED' for rsp, swap in zip(rsps, swaps)}
 
         return result, info
 
