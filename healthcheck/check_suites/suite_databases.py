@@ -215,7 +215,7 @@ class Databases(BaseCheckSuite):
         return not info, info
 
     def check_databases_usage_001(self, _params):
-        """DU-001: Check throughput of each database.
+        """DU-001: Check throughput of each database (min/avg/max/dev).
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'total_req' of each shard.
         It compares the maximum value to Redis Labs recommended upper limitsi, i.e. 25 Kops.
@@ -257,7 +257,7 @@ class Databases(BaseCheckSuite):
                  f"DU-001: Check throughput of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
 
     def check_databases_usage_002(self, _params):
-        """DU-002: Check memory usage of each database.
+        """DU-002: Check memory usage of each database (min/avg/max/dev).
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'used_memory' of each shard.
         It compares the maximum value to Redis Labs recommended upper limits, i.e. 25 GB.
@@ -297,7 +297,7 @@ class Databases(BaseCheckSuite):
                  f"DU-002: Check memory usage of '{bdb['name']}' (min/avg/max/dev).") for bdb in bdbs]
 
     def check_databases_usage_003(self, _params):
-        """DU-003: Check network traffic usage of each database.
+        """DU-003: Check network traffic usage of each database (min/avg/max/dev).
 
         Calls '/v1/bdbs' from API and calculates min/avg/max/dev for 'egress_bytes' and 'ingress_bytes' of each DB.
 

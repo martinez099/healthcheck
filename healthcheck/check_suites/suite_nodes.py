@@ -328,7 +328,7 @@ class Nodes(BaseCheckSuite):
         return not info, info
 
     def check_nodes_usage_001(self, _params):
-        """NU-001: Check CPU usage of each node.
+        """NU-001: Check CPU usage of each node (min/avg/max/dev).
 
         Calls '/v1/nodes/stats' from API calculates min/avg/max/dev of 1 - 'cpu_idle' (cpu usage).
         It compares to RL recommended values, i.e. maximum of 80%.
@@ -359,7 +359,7 @@ class Nodes(BaseCheckSuite):
         return all(results.values()), info
 
     def check_nodes_usage_002(self, _params):
-        """NU-002: Check RAM usage of each node.
+        """NU-002: Check RAM usage of each node (min/avg/max/dev).
 
         Call '/v1/nodes/stats' and calculates min/avg/max/dev of 'total_memory' - 'free_memory' (used memory).
         It compares them to RL recommended values, i.e. maximum of 2/3.
@@ -395,7 +395,7 @@ class Nodes(BaseCheckSuite):
         return all(results.values()), info
 
     def check_nodes_usage_003(self, _params):
-        """NU-003: Get ephemeral storage usage of each node.
+        """NU-003: Get ephemeral storage usage of each node (min/avg/max/dev).
 
         Calls '/v1/nodes/stats' and calculates
         min/avg/max/dev of 'ephemeral_storage_size' - 'ephemeral_storage_avail' (used ephemeral storage).
@@ -427,7 +427,7 @@ class Nodes(BaseCheckSuite):
         return None, info
 
     def check_nodes_usage_004(self, _params):
-        """NU-004: Get persistent storage usage of each node.
+        """NU-004: Get persistent storage usage of each node (min/avg/max/dev).
 
         Calls '/v1/nodes/stats' and calculates
         min/avg/max/dev of 'persistent_storage_size' - 'persistent_storage_avail' (used persistent storage).
@@ -459,7 +459,7 @@ class Nodes(BaseCheckSuite):
         return None, info
 
     def check_nodes_usage_005(self, _params):
-        """NU-005: Get network traffic usage of each node.
+        """NU-005: Get network traffic usage of each node (min/avg/max/dev).
 
         Calls '/v1/nodes/stats' and calculates min/avg/max/dev of 'ingress_bytes' and 'egress_bytes'.
 
