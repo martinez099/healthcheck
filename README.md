@@ -33,7 +33,7 @@ Checks may or may not have parameter maps, i.e. JSON files with parameters.
 
 ## Setup
 ### Prerequisites
-- Python 3.7 (no further dependencies required)
+- Python 3.5 (no further dependencies required)
 - A remote executor:
   - `ssh`
   - `docker`

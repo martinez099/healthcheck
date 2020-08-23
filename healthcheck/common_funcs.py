@@ -7,7 +7,7 @@ import re
 import socket
 import ssl
 
-from subprocess import run
+from subprocess import run, PIPE
 from urllib import request
 
 SSL_CONTEXT = ssl.create_default_context()
@@ -97,7 +97,7 @@ def exec_cmd(_args, _shell=True):
     :raise Exception: If an error occurred.
     """
     logging.debug('executing comand {}'.format(_args))
-    completed_process = run(_args, shell=_shell, check=True, capture_output=True, encoding='utf-8')
+    completed_process = run(_args, shell=_shell, check=True, stdout=PIPE, stderr=PIPE, universal_newlines=True)
 
     return completed_process.stdout.strip()
 
