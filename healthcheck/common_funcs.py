@@ -162,7 +162,12 @@ def redis_ping(_host, _port, auth=None):
         if not sent:
             raise Exception('could not send PING message to Redis server')
 
-        return conn.recv(7) == b'+PONG\r\n'
+        recv = conn.recv(7)
+
+        if recv == b'-NOAUTH':
+            raise ValueError(f"{'invalid' if auth else 'no'} database password provided")
+
+        return recv == b'+PONG\r\n' or recv
 
     except Exception as e:
         return str(e)

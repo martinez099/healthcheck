@@ -65,10 +65,10 @@ class Databases(BaseCheckSuite):
             else:
                 endpoint = endpoints[0]
 
-            result = redis_ping(endpoint['addr'][0], endpoint['port'])
+            result = redis_ping(endpoint['addr'][0], endpoint['port'], 'test')
             info[endpoint['dns_name']] = result
 
-        return all(v is True for v in info.values()) if info else '', info
+        return all(info.values()) if info else '', info
 
     def check_databases_config_003(self, _params):
         """DC-003: Check for OSS cluster API of each database.
@@ -312,9 +312,9 @@ class Databases(BaseCheckSuite):
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'ingress_bytes')
             info[bdb['name']] = {
-                'ingress': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+                'ingress': '{}/{}/{}/{} GB/s'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
             }
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'egress_bytes')
-            info[bdb['name']]['egress'] = '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+            info[bdb['name']]['egress'] = '{}/{}/{}/{} GB/s'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
         return None, info

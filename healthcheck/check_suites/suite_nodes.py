@@ -204,7 +204,7 @@ class Nodes(BaseCheckSuite):
         # calculate values
         _min, avg, _max, mdev = .0, .0, .0, .0
         futures = self.rex().exec_multi(cmd_targets)
-        key = 'RTT min/avg/max/mdev'
+        key = 'rtt min/avg/max/mdev'
         for future in futures:
             lines = future.result().split('\n')
             key = lines[-1:][0].split(' = ')[0]
@@ -477,9 +477,9 @@ class Nodes(BaseCheckSuite):
 
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ingress_bytes')
             info[node_name] = {
-                'ingress': '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev)),
+                'ingress': '{}/{}/{}/{} GB/s'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev)),
             }
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'egress_bytes')
-            info[node_name]['egress'] = '{}/{}/{}/{} GB'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
+            info[node_name]['egress'] = '{}/{}/{}/{} GB/s'.format(to_gb(minimum), to_gb(average), to_gb(maximum), to_gb(std_dev))
 
         return None, info

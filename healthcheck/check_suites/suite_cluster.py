@@ -294,17 +294,17 @@ class Cluster(BaseCheckSuite):
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ingress_bytes')
         info['ingress'] = {
-            'min': '{} GB'.format(to_gb(minimum)),
-            'avg': '{} GB'.format(to_gb(average)),
-            'max': '{} GB'.format(to_gb(maximum)),
-            'dev': '{} GB'.format(to_gb(std_dev)),
+            'min': '{} GB/s'.format(to_gb(minimum)),
+            'avg': '{} GB/s'.format(to_gb(average)),
+            'max': '{} GB/s'.format(to_gb(maximum)),
+            'dev': '{} GB/s'.format(to_gb(std_dev)),
         }
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'egress_bytes')
         info['egress'] = {
-            'min': '{} GB'.format(to_gb(minimum)),
-            'avg': '{} GB'.format(to_gb(average)),
-            'max': '{} GB'.format(to_gb(maximum)),
-            'dev': '{} GB'.format(to_gb(std_dev)),
+            'min': '{} GB/s'.format(to_gb(minimum)),
+            'avg': '{} GB/s'.format(to_gb(average)),
+            'max': '{} GB/s'.format(to_gb(maximum)),
+            'dev': '{} GB/s'.format(to_gb(std_dev)),
         }
 
         return None, info
