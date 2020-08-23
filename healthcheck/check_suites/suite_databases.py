@@ -1,4 +1,3 @@
-from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import calc_usage, GB, to_gb, to_kops, redis_ping
 
@@ -7,12 +6,6 @@ class Databases(BaseCheckSuite):
     """
     Check configuration, status and usage of all databases.
     """
-
-    def __init__(self, _config):
-        """
-        :param _config: The configuration.
-        """
-        self.api = ApiFetcher.instance(_config)
 
     def check_databases_config_001(self, _params):
         """DC-001: Check database configuration.
@@ -26,7 +19,7 @@ class Databases(BaseCheckSuite):
         :param _params: A dict with database configuration values. See 'parameter_maps/databases/check_config' for examples.
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         results = []
 
         if not _params:
@@ -62,7 +55,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
 
         for bdb in bdbs:
@@ -88,7 +81,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
         for bdb in filter(lambda x: x['oss_cluster'], bdbs):
             info[bdb['name']] = bdb['shards_placement'] == 'sparse' and bdb['proxy_policy'] == 'all-master-shards'
@@ -106,8 +99,8 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        nodes = self.api.get('nodes')
-        bdbs = self.api.get('bdbs')
+        nodes = self.api().get('nodes')
+        bdbs = self.api().get('bdbs')
         info = {}
 
         dense_bdbs = filter(lambda x: x['shards_placement'] == 'dense', bdbs)
@@ -124,7 +117,7 @@ class Databases(BaseCheckSuite):
                 info[bdb['name']] = f"no endpoint node found"
                 continue
 
-            master_shards = filter(lambda shard: shard['bdb_uid'] == bdb['uid'] and shard['role'] == 'master', self.api.get('shards'))
+            master_shards = filter(lambda shard: shard['bdb_uid'] == bdb['uid'] and shard['role'] == 'master', self.api().get('shards'))
             shards_not_on_endpoint = filter(lambda shard: int(shard['node_uid']) != endpoint_nodes[0]['uid'], master_shards)
             result = list(map(lambda shard: 'shard:{}'.format(shard['uid']), shards_not_on_endpoint))
             if result:
@@ -140,7 +133,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        return None, {bdb['name']: bdb['module_list'] or None for bdb in self.api.get('bdbs')}
+        return None, {bdb['name']: bdb['module_list'] or None for bdb in self.api().get('bdbs')}
 
     def check_databases_status_001(self, _params):
         """DS-001: Check replicaOf sources.
@@ -152,7 +145,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
 
         for bdb in bdbs:
@@ -182,7 +175,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
 
         for bdb in bdbs:
@@ -212,7 +205,7 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        alerts = self.api.get('bdbs/alerts')
+        alerts = self.api().get('bdbs/alerts')
         info = {}
         for uid in alerts:
             enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
@@ -232,12 +225,12 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
         results = {}
 
         for bdb in bdbs:
-            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+            db_stats = self.api().get(f'bdbs/stats/{bdb["uid"]}')
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'total_req')
             info[bdb['name']] = {
@@ -245,7 +238,7 @@ class Databases(BaseCheckSuite):
                                                    to_kops(std_dev))}
 
             for shard_uid in bdb['shard_list']:
-                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
+                shard_stats = self.api().get(f'shards/stats/{shard_uid}')
 
                 minimum, average, maximum, std_dev = calc_usage(shard_stats['intervals'], 'total_req')
 
@@ -274,12 +267,12 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
         results = {}
 
         for bdb in bdbs:
-            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+            db_stats = self.api().get(f'bdbs/stats/{bdb["uid"]}')
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'used_memory')
             info[bdb['name']] = {
@@ -287,7 +280,7 @@ class Databases(BaseCheckSuite):
                                                  to_gb(std_dev))}
 
             for shard_uid in bdb['shard_list']:
-                shard_stats = self.api.get(f'shards/stats/{shard_uid}')
+                shard_stats = self.api().get(f'shards/stats/{shard_uid}')
 
                 minimum, average, maximum, std_dev = calc_usage(shard_stats['intervals'], 'used_memory')
 
@@ -311,11 +304,11 @@ class Databases(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        bdbs = self.api.get('bdbs')
+        bdbs = self.api().get('bdbs')
         info = {}
 
         for bdb in bdbs:
-            db_stats = self.api.get(f'bdbs/stats/{bdb["uid"]}')
+            db_stats = self.api().get(f'bdbs/stats/{bdb["uid"]}')
 
             minimum, average, maximum, std_dev = calc_usage(db_stats['intervals'], 'ingress_bytes')
             info[bdb['name']] = {

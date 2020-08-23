@@ -170,3 +170,23 @@ def redis_ping(_host, _port, auth=None):
     finally:
         if conn:
             conn.close()
+
+
+def is_api_configured(config):
+    """
+    Check if an [api] section was found in the configuration file.
+
+    :param config:
+    :return: Boolean
+    """
+    return 'api' in config
+
+
+def is_rex_configured(config):
+    """
+    Check if a [ssh], [docker] or [k8s] section was found in the configuration file.
+
+    :param config:
+    :return: Boolean
+    """
+    return any(map(lambda x: x in config, ['ssh', 'docker', 'k8s']))

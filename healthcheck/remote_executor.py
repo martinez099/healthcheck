@@ -34,6 +34,8 @@ class RemoteExecutor(object):
             self.targets = list(map(lambda x: x.strip(), _config['k8s']['pods'].split(',')))
             self.k8s_ns = _config['k8s']['namespace']
             self.mode = 'k8s'
+        else:
+            raise ValueError('no valid remote executor found')
 
         self.addrs = {}
         self.locks = {}
@@ -41,7 +43,7 @@ class RemoteExecutor(object):
         self.connected = None
 
     @classmethod
-    def instance(cls, _config):
+    def inst(cls, _config):
         """
         Get singleton instance.
 

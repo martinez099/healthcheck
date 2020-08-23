@@ -8,7 +8,7 @@ import os
 
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.check_executor import CheckExecutor
-from healthcheck.common_funcs import get_parameter_map_name
+from healthcheck.common_funcs import get_parameter_map_name, is_api_configured, is_rex_configured
 from healthcheck.printer_funcs import print_list, print_error, print_warning
 from healthcheck.stats_collector import StatsCollector
 
@@ -45,6 +45,12 @@ def parse_config(_args):
     config = configparser.ConfigParser()
     with open(_args.config, 'r') as configfile:
         config.read_file(configfile)
+
+    if not is_api_configured(config):
+        print_warning('no [api] configuration found')
+
+    if not is_rex_configured(config):
+        print_warning('no [ssh], [docker] or [k8s] configuration found')
 
     return config
 
@@ -105,11 +111,12 @@ def find_checks(_suites, _args, _config):
                 if not list(filter(lambda x: x in check_func.__name__ or x in check_doc, check_args)):
                     continue
 
-            if 'api' not in _config and 'api' in check_func.__code__.co_names:
+            if not is_api_configured(_config) \
+                    and 'api' in (check_func.__code__.co_names + check_func.__code__.co_varnames):
                 continue
 
-            if not filter(lambda x: x in _config,
-                          ['ssh', 'docker', 'k8s']) and 'rex' in check_func.__code__.co_names:
+            if not is_rex_configured(_config) \
+                    and 'rex' in (check_func.__code__.co_varnames + check_func.__code__.co_names):
                 continue
 
             checks.append((check_func, suite))
@@ -222,7 +229,7 @@ def main():
         if type(_result) == list:
             return [render(r, _func) for r in _result]
         else:
-            return renderer.render_result(_result, _func, _cluster_name=config['api']['addr'])
+            return renderer.render_result(_result, _func, _cluster_name=config['api']['addr'] if 'api' in config else '')
 
     checks = find_checks(suites, args, config)
     exec_checks(suites, checks, args, render, collect_stats)

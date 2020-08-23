@@ -1,23 +1,13 @@
-import datetime
 import re
 
-from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import calc_usage, GB, to_gb, to_kops, to_percent
-from healthcheck.remote_executor import RemoteExecutor
 
 
 class Cluster(BaseCheckSuite):
     """
     Check configuration, status and usage of the cluster.
     """
-
-    def __init__(self, _config):
-        """
-        :param _config: The configuration.
-        """
-        self.api = ApiFetcher.instance(_config)
-        self.rex = RemoteExecutor.instance(_config)
 
     def check_cluster_config_001(self, _params):
         """CC-001: Check cluster sizing.
@@ -30,11 +20,11 @@ class Cluster(BaseCheckSuite):
         :param _params: A dict with cluster sizing values to compare to, see 'parameter_maps/cluster/check_sizing' for examples.
         :returns: result
         """
-        number_of_nodes = self.api.get_number_of_values('nodes')
-        number_of_cores = self.api.get_sum_of_values('nodes', 'cores')
-        total_memory = self.api.get_sum_of_values('nodes', 'total_memory')
-        epehemeral_storage_size = self.api.get_sum_of_values('nodes', 'ephemeral_storage_size')
-        persistent_storage_size = self.api.get_sum_of_values('nodes', 'persistent_storage_size')
+        number_of_nodes = self.api().get_number_of_values('nodes')
+        number_of_cores = self.api().get_sum_of_values('nodes', 'cores')
+        total_memory = self.api().get_sum_of_values('nodes', 'total_memory')
+        epehemeral_storage_size = self.api().get_sum_of_values('nodes', 'ephemeral_storage_size')
+        persistent_storage_size = self.api().get_sum_of_values('nodes', 'persistent_storage_size')
 
         if not _params:
             info = {'number of nodes': str(number_of_nodes),
@@ -72,11 +62,11 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex.get_targets()[0])
+        rsp = self.rex().exec_uni('sudo /opt/redislabs/bin/rladmin status', self.rex().get_targets()[0])
         found = re.search(r'(^\*?node:\d+\s+master.*$)', rsp, re.MULTILINE)
         parts = re.split(r'\s+', found.group(1))
 
-        return None, {'uid': self.api.get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
+        return None, {'uid': self.api().get_uid(parts[2]), 'address': parts[2], 'external address': parts[3]}
 
     def check_cluster_config_003(self, _params):
         """CC-003: Get shards distribution.
@@ -87,7 +77,7 @@ class Cluster(BaseCheckSuite):
         :return:  result
         """
         info = {}
-        for shard in self.api.get('shards'):
+        for shard in self.api().get('shards'):
             node = 'node:{}'.format(shard['node_uid'])
             if node not in info:
                 info[node] = {'master': 0, 'slave': 0}
@@ -105,13 +95,13 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        number_of_shards = self.api.get_number_of_values('shards')
-        _license = self.api.get('license')
+        number_of_shards = self.api().get_number_of_values('shards')
+        _license = self.api().get('license')
         expired = _license['expired']
         if 'shards_limit' in _license:
             shards_limit = int(_license['shards_limit'])
         else:
-            match = re.search(r'Shards limit : (\d+)\n', self.api.get('license')['license'], re.MULTILINE | re.DOTALL)
+            match = re.search(r'Shards limit : (\d+)\n', self.api().get('license')['license'], re.MULTILINE | re.DOTALL)
             shards_limit = int(match.group(1))
 
         result = shards_limit >= number_of_shards and not expired
@@ -130,7 +120,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :return: result
         """
-        cluster = self.api.get('cluster')
+        cluster = self.api().get('cluster')
         min_control_TLS_version = cluster.get('min_control_TLS_version')
         min_data_TLS_version = cluster.get('min_data_TLS_version')
 
@@ -148,7 +138,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        result = self.api.get('cluster/check')
+        result = self.api().get('cluster/check')
 
         return result['cluster_test_result'], result
 
@@ -164,8 +154,8 @@ class Cluster(BaseCheckSuite):
         :returns: result
         """
         info = {}
-        for shard in self.api.get('shards'):
-            ping_rsp = self.rex.exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING', self.rex.get_targets()[0])
+        for shard in self.api().get('shards'):
+            ping_rsp = self.rex().exec_uni(f'/opt/redislabs/bin/shard-cli {shard["uid"]} PING', self.rex().get_targets()[0])
             if ping_rsp != 'PONG' or shard['status'] != 'active' or shard['detailed_status'] != 'ok':
                 info[f'shard:{shard["uid"]}'] = shard
 
@@ -182,8 +172,8 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsp = self.rex.exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
-                                self.rex.get_targets()[0])
+        rsp = self.rex().exec_uni('sudo /opt/redislabs/bin/rladmin status | grep -v endpoint | grep node',
+                                self.rex().get_targets()[0])
         not_ok = re.findall(r'^((?!OK).)*$', rsp, re.MULTILINE)
 
         return len(not_ok) == 0, {'not OK': len(not_ok)} if not_ok else {'OK': 'all'}
@@ -198,7 +188,7 @@ class Cluster(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        alerts = self.api.get('cluster/alerts')
+        alerts = self.api().get('cluster/alerts')
         enableds = list(filter(lambda x: x[1]['state'], alerts.items()))
 
         return not enableds, dict(enableds)
@@ -212,7 +202,7 @@ class Cluster(BaseCheckSuite):
         :returns: result
         """
         info = {}
-        stats = self.api.get('cluster/stats')
+        stats = self.api().get('cluster/stats')
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'total_req')
 
@@ -232,11 +222,11 @@ class Cluster(BaseCheckSuite):
         :returns: result
         """
         info = {}
-        stats = self.api.get('cluster/stats')
+        stats = self.api().get('cluster/stats')
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'free_memory')
 
-        total_mem = self.api.get_sum_of_values('nodes', 'total_memory')
+        total_mem = self.api().get_sum_of_values('nodes', 'total_memory')
 
         info['min'] = '{} GB ({} %)'.format(to_gb(total_mem - maximum), to_percent((100 / total_mem) * (total_mem - maximum)))
         info['avg'] = '{} GB ({} %)'.format(to_gb(total_mem - average), to_percent((100 / total_mem) * (total_mem - average)))
@@ -255,11 +245,11 @@ class Cluster(BaseCheckSuite):
         :returns: result
         """
         info = {}
-        stats = self.api.get('cluster/stats')
+        stats = self.api().get('cluster/stats')
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ephemeral_storage_avail')
 
-        total_size = self.api.get_sum_of_values(f'nodes', 'ephemeral_storage_size')
+        total_size = self.api().get_sum_of_values(f'nodes', 'ephemeral_storage_size')
 
         info['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
         info['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
@@ -278,11 +268,11 @@ class Cluster(BaseCheckSuite):
         :returns: result
         """
         info = {}
-        stats = self.api.get('cluster/stats')
+        stats = self.api().get('cluster/stats')
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'persistent_storage_avail')
 
-        total_size = self.api.get_sum_of_values(f'nodes', 'persistent_storage_size')
+        total_size = self.api().get_sum_of_values(f'nodes', 'persistent_storage_size')
 
         info['min'] = '{} GB ({} %)'.format(to_gb(total_size - maximum), to_percent((100 / total_size) * (total_size - maximum)))
         info['avg'] = '{} GB ({} %)'.format(to_gb(total_size - average), to_percent((100 / total_size) * (total_size - average)))
@@ -300,7 +290,7 @@ class Cluster(BaseCheckSuite):
         :return:
         """
         info = {}
-        stats = self.api.get('cluster/stats')
+        stats = self.api().get('cluster/stats')
 
         minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ingress_bytes')
         info['ingress'] = {

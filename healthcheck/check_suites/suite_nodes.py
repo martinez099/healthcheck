@@ -1,9 +1,7 @@
 import re
 
-from healthcheck.api_fetcher import ApiFetcher
 from healthcheck.check_suites.base_suite import BaseCheckSuite
 from healthcheck.common_funcs import calc_usage, parse_semver, to_gb, to_percent, to_ms
-from healthcheck.remote_executor import RemoteExecutor
 
 
 class Nodes(BaseCheckSuite):
@@ -11,22 +9,15 @@ class Nodes(BaseCheckSuite):
     Check configuration, status and usage of all nodes.
     """
 
-    def __init__(self, _config):
-        """
-        :param _config: The configuration.
-        """
-        self.api = ApiFetcher.instance(_config)
-        self.rex = RemoteExecutor.instance(_config)
-
     def _get_quorum_only_nodes(self):
         """
         Get UID of nodes marked 'quorum only'.
 
         :return: A list of node:UIDs.
         """
-        nodes = self.api.get('nodes')
-        rsps = [self.rex.exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
-                                  self.rex.get_targets()[0]) for node in nodes]
+        nodes = self.api().get('nodes')
+        rsps = [self.rex().exec_uni(f'sudo /opt/redislabs/bin/rladmin info node {node["uid"]}',
+                                  self.rex().get_targets()[0]) for node in nodes]
         matches = [re.match(r'^.*quorum only: (\w+).*$', rsp, re.DOTALL) for rsp in rsps]
 
         return list(map(lambda x: x[0]['uid'], filter(lambda x: x[1].group(1) == 'enabled', zip(nodes, matches))))
@@ -38,11 +29,11 @@ class Nodes(BaseCheckSuite):
         :param _path: The file path.
         :return: A dict mapping node:UID -> filesystem
         """
-        rsps = self.rex.exec_broad(f'sudo df -h {_path}')
+        rsps = self.rex().exec_broad(f'sudo df -h {_path}')
         matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
         fsystems = [match.group(1) for match in matches]
 
-        return {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': fsystem for rsp, fsystem in
+        return {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': fsystem for rsp, fsystem in
                 zip(rsps, fsystems)}
 
     def check_nodes_config_001(self, _params):
@@ -55,11 +46,11 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/rlcheck')
+        rsps = self.rex().exec_broad('sudo /opt/redislabs/bin/rlcheck')
         failed = [(re.findall(r'FAILED', rsp.result().strip(), re.MULTILINE), rsp.target) for rsp in rsps]
         errors = sum([len(f[0]) for f in failed])
 
-        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(f[1]))}': len(f[0]) for f in failed}
+        return not errors, {f'node:{self.api().get_uid(self.rex().get_addr(f[1]))}': len(f[0]) for f in failed}
 
     def check_nodes_config_002(self, _params):
         """NC-002: Check if log file path is not on the root filesystem.
@@ -71,8 +62,9 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
+        api = True  # API is called in subroutine
         filesystems = self._get_file_systems('/var/opt/redislabs/log')
-        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
         return result, filesystems
 
@@ -87,9 +79,9 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        storage_paths = self.api.get_values('nodes', 'ephemeral_storage_path')
+        storage_paths = self.api().get_values('nodes', 'ephemeral_storage_path')
         filesystems = self._get_file_systems(storage_paths[0])
-        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
         return result, filesystems
 
@@ -104,9 +96,9 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        storage_paths = self.api.get_values('nodes', 'persistent_storage_path')
+        storage_paths = self.api().get_values('nodes', 'persistent_storage_path')
         filesystems = self._get_file_systems(storage_paths[0])
-        result = any(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
 
         return result, filesystems
 
@@ -120,10 +112,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad("sh -c 'wc -l < /proc/swaps'")
-        swaps = [int(rsp.result()) for rsp in rsps]
+        rsps = self.rex().exec_broad("wc -l < /proc/swaps")
+        swaps = map(lambda x: int(x.result()), rsps)
         result = any([swap <= 1 for swap in swaps])
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': 'OK' if swap <= 1 else 'FAILED' for rsp, swap in zip(rsps, swaps)}
+        info = {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': 'OK' if swap <= 1 else 'FAILED' for rsp, swap in zip(rsps, swaps)}
 
         return result, info
 
@@ -137,10 +129,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('cat /sys/kernel/mm/transparent_hugepage/enabled')
+        rsps = self.rex().exec_broad('cat /sys/kernel/mm/transparent_hugepage/enabled')
         transparent_hugepages = [rsp.result() for rsp in rsps]
         result = all(transparent_hugepage == 'always madvise [never]' for transparent_hugepage in transparent_hugepages)
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': transparent_hugepage for
+        info = {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': transparent_hugepage for
                 rsp, transparent_hugepage in zip(rsps, transparent_hugepages)}
 
         return result, info
@@ -153,10 +145,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('cat /etc/os-release | grep PRETTY_NAME')
+        rsps = self.rex().exec_broad('cat /etc/os-release | grep PRETTY_NAME')
         matches = [re.match(r'^PRETTY_NAME="(.*)"$', rsp.result()) for rsp in rsps]
         os_versions = [match.group(1) for match in matches]
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': os_version for rsp, os_version in
+        info = {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': os_version for rsp, os_version in
                 zip(rsps, os_versions)}
 
         return None, info
@@ -171,8 +163,8 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        node_ids = self.api.get_values('nodes', 'uid')
-        software_versions = self.api.get_values('nodes', 'software_version')
+        node_ids = self.api().get_values('nodes', 'uid')
+        software_versions = self.api().get_values('nodes', 'software_version')
         result = all(map(lambda x: parse_semver(x)[0:2] == (5, 6), software_versions))
         info = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
 
@@ -188,10 +180,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('grep error /var/opt/redislabs/log/install.log || echo ""')
+        rsps = self.rex().exec_broad('grep error /var/opt/redislabs/log/install.log || echo ""')
         errors = sum([len(rsp.result()) for rsp in rsps])
 
-        return not errors, {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': len(rsp.result()) for
+        return not errors, {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': len(rsp.result()) for
                             rsp in rsps}
 
     def check_nodes_config_010(self, _params):
@@ -203,16 +195,16 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         cmd_targets = []
-        for source in self.rex.get_targets():
-            for target, address in self.rex.get_addrs().items():
+        for source in self.rex().get_targets():
+            for target, address in self.rex().get_addrs().items():
                 if source == target:
                     continue
                 cmd_targets.append((f'ping -c 4 {address}', source))
 
         # calculate values
         _min, avg, _max, mdev = .0, .0, .0, .0
-        futures = self.rex.exec_multi(cmd_targets)
-        key = 'rtt min/avg/max/mdev'
+        futures = self.rex().exec_multi(cmd_targets)
+        key = 'RTT min/avg/max/mdev'
         for future in futures:
             lines = future.result().split('\n')
             key = lines[-1:][0].split(' = ')[0]
@@ -246,18 +238,18 @@ class Nodes(BaseCheckSuite):
         cmd = '''python -c "import socket; socket.create_connection(('"'{0}'"', {1}))" 2> /dev/null || echo '"'{0}:{1}'"' '''
 
         for port in ports:
-            for source in self.rex.get_targets():
-                for external, internal in self.rex.get_addrs().items():
+            for source in self.rex().get_targets():
+                for external, internal in self.rex().get_addrs().items():
                     if source == external:
                         continue
                     cmd_targets.append((cmd.format(internal, port), source))
 
         info = {}
-        futures = self.rex.exec_multi(cmd_targets)
+        futures = self.rex().exec_multi(cmd_targets)
         for future in futures:
             failed = future.result()
             if failed:
-                node_name = f'node:{self.api.get_uid(self.rex.get_addr(future.target))}'
+                node_name = f'node:{self.api().get_uid(self.rex().get_addr(future.target))}'
                 if node_name not in info:
                     info[node_name] = []
                 info[node_name].append(failed)
@@ -274,10 +266,10 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('cat /proc/sys/vm/overcommit_memory')
+        rsps = self.rex().exec_broad('cat /proc/sys/vm/overcommit_memory')
         overcommit_mems = [rsp.result() for rsp in rsps]
         result = all(overcommit_mem == '1' for overcommit_mem in overcommit_mems)
-        info = {f'node:{self.api.get_uid(self.rex.get_addr(rsp.target))}': overcommit_mem for
+        info = {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': overcommit_mem for
                 rsp, overcommit_mem in zip(rsps, overcommit_mems)}
 
         return result, info
@@ -292,11 +284,11 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
+        rsps = self.rex().exec_broad('sudo /opt/redislabs/bin/cnm_ctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
-        return sum_not_running == 0, {f'node:{self.api.get_uid(self.rex.get_addr(n_r[1]))}': len(n_r[0]) for
+        return sum_not_running == 0, {f'node:{self.api().get_uid(self.rex().get_addr(n_r[1]))}': len(n_r[0]) for
                                       n_r in not_running}
 
     def check_nodes_status_002(self, _params):
@@ -309,12 +301,12 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        rsps = self.rex.exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
+        rsps = self.rex().exec_broad('sudo /opt/redislabs/bin/supervisorctl status')
         not_running = [(re.findall(r'^((?!RUNNING).)*$', rsp.result(), re.MULTILINE), rsp.target) for rsp in rsps]
         sum_not_running = sum([len(r[0]) for r in not_running])
 
         return sum_not_running == 1 * len(rsps), {
-            f'node:{self.api.get_uid(self.rex.get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
+            f'node:{self.api().get_uid(self.rex().get_addr(r[1]))}': len(r[0]) - 1 for r in not_running}
 
     def check_nodes_status_003(self, _params):
         """NS-003: Check node alerts
@@ -326,7 +318,7 @@ class Nodes(BaseCheckSuite):
         :param _params: None
         :returns: result
         """
-        alerts = self.api.get('nodes/alerts')
+        alerts = self.api().get('nodes/alerts')
         info = {}
         for uid in alerts:
             enableds = list(filter(lambda x: x[1]['state'], alerts[uid].items()))
@@ -348,9 +340,10 @@ class Nodes(BaseCheckSuite):
         """
         info = {}
         results = {}
+        rex = True  # Remote Executor called in subroutine
         quorum_onlys = self._get_quorum_only_nodes()
 
-        for stats in self.api.get('nodes/stats'):
+        for stats in self.api().get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'cpu_idle')
 
             node_name = f'node:{stats["uid"]}'
@@ -378,11 +371,12 @@ class Nodes(BaseCheckSuite):
         """
         info = {}
         results = {}
+        rex = True  # Remote Executor called in subroutine
         quorum_onlys = self._get_quorum_only_nodes()
 
-        for stats in self.api.get('nodes/stats'):
+        for stats in self.api().get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'free_memory')
-            total_mem = self.api.get_value(f'nodes/{stats["uid"]}', 'total_memory')
+            total_mem = self.api().get_value(f'nodes/{stats["uid"]}', 'total_memory')
 
             node_name = f'node:{stats["uid"]}'
             if stats['uid'] in quorum_onlys:
@@ -410,11 +404,12 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         info = {}
+        rex = True  # Remote Executor called in subroutine
         quorum_onlys = self._get_quorum_only_nodes()
 
-        for stats in self.api.get('nodes/stats'):
+        for stats in self.api().get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'ephemeral_storage_avail')
-            total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'ephemeral_storage_size')
+            total_size = self.api().get_value(f'nodes/{stats["uid"]}', 'ephemeral_storage_size')
 
             node_name = f'node:{stats["uid"]}'
             if stats['uid'] in quorum_onlys:
@@ -441,11 +436,12 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         info = {}
+        rex = True  # Remote Executor called in subroutine
         quorum_onlys = self._get_quorum_only_nodes()
 
-        for stats in self.api.get('nodes/stats'):
+        for stats in self.api().get('nodes/stats'):
             minimum, average, maximum, std_dev = calc_usage(stats['intervals'], 'persistent_storage_avail')
-            total_size = self.api.get_value(f'nodes/{stats["uid"]}', 'persistent_storage_size')
+            total_size = self.api().get_value(f'nodes/{stats["uid"]}', 'persistent_storage_size')
 
             node_name = f'node:{stats["uid"]}'
             if stats['uid'] in quorum_onlys:
@@ -471,9 +467,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         info = {}
+        rex = True  # Remote Executor called in subroutine
         quorum_onlys = self._get_quorum_only_nodes()
 
-        for stats in self.api.get('nodes/stats'):
+        for stats in self.api().get('nodes/stats'):
             node_name = f'node:{stats["uid"]}'
             if stats['uid'] in quorum_onlys:
                 node_name += ' (quorum only)'

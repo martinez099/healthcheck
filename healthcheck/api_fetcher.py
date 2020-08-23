@@ -12,17 +12,15 @@ class ApiFetcher(object):
         """
         :param _config: The parsed configuration.
         """
-        if 'api' in _config:
-            self.addr = _config['api']['addr']
-            self.username = _config['api']['user']
-            self.password = _config['api']['pass']
-
+        self.addr = _config['api']['addr']
+        self.username = _config['api']['user']
+        self.password = _config['api']['pass']
         self.cache = {}
         self.uids = {}
         self.connected = None
 
     @classmethod
-    def instance(cls, _config):
+    def inst(cls, _config):
         """
         Get singleton instance.
 
