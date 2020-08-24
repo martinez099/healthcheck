@@ -208,7 +208,7 @@ def main():
     """
     Here we go. That's where all starts and all ends.
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)-15s [%(levelname)s] %(message)s')
 
     args = parse_args()
     config = parse_config(args)
