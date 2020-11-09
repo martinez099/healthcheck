@@ -24,17 +24,17 @@ class Nodes(BaseCheckSuite):
 
     def _get_file_systems(self, _path):
         """
-        Get the filesystem of each node on which the given filepath is stored.
+        Get the mountpoint of the filesystem of each node on which the given filepath is stored.
 
         :param _path: The file path.
-        :return: A dict mapping node:UID -> filesystem
+        :return: A dict mapping node:UID -> mountpoint
         """
-        rsps = self.rex().exec_broad(f'sudo df -h {_path}')
-        matches = [re.match(r'^([\w+/]+)\s+.*$', rsp.result().split('\n')[1], re.DOTALL) for rsp in rsps]
-        fsystems = [match.group(1) for match in matches]
+        rsps = self.rex().exec_broad(f'sudo df {_path}')
+        second_lines = [rsp.result().split('\n')[1] for rsp in rsps]
+        mounts = [re.split(r'\s+', line)[5] for line in second_lines]
 
-        return {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': fsystem for rsp, fsystem in
-                zip(rsps, fsystems)}
+        return {f'node:{self.api().get_uid(self.rex().get_addr(rsp.target))}': mount for rsp, mount in
+                zip(rsps, mounts)}
 
     def check_nodes_config_001(self, _params):
         """NC-001: Check if `rlcheck` has errors.
@@ -53,9 +53,9 @@ class Nodes(BaseCheckSuite):
         return not errors, {f'node:{self.api().get_uid(self.rex().get_addr(f[1]))}': len(f[0]) for f in failed}
 
     def check_nodes_config_002(self, _params):
-        """NC-002: Check if log file path is not on the root filesystem.
+        """NC-002: Check if log file path is not on root filesystem.
 
-        Executes `df -h /var/opt/redislabs/log` and compares the output to '/dev/root'.
+        Executes `df /var/opt/redislabs/log` and compares the mountpoint to '/'.
 
         Remedy: Move the log file path to a mounted filesystem.
 
@@ -63,16 +63,16 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         api = True  # API is called in subroutine
-        filesystems = self._get_file_systems('/var/opt/redislabs/log')
-        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        mounts = self._get_file_systems('/var/opt/redislabs/log')
+        result = all(['/' != mount for mount in mounts.values()])
 
-        return result, filesystems
+        return result, mounts
 
     def check_nodes_config_003(self, _params):
-        """NC-003: Check if ephemeral storage path is not on the root filesystem.
+        """NC-003: Check if ephemeral storage path is not on root filesystem.
 
         Calls '/v1/nodes' from API and gets the ephemeral storage path.
-        Executes `df -h /var/opt/redislabs/log` and compares the output to the configured ephemeral storage path.
+        Executes `df [PATH]` and compares the mountpoint to '/'.
 
         Remedy: Move the ephemeral storage path to a mounted filesystem.
 
@@ -80,16 +80,16 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         storage_paths = self.api().get_values('nodes', 'ephemeral_storage_path')
-        filesystems = self._get_file_systems(storage_paths[0])
-        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        mounts = self._get_file_systems(storage_paths[0])
+        result = all(['/' != mount for mount in mounts.values()])
 
-        return result, filesystems
+        return result, mounts
 
     def check_nodes_config_004(self, _params):
-        """NC-004: Check if persistent storage path is not on the root filesystem.
+        """NC-004: Check if persistent storage path is not on root filesystem.
 
         Calls '/v1/nodes' from API and gets the persistent storage path.
-        Executes `df -h /var/opt/redislabs/log` and compares the output to the configured persistent storage path.
+        Executes `df [PATH]` and compares the mountpoint to '/'.
 
         Remedy: Move the persistent storage path to a mounted filesystem.
 
@@ -97,10 +97,10 @@ class Nodes(BaseCheckSuite):
         :returns: result
         """
         storage_paths = self.api().get_values('nodes', 'persistent_storage_path')
-        filesystems = self._get_file_systems(storage_paths[0])
-        result = all(['/dev/root' not in fsystem for fsystem in filesystems.values()])
+        mounts = self._get_file_systems(storage_paths[0])
+        result = all(['/' != mount for mount in mounts.values()])
 
-        return result, filesystems
+        return result, mounts
 
     def check_nodes_config_005(self, _params):
         """NC-005: Check swaps on each node.
