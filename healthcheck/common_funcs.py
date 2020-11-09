@@ -164,8 +164,10 @@ def redis_ping(_host, _port, auth=None):
 
         recv = conn.recv(7)
 
+        # accept endpoint even if the provided password is invalid
         if recv == b'-NOAUTH':
-            raise ValueError(f"{'invalid' if auth else 'no'} database password provided")
+            _ = conn.recv(2)
+            return True
 
         return recv == b'+PONG\r\n' or recv
 

@@ -65,10 +65,10 @@ class Databases(BaseCheckSuite):
             else:
                 endpoint = endpoints[0]
 
-            result = redis_ping(endpoint['addr'][0], endpoint['port'], 'test')
+            result = redis_ping(endpoint['addr'][0], endpoint['port'])
             info[endpoint['dns_name']] = result
 
-        return all(info.values()) if info else '', info
+        return all(map(lambda x: x is True, info.values())) if info else '', info
 
     def check_databases_config_003(self, _params):
         """DC-003: Check for OSS cluster API of each database.
