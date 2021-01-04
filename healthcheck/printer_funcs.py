@@ -1,7 +1,5 @@
 import sys
 
-from healthcheck.common_funcs import get_parameter_map_name
-
 
 class Color(object):
     """
