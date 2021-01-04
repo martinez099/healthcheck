@@ -158,14 +158,14 @@ class Nodes(BaseCheckSuite):
 
         Calls '/v1/nodes' and outputs 'software_version' (RE version).
 
-        Remedy: Upgrade Redis Enterprise software version to 5.6.
+        Remedy: Upgrade Redis Enterprise software version to 6
 
         :param _params: None
         :returns: result
         """
         node_ids = self.api().get_values('nodes', 'uid')
         software_versions = self.api().get_values('nodes', 'software_version')
-        result = all(map(lambda x: parse_semver(x)[0:2] == (5, 6), software_versions))
+        result = all(map(lambda x: parse_semver(x)[0:1] == (6,), software_versions))
         info = {f'node:{node_id}': software_version for node_id, software_version in zip(node_ids, software_versions)}
 
         return result, info
